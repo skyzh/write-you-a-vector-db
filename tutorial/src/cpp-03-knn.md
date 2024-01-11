@@ -1,1 +1,1 @@
-# K Nearest Neighbors
+# Naive K-Nearest Neighbors
