@@ -1,8 +1,10 @@
-# Ramp Up: The Vector Table
+# Vector Storage + Expressions
 
 Sequential scan.
 
 Insertions.
+
+Distance expressions.
 
 ## Bonus Tasks
 
