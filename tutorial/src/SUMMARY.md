@@ -10,5 +10,4 @@
   - [HNSW Index](./cpp-06-02-hnsw.md)
   - [Working on Large Datasets (WIP)](./cpp-07-large-dataset.md)
 
-- [The Rust Way (over RisingLight)](./rust-01-overview.md)
-  - [WIP](./rust-02-setup.md)
+- [The Rust Way (over RisingLight) (WIP)](./rust-01-overview.md)

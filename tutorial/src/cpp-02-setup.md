@@ -1,10 +1,22 @@
 # Vector Storage + Expressions
 
-Sequential scan.
+In this chapter, we will walk through some ramp-up tasks to get familiar with the BusTub system. You will be able to store vectors inside the system and compute vector distances after finishing all required tasks.
 
-Insertions.
+The list of files that you will likely need to modify:
 
-Distance expressions.
+```
+src/execution/insert_executor.cpp                    (recommended to git-ignore)
+src/execution/seq_scan_executor.cpp                  (recommended to git-ignore)
+src/include/execution/executors/insert_executor.h    (recommended to git-ignore)
+src/include/execution/executors/seq_scan_executor.h  (recommended to git-ignore)
+src/include/execution/expressions/vector_expression.h
+```
+
+**WARNING:** In this tutorial, you will implement a simplified version of the sequential scan and the insert executor. These implementations are different from the 15-445 course but we still recommend you not including these files in your git repository.
+
+## Computing Distances
+
+## Insertion and Sequential Scan
 
 ## Bonus Tasks
 
