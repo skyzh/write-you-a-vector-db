@@ -27,7 +27,7 @@ Then, you can run `./bin/bustub-shell` to start the BusTub SQL shell.
 ```
 ./bin/bustub-shell
 
-bustub> select array[1.0, 2.0, 3.0];
+bustub> select array [1.0, 2.0, 3.0];
 +-------------+
 | __unnamed#0 |
 +-------------+
