@@ -2,7 +2,7 @@
 
 - [Introduction](./00-introduction.md)
 - [The C++ Way (over BusTub)](./cpp-01-overview.md)
-  - [Vector Storage + Expressions](./cpp-02-setup.md)
+  - [Vector Expressions and Storage](./cpp-02-setup.md)
   - [Naive K-Nearest Neighbors](./cpp-03-knn.md)
   - [Matching a Vector Index](./cpp-04-optimizer.md)
   - [IVFFlat Index](./cpp-05-ivfflat.md)

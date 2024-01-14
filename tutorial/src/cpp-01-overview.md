@@ -37,6 +37,16 @@ bustub> select array [1.0, 2.0, 3.0];
 
 In BusTub, you can use the `array` keyword to create a vector. The elements in a vector must be of decimal (double) type.
 
-**Extra content: what did we change from the CMU-DB's BusTub codebase**
+## Extra Content
 
-The `bustub-vectordb` repository implements some stub code for you so that you can focus on the implementation of the vector things. For example, we have a modified version of the table heap and a mock buffer pool manager. All the data stay in memory. If you are interested in persisting everything to disk, you may revert the buffer pool manager patch commit (remember to revert both the buffer pool manager and the table heap), and start from the 15-445/645 [project 1](https://15445.courses.cs.cmu.edu/fall2023/project1/) buffer pool manager.
+**What did we change from the CMU-DB's BusTub codebase**
+
+The `bustub-vectordb` repository implements some stub code for you so that you can focus on the implementation of the vector things.
+
+**Buffer Pool Manager**. We have a modified version of the table heap and a mock buffer pool manager. All the data stay in memory. If you are interested in persisting everything to disk, you may revert the buffer pool manager patch commit (remember to revert both the buffer pool manager and the table heap), and start from the 15-445/645 [project 1](https://15445.courses.cs.cmu.edu/fall2023/project1/) buffer pool manager.
+
+**Vector Expressions**. The modified BusTub codebase has support for vector distance expressions.
+
+**Vector Indexes**. The codebase adds support for vector indexes besides B+ tree and hash table indexes.
+
+**Vector Executors**. With the vector index conversion optimizer rule and the vector index scan executor, users will be able to scan the vector index when running some specific k-nearest neighbor SQLs.

@@ -16,12 +16,31 @@ src/optimizer/sort_limit_as_topn.cpp                 (KEEP PRIVATE)
 
 **WARNING:** Some part of this chapter overlaps with the CMU-DB's Database System course and we ask you NOT to put the above files in a public repo.
 
-## 
+## Naive K-Nearest Neighbors
 
-order by executor
+In vector databases, one of the most important operations is to find nearest neighbors to a user-provided vector in the vector table using a specified vector distance function. In this task, you will need to implement some query executors in order to support nearest neighbor SQL queries as below:
 
-limit executor
+```sql
+CREATE TABLE t1(v1 VECTOR(3), v2 integer);
+SELECT v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 3;
+```
 
-## Bonus
+The query scans the table, computes the distances between vectors in the table and `<1.0, 1.0, 1.0>`, and returns 3 nearest neighbors to the query vector.
 
-Top-n optimizer rule and top-n executor.
+## Sort and Limit Executor
+
+Explain the query.
+
+Sort and limit.
+
+std::sort with lambda function.
+
+## Top-n Optimization
+
+You do not need to sort the entire dataset. You may use a binary heap (`priority_queue` in C++ STL) to compute the same result set with more efficiency.
+
+The first step is to write an optimizer rule to convert sort and limit into a top-n executor.
+
+Then, implement the top-n executor.
+
+## Test Cases
