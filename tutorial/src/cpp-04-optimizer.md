@@ -9,6 +9,8 @@ src/optimizer/vector_index_scan.cpp
 src/optimizer/optimizer_custom_rules.cpp
 ```
 
+Related lectures: [Query Planning & Optimization (CMU Intro to Database Systems)](https://www.youtube.com/watch?v=ePGPVJCyCAk&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=15)
+
 ## Matching the Plan Structure
 
 ```sql
@@ -75,7 +77,7 @@ In the `Optimizer` class, you may make use of the `vector_index_match_method_` m
 * `ivfflat`: only match the IVFFlat index.
 * `none`: do not match any index and do exact nearest-neighbor search.
 
-## Test Cases
+## Testing
 
 You can run the test cases using SQLLogicTest.
 

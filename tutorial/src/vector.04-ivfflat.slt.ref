@@ -1,0 +1,44 @@
+<main>:1
+CREATE TABLE t1(v1 VECTOR(3), v2 integer);
+----
+Table created with id = 24	
+
+<main>:4
+INSERT INTO t1 VALUES (ARRAY [-1.0, 1.0, 1.0], -1), (ARRAY [-3.0, 1.0, 1.0], -3), (ARRAY [-2.0, 1.0, 1.0], -2), (ARRAY [-4.0, 1.0, 1.0], -4), (ARRAY [0.0, 1.0, 1.0], 0), (ARRAY [2.0, 1.0, 1.0], 2), (ARRAY [4.0, 1.0, 1.0], 4), (ARRAY [5.0, 1.0, 1.0], 5);
+----
+0	
+
+<main>:7
+CREATE INDEX t1v1ivfflat ON t1 USING ivfflat (v1 vector_l2_ops) WITH (lists = 3, probe_lists = 2);
+----
+Index created with id = 0 with type = VectorIVFFlat	
+
+<main>:10
+EXPLAIN (o) SELECT v1, v2, ARRAY [1.0, 1.0, 1.0] <-> v1 as distance FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 3;
+----
+=== OPTIMIZER ===
+Projection { exprs=["#0.0", "#0.1", "l2_dist([1.000000,1.000000,1.000000], #0.0)"] }
+  VectorIndexScan { index_oid=0, index_name=t1v1ivfflat, table_oid=24, table_name=t1 base_vector=[1.000000,1.000000,1.000000], limit=3 }
+	
+
+<main>:13
+SELECT v1, v2, ARRAY [1.0, 1.0, 1.0] <-> v1 as distance FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 3;
+----
+[0,1,1]	0	1.000000	
+[2,1,1]	2	1.000000	
+[-1,1,1]	-1	2.000000	
+
+<main>:16
+INSERT INTO t1 VALUES  (ARRAY [1.0, 1.0, 1.0], 1), (ARRAY [3.0, 1.0, 1.0], 3);
+----
+0	
+
+<main>:19
+SELECT v1, v2, ARRAY [1.0, 1.0, 1.0] <-> v1 as distance FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 5;
+----
+[1,1,1]	1	0.000000	
+[2,1,1]	2	1.000000	
+[0,1,1]	0	1.000000	
+[-1,1,1]	-1	2.000000	
+[3,1,1]	3	2.000000	
+

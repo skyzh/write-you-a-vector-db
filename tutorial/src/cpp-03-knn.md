@@ -53,7 +53,7 @@ Limit executor returns the first `limit` number of elements from the child execu
 
 After implementing these two executors, you should be able to get k-nearest neighbors of the base vector in BusTub.
 
-## Test Cases
+## Testing Sort + Limit
 
 At this point, you can run the test cases using SQLLogicTest.
 
@@ -84,7 +84,9 @@ The first step is to write an optimizer rule to convert sort and limit into a to
 
 Then, you may implement the top-n executor. The logic is similar to the sort executor that you do all the computation work in the `Init` function and then emit the top-k tuples in the `Next` function one by one. You will need to maintain a max-heap that contains the minimum k elements when scanning from the child executor.
 
-## Test Cases
+Related lectures: [Query Planning & Optimization (CMU Intro to Database Systems)](https://www.youtube.com/watch?v=ePGPVJCyCAk&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=15)
+
+## Testing TopN
 
 At this point, you can run the test cases using SQLLogicTest.
 

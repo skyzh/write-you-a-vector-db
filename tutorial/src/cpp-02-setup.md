@@ -91,7 +91,7 @@ You may get the table heap structure by accessing the catalog using executor con
 
 You can get necessary information (i.e., table oid) from the query plan.
 
-## Test Cases
+## Testing
 
 You can run the test cases using SQLLogicTest.
 
