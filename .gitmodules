@@ -1,0 +1,7 @@
+[submodule "bustub-vectordb-starter"]
+	path = bustub-vectordb-starter
+	url = https://github.com/skyzh/bustub-vectordb
+[submodule "bustub-vectordb-solution"]
+	path = bustub-vectordb-solution
+	url = https://github.com/skyzh/bustub-vectordb
+	branch = vectordb-solution
