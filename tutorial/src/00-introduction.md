@@ -28,6 +28,8 @@ Some part of this tutorial overlaps with Carnegie Mellon University's Database S
 
 </div>
 
+There are many other vector database tutorials on the Internet. The primary features of this tutorial: we focus on building a vector extension on a relational database system (instead of REST APIs or some other interfaces), and we focus on the implementation of the vector indexes (instead of directly using the Faiss library).
+
 ## Prerequisites
 
 You will need to know the basics of relational database systems and have some experience of system programming before starting this tutorial. You *do not* need to have a solid experience with database systems (i.e., complete the 15-445/645 Database Systems course). We assume you do not know much about the internals of the database systems and will have necessary contents to guide you through the system in the tutorial.
