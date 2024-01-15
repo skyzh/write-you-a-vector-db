@@ -9,7 +9,9 @@ src/optimizer/vector_index_scan.cpp
 src/optimizer/optimizer_custom_rules.cpp
 ```
 
-Related lectures: [Query Planning & Optimization (CMU Intro to Database Systems)](https://www.youtube.com/watch?v=ePGPVJCyCAk&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=15)
+*Related Lectures*
+
+* [Query Planning & Optimization (CMU Intro to Database Systems)](https://www.youtube.com/watch?v=ePGPVJCyCAk&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=15)
 
 ## Matching the Plan Structure
 

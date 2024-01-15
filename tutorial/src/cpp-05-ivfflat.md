@@ -9,7 +9,9 @@ src/include/storage/index/ivfflat_index.h
 src/storage/index/ivfflat_index.cpp
 ```
 
-Related readings: [Product Quantization from Pinecone's Faiss Manual](https://www.pinecone.io/learn/series/faiss/product-quantization/). You may skip the product quantization part and take a look at the IVF visualization.
+*Related Readings*
+
+* [Product Quantization from Pinecone's Faiss Manual](https://www.pinecone.io/learn/series/faiss/product-quantization/). You may skip the product quantization part and take a look at the IVF visualization.
 
 ## Overview
 

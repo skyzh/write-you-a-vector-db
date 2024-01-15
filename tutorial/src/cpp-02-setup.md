@@ -56,7 +56,9 @@ In BusTub, there are 3 important data-representation structures.
 * `Schema`: as above, number of elements and the data type of each element, indicating the correct way to decode the tuple.
 * `Value`: an in-memory representation of a value with type information, where users can convert it to a primitive type.
 
-Related lectures: [Database Storage Part 2 (CMU Intro to Database Systems)](https://www.youtube.com/watch?v=Ra50bFHkeM8&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=5)
+*Related Lectures*
+
+* [Database Storage Part 2 (CMU Intro to Database Systems)](https://www.youtube.com/watch?v=Ra50bFHkeM8&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=5)
 
 ### Execution Model
 
@@ -64,7 +66,10 @@ BusTub uses the Volcano execution model. Each query executor defines an `Init` a
 
 ![Execution Model](./vector-db/03-execution-model.svg)
 
-Related lectures: [Query Execution Part 1 (CMU Intro to Database Systems)](https://www.youtube.com/watch?v=3F3FWgujN9Q&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=13) and [Query Execution Part 2 (CMU Intro to Database Systems](https://www.youtube.com/watch?v=MUjS0tIDnEE&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=14)
+*Related Lectures*
+
+* [Query Execution Part 1 (CMU Intro to Database Systems)](https://www.youtube.com/watch?v=3F3FWgujN9Q&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=13)
+* [Query Execution Part 2 (CMU Intro to Database Systems](https://www.youtube.com/watch?v=MUjS0tIDnEE&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=14)
 
 ### Insertion
 

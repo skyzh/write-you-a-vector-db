@@ -84,7 +84,9 @@ The first step is to write an optimizer rule to convert sort and limit into a to
 
 Then, you may implement the top-n executor. The logic is similar to the sort executor that you do all the computation work in the `Init` function and then emit the top-k tuples in the `Next` function one by one. You will need to maintain a max-heap that contains the minimum k elements when scanning from the child executor.
 
-Related lectures: [Query Planning & Optimization (CMU Intro to Database Systems)](https://www.youtube.com/watch?v=ePGPVJCyCAk&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=15)
+*Related Lectures*
+
+* [Query Planning & Optimization (CMU Intro to Database Systems)](https://www.youtube.com/watch?v=ePGPVJCyCAk&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=15)
 
 ## Testing TopN
 
