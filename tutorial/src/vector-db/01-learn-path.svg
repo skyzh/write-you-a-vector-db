@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="144 178 408 502" width="408" height="502">
+  <defs>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -4 10 8" markerWidth="10" markerHeight="8" color="black">
+      <g>
+        <path d="M 8 0 L 0 -3 L 0 3 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+  </defs>
+  <g id="01-learn-path" stroke="none" stroke-opacity="1" fill="none" stroke-dasharray="none" fill-opacity="1">
+    <title>01-learn-path</title>
+    <rect fill="white" x="144" y="178" width="408" height="502"/>
+    <g id="01-learn-path_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_2">
+        <rect x="236" y="179" width="132" height="54" fill="white"/>
+        <rect x="236" y="179" width="132" height="54" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(241 196.776)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="43.816" y="15">Start</tspan>
+        </text>
+      </g>
+      <g id="Graphic_3">
+        <rect x="236" y="280" width="132" height="54" fill="white"/>
+        <rect x="236" y="280" width="132" height="54" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(241 288.552)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="3.8" y="15">2.1 Vector Table </tspan>
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="1.88" y="33.448">and Expressions</tspan>
+        </text>
+      </g>
+      <g id="Line_4">
+        <line x1="302" y1="233" x2="302" y2="270.1" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_5">
+        <rect x="145" y="395" width="132" height="54" fill="white"/>
+        <rect x="145" y="395" width="132" height="54" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(150 412.776)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="9.584" y="15">2.2 Naive kNN</tspan>
+        </text>
+      </g>
+      <g id="Line_6">
+        <line x1="280.63478" y1="334" x2="238.50845" y2="387.2366" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_7">
+        <rect x="327" y="395" width="132" height="54" fill="white"/>
+        <rect x="327" y="395" width="132" height="54" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(332 403.552)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="2.912" y="15">2.3 Vector Index </tspan>
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="8.256" y="33.448">Optimizer Rule</tspan>
+        </text>
+      </g>
+      <g id="Line_8">
+        <line x1="323.3652" y1="334" x2="365.49155" y2="387.2366" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_9">
+        <rect x="234.75" y="510" width="132" height="54" fill="white"/>
+        <rect x="234.75" y="510" width="132" height="54" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(239.75 527.776)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x=".992" y="15">2.4 IVFFlat Index</tspan>
+        </text>
+      </g>
+      <g id="Graphic_10">
+        <rect x="419.25" y="510" width="132" height="54" fill="white"/>
+        <rect x="419.25" y="510" width="132" height="54" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(424.25 527.776)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="7.36" y="15">2.5 NSW Index</tspan>
+        </text>
+      </g>
+      <g id="Line_11">
+        <line x1="371.3413" y1="449" x2="328.6034" y2="502.2776" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_12">
+        <line x1="414.6587" y1="449" x2="457.3966" y2="502.2776" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_13">
+        <rect x="419.25" y="625" width="132" height="54" fill="white"/>
+        <rect x="419.25" y="625" width="132" height="54" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(424.25 642.776)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="1.584" y="15">2.6 HNSW Index</tspan>
+        </text>
+      </g>
+      <g id="Line_14">
+        <line x1="485.25" y1="564" x2="485.25" y2="615.1" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+    </g>
+  </g>
+</svg>

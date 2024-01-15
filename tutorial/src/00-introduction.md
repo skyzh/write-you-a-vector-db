@@ -6,7 +6,15 @@ In this tutorial, you will learn how to add vector extensions to an existing rel
 
 Vector databases store vectors, and vectors are arrays of decimal values. Vector databases support efficient query and retrieval of vector data by storing vectors with compact format and creating vector indexes to accelerate similarity searches. Vector databases can be either a vector-oriented standalone database product that provides the above functionalities (i.e., Pinecone and Milvus), or a relational/NoSQL database system with vector extensions (i.e., PostgreSQL with pgvector, or Elasticsearch with vector searches).
 
-Diving a little bit into PostgreSQL with pgvector, the extension adds some vector capabilities to the system.
+Diving a little bit into PostgreSQL with [pgvector](https://github.com/pgvector/pgvector), the extension adds the following vector capabilities on top of PostgreSQL.
+
+```sql
+CREATE TABLE items (id bigserial PRIMARY KEY, embedding vector(3)); -- vector type
+SELECT * FROM items ORDER BY embedding <-> '[3,1,2]' LIMIT 5; -- computing nearest neighbors
+CREATE INDEX ON items USING hnsw (embedding vector_l2_ops); -- create vector indexes
+```
+
+We will implement the same functionalities in this tutorial.
 
 ## About This Tutorial
 
@@ -14,9 +22,11 @@ We have two variants of this tutorial: the C++ version is based on CMU-DB's BusT
 
 We provide full solution for this tutorial on the `vectordb-solution` branch at [https://github.com/skyzh/bustub-vectordb](https://github.com/skyzh/bustub-vectordb) except the part of the tutorial that overlaps with CMU-DB's Database Systems course.
 
-Please note that using the BusTub system outside CMU requires the students not to put the solutions online. As part of this tutorial overlaps with CMU-DB's Database System course, we will have warnings on some chapters asking you to add some specific files to the gitignore file, therefore preventing you from leaking the solutions.
+<div class="warning">
 
-*Disclaimer: This tutorial is not affiliated with Carnegie Mellon University or CMU-DB Group. The C++ version of this tutorial is not, and will not be part of the 15-445/645 Database Systems course.*
+Some part of this tutorial overlaps with Carnegie Mellon University's Database Systems course. Please follow the instructions in the tutorial on whether you can make some specific part of your implementation public on the Internet.
+
+</div>
 
 ## Prerequisites
 
@@ -35,3 +45,10 @@ As of writing (at the beginning of 2024), Chi obtained his master's degree in Co
 [db3]: https://github.com/bytedance/terarkdb
 [db4]: https://github.com/risingwavelabs/risingwave
 [db5]: https://github.com/neondatabase/neon
+
+
+<div class="warning">
+
+Disclaimer: This tutorial is not affiliated with Carnegie Mellon University or CMU-DB Group. The C++ version of this tutorial is a part/extension of CMU's 15-445/645 Database Systems course.
+
+</div>

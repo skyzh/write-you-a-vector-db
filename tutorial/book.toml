@@ -7,3 +7,4 @@ title = "Write You a Vector Database"
 
 [output.html]
 mathjax-support = true
+additional-css = ["custom.css"]

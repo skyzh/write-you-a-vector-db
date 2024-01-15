@@ -12,7 +12,11 @@ src/include/execution/executors/seq_scan_executor.h  (recommended to git-ignore)
 src/include/execution/expressions/vector_expression.h
 ```
 
+<div class="warning">
+
 **WARNING:** In this tutorial, you will implement a simplified version of the sequential scan and the insert executor. These implementations are different from the 15-445 course but we still recommend you not including these files in your git repository.
+
+</div>
 
 ## Computing Distances
 
@@ -34,11 +38,54 @@ In `vector_expressions.h`, you can implement some distance functions that we wil
 
 In this task, you will learn how BusTub represents data and how to interact with vector indexes.
 
-### Table Heap and Vector Indexes
+### Table Heap and Tuple Format
+
+In BusTub, all table data are stored in a structure called table heap. The table heap is row-based storage that stores a collection of tuples on the disk. See the `TableHeap` class for more information.
+
+A tuple is a serialized representation of a row in the database. For example, a tuple of integer `1, 2, 3` will be serialized into a tuple with hex representation of:
+
+```
+01 00 02 00 03 00
+```
+
+This serialized data will be stored on disk. To recover the values from the serialized value, you will need to provide a schema. For example, the schema for 3 integers is `[Int, Int, Int]`. With the schema, we can decode the tuple to three integer values.
+
+In BusTub, there are 3 important data-representation structures.
+
+* `Tuple`: as above, serialized bytes that represent some values.
+* `Schema`: as above, number of elements and the data type of each element, indicating the correct way to decode the tuple.
+* `Value`: an in-memory representation of a value with type information, where users can convert it to a primitive type.
+
+Related lectures: [Database Storage Part 2 (CMU Intro to Database Systems)](https://www.youtube.com/watch?v=Ra50bFHkeM8&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=5)
+
+### Execution Model
+
+BusTub uses the Volcano execution model. Each query executor defines an `Init` and a `Next` member functions. The query executors are organized in a tree. The top-most execution driver (see `execution_engine.h`) will call `Init` once and `Next` until the top-most executor returns false, which indicates there are no more tuples to be produced. Each executor will initialize and retrieve the next tuple from their child executors.
+
+![Execution Model](./vector-db/03-execution-model.svg)
+
+Related lectures: [Query Execution Part 1 (CMU Intro to Database Systems)](https://www.youtube.com/watch?v=3F3FWgujN9Q&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=13) and [Query Execution Part 2 (CMU Intro to Database Systems](https://www.youtube.com/watch?v=MUjS0tIDnEE&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=14)
 
 ### Insertion
 
+SQL queries like `INSERT INTO` will be converted into an insert executor in the query processing layer.
+
+```
+bustub> explain (o) insert into t1 values (array [1.0, 2.0, 3.0]);
+=== OPTIMIZER ===
+Insert { table_oid=24 }
+  Values { rows=1 }
+```
+
+We have already provided the implementation of values executor that produces the user-provided values in the insert statement. You will need to implement the insert executor. The insert executor should do all the insertion works in the `Init` function and return a single number indicating rows processed in the `Next` function.
+
+You will also need to get all vector indexes from the catalog (using the executor context), and insert the corresponding data into the vector index. All vector indexes can be dynamically casted to `VectorIndex*`. You can use `index->GetKeyAttrs()` to retrieve the vector column to build index on, and it should always be one column of vector type. After you know which column to build the index, you can extract the `Value` from the child executor (values) output tuple, and then use `Value::GetVector` to convert it to a `std::vector<double>` vector. With that, you may call `index->InsertVectorEntry` to insert the data into vector indexes.
+
 ### Sequential Scan
+
+In sequential scan, you may create a table iterator and store it in the executor class in `Init`, and emit tuple one by one in `Next`. You do not need to consider the case that a tuple might have been deleted. In this tutorial, all tables are append-only.
+
+You may get the table heap structure by accessing the catalog using executor context. After getting the table heap, you may create a table iterator by using `MakeIterator`. You may retrieve the current tuple pointed by the iterator by calling `TableIterator::GetTuple`, and move to the next tuple by using prefix `++` operator. `TableIterator::IsEnd` indicates whether there are more tuples in the table heap.
 
 ## Test Cases
 
@@ -48,69 +95,14 @@ You can run the test cases using SQLLogicTest.
 ./bin/bustub-sqllogictest ../test/sql/vector.01-insert-scan.slt --verbose
 ```
 
-The test cases do not do any correctness checks and you will need to compare with the below output by yourself.
+The test cases do not do any correctness checks and you will need to compare with the below output by yourself. Note that we do not test index insertions for now, and you can validate if your implementation of index insertion is correct in later tasks.
 
 <details>
 
 <summary>Reference Test Result</summary>
 
 ```
-<main>:2
-SELECT ARRAY [1.0, 1.0, 1.0] <-> ARRAY [-1.0, -1.0, -1.0] as distance;
-----
-3.464102	
-
-<main>:5
-SELECT ARRAY [1.0, 1.0, 1.0] <=> ARRAY [-1.0, -1.0, -1.0] as distance;
-----
-2.000000	
-
-<main>:8
-SELECT inner_product(ARRAY [1.0, 1.0, 1.0], ARRAY [-1.0, -1.0, -1.0]) as distance;
-----
-3.000000	
-
-<main>:11
-CREATE TABLE t1(v1 VECTOR(3), v2 integer);
-----
-Table created with id = 24	
-
-<main>:14
-INSERT INTO t1 VALUES (ARRAY [1.0, 1.0, 1.0], 1), (ARRAY [2.0, 1.0, 1.0], 2), (ARRAY [3.0, 1.0, 1.0], 3), (ARRAY [4.0, 1.0, 1.0], 4);
-----
-0	
-
-<main>:17
-SELECT * FROM t1;
-----
-[1,1,1]	1	
-[2,1,1]	2	
-[3,1,1]	3	
-[4,1,1]	4	
-
-<main>:20
-SELECT v1, ARRAY [1.0, 1.0, 1.0] <-> v1 as distance FROM t1;
-----
-[1,1,1]	0.000000	
-[2,1,1]	1.000000	
-[3,1,1]	2.000000	
-[4,1,1]	3.000000	
-
-<main>:23
-SELECT v1, ARRAY [1.0, 1.0, 1.0] <=> v1 as distance FROM t1;
-----
-[1,1,1]	0.000000	
-[2,1,1]	0.057191	
-[3,1,1]	0.129612	
-[4,1,1]	0.183503	
-
-<main>:26
-SELECT v1, inner_product(ARRAY [1.0, 1.0, 1.0], v1) as distance FROM t1;
-----
-[1,1,1]	-3.000000	
-[2,1,1]	-4.000000	
-[3,1,1]	-5.000000	
-[4,1,1]	-6.000000	
+{{#include vector.01-insert-scan.slt.reference}}
 ```
 
 </details>

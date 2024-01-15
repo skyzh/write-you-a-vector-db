@@ -4,7 +4,9 @@ In this section, we will implement a vector database extension over the BusTub e
 
 ## Overview
 
-Firstly, you will need to go through several easy tasks to get familiar with the BusTub system and implement necessary components for vector storage and retrieval. Next, you will implement linear scan over the database to get k-nearest neighbors. After that, you will implement IVFFlat and HNSW vector index to achieve fast vector search.
+You may approach this tutorial by implementing the thing that interests you most first. The following figure is a learning path diagram that visualizes the dependencies between the chapters.
+
+![Learning Path](./vector-db/01-learn-path.svg)
 
 ## Environment Setup
 

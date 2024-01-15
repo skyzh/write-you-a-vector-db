@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="441 267 398 302" width="398" height="302">
+  <defs>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -4 10 8" markerWidth="10" markerHeight="8" color="black">
+      <g>
+        <path d="M 8 0 L 0 -3 L 0 3 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+  </defs>
+  <g id="03-execution-model" stroke="none" stroke-opacity="1" fill="none" stroke-dasharray="none" fill-opacity="1">
+    <title>03-execution-model</title>
+    <rect fill="white" x="441" y="267" width="398" height="302"/>
+    <g id="03-execution-model_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_2">
+        <rect x="441.5" y="389.5" width="129.5" height="57" fill="white"/>
+        <rect x="441.5" y="389.5" width="129.5" height="57" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(446.5 408.776)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="39.75" y="15">Insert</tspan>
+        </text>
+      </g>
+      <g id="Graphic_3">
+        <rect x="441.5" y="511" width="129.5" height="57" fill="white"/>
+        <rect x="441.5" y="511" width="129.5" height="57" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(446.5 530.276)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="36.486" y="15">Values</tspan>
+        </text>
+      </g>
+      <g id="Line_4">
+        <line x1="506.25" y1="511" x2="506.25" y2="456.4" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_6">
+        <line x1="506.25" y1="389.5" x2="506.25" y2="334.9" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_7">
+        <rect x="441.5" y="268" width="129.5" height="57" fill="white"/>
+        <rect x="441.5" y="268" width="129.5" height="57" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+        <text transform="translate(446.5 287.276)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="1.086" y="15">Execution Driver</tspan>
+        </text>
+      </g>
+      <g id="Graphic_8">
+        <text transform="translate(590.5 278.052)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="0" y="15">call Init once</tspan>
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="0" y="33.448">and Next until `Insert` returns false</tspan>
+        </text>
+      </g>
+    </g>
+  </g>
+</svg>

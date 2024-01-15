@@ -14,7 +14,11 @@ src/include/execution/executors/limit_executor.h     (KEEP PRIVATE)
 src/optimizer/sort_limit_as_topn.cpp                 (KEEP PRIVATE)
 ```
 
+<div class="warning">
+
 **WARNING:** Some part of this chapter overlaps with the CMU-DB's Database System course and we ask you NOT to put the above files in a public repo.
+
+</div>
 
 ## Naive K-Nearest Neighbors
 
