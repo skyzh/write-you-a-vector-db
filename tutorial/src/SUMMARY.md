@@ -5,9 +5,9 @@
   - [Vector Expressions and Storage](./cpp-02-setup.md)
   - [Naive K-Nearest Neighbors](./cpp-03-knn.md)
   - [Matching a Vector Index](./cpp-04-optimizer.md)
-  - [IVFFlat Index](./cpp-05-ivfflat.md)
-  - [NSW Index](./cpp-06-01-nsw.md)
-  - [HNSW Index](./cpp-06-02-hnsw.md)
+  - [IVFFlat Index (WIP - Code Ready)](./cpp-05-ivfflat.md)
+  - [NSW Index (WIP - Code Ready)](./cpp-06-01-nsw.md)
+  - [HNSW Index (WIP)](./cpp-06-02-hnsw.md)
   - [Working on Large Datasets (WIP)](./cpp-07-large-dataset.md)
 
 - [The Rust Way (over RisingLight) (WIP)](./rust-01-overview.md)

@@ -4,7 +4,7 @@ In this section, we will implement a vector database extension over the BusTub e
 
 ## Overview
 
-You may approach this tutorial by implementing the thing that interests you most first. The following figure is a learning path diagram that visualizes the dependencies between the chapters.
+You may approach this tutorial by implementing the things that interest you most first. The following figure is a learning path diagram that visualizes the dependencies between the chapters.
 
 ![Learning Path](./vector-db/01-learn-path.svg)
 

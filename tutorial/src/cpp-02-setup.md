@@ -1,4 +1,4 @@
-# Vector Storage and Expressions
+# Vector Expressions and Storage
 
 In this chapter, we will walk through some ramp-up tasks to get familiar with the BusTub system. You will be able to store vectors inside the system and compute vector distances after finishing all required tasks.
 
