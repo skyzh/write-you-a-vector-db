@@ -531,7 +531,7 @@
         <path d="M 436.72225 160.5 L 340.1424 164.72785 M 436.72225 160.5 L 475.4224 196.12247 M 340.1424 164.72785 L 324.20325 195.65145 M 324.20325 195.65145 L 290.21187 208.82273 M 324.20325 195.65145 L 410.8236 295.8006 M 290.21187 208.82273 L 248.5 308.8152 M 475.4224 196.12247 L 410.8236 295.8006 M 410.8236 295.8006 L 410.1964 310.56006 M 248.5 308.8152 L 253.99492 328.59826 M 410.1964 310.56006 L 296.76823 367.53684 M 253.99492 328.59826 L 296.76823 367.53684" stroke="#ff7e79" stroke-linecap="butt" stroke-linejoin="round" stroke-width="2"/>
       </g>
       <g id="Graphic_278">
-        <text transform="translate(296.388 222)" fill="black">
+        <text transform="translate(295.5 222)" fill="black">
           <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="0" y="15">A</tspan>
         </text>
       </g>

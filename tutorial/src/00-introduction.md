@@ -1,5 +1,7 @@
 # Introduction
 
+![banner](vectordb-banner-vertical.png)
+
 In this tutorial, you will learn how to add vector extensions to an existing relational database system.
 
 ## Vector Databases

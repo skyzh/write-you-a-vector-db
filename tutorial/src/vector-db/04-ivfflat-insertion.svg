@@ -122,6 +122,16 @@
         <circle cx="331.25" cy="299.75" r="4.25000679108308" fill="#f26077"/>
         <circle cx="331.25" cy="299.75" r="4.25000679108308" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
       </g>
+      <g id="Graphic_277">
+        <text transform="translate(295.5 222)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="0" y="15">A</tspan>
+        </text>
+      </g>
+      <g id="Graphic_276">
+        <text transform="translate(405.204 234.052)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="16" fill="black" x="0" y="15">B</tspan>
+        </text>
+      </g>
     </g>
   </g>
 </svg>

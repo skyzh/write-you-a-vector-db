@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="-6 226 374 330" width="374" height="330">
+  <defs/>
+  <g id="logo" fill="none" stroke-opacity="1" stroke="none" stroke-dasharray="none" fill-opacity="1">
+    <title>logo</title>
+    <rect fill="white" x="-6" y="226" width="374" height="330"/>
+    <g id="logo_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_6">
+        <path d="M 70.3 366 L 367.5 366 L 293.2 486 L -4 486 Z" fill="white"/>
+        <path d="M 70.3 366 L 367.5 366 L 293.2 486 L -4 486 Z" stroke="gray" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_5">
+        <path d="M 69.3 280.5 L 366.5 280.5 L 292.2 400.5 L -5 400.5 Z" fill="white"/>
+        <path d="M 69.3 280.5 L 366.5 280.5 L 292.2 400.5 L -5 400.5 Z" stroke="gray" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_4">
+        <line x1="182.25" y1="227" x2="182.25" y2="338" stroke="#7f8080" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8.0,5.0" stroke-width="1"/>
+      </g>
+      <g id="Line_3">
+        <line x1="181.25" y1="486" x2="181.25" y2="555" stroke="#7f8080" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8.0,5.0" stroke-width="1"/>
+      </g>
+      <g id="Line_2">
+        <line x1="181.25" y1="400.5" x2="181.25" y2="430.5" stroke="#7f8080" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="8.0,5.0" stroke-width="1"/>
+      </g>
+    </g>
+  </g>
+</svg>

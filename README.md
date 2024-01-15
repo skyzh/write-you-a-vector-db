@@ -1,3 +1,5 @@
+![banner](tutorial/src/vectordb-banner-horizontal.png)
+
 # Write You a Vector Database
 
 A tutorial on how to add vector capabilities to a relational database system.
