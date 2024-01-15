@@ -66,6 +66,15 @@ After identifying the index column, you may iterate the catalog and find the fir
 
 The vector index scan plan node will emit the table tuple in its original schema order. Therefore, in case 2 and 3, you will also need to add a projection after the vector index scan plan node in order to keep the semantics of the query. 
 
+## Index Selection Strategy
+
+In the `Optimizer` class, you may make use of the `vector_index_match_method_` member variable to decide the index selection strategy.
+
+* `unset` or empty: match the first vector index available.
+* `hnsw`: only match the HNSW index.
+* `ivfflat`: only match the IVFFlat index.
+* `none`: do not match any index and do exact nearest-neighbor search.
+
 ## Test Cases
 
 You can run the test cases using SQLLogicTest.
