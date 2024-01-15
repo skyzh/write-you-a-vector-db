@@ -8,3 +8,4 @@ title = "Write You a Vector Database"
 [output.html]
 mathjax-support = true
 additional-css = ["custom.css"]
+git-repository-url = "https://github.com/skyzh/write-you-a-vector-db"
