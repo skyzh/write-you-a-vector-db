@@ -1,4 +1,4 @@
-# IVFFlat Index
+# IVFFlat (Inverted File Flat) Index
 
 IVFFlat (InVerted File Flat) Index is a simple vector index that splits data into buckets (aka. quantization-based index) so as to accelerate vector similarities search.
 
