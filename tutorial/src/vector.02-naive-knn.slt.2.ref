@@ -1,0 +1,74 @@
+<main>:1
+CREATE TABLE t1(v1 VECTOR(3), v2 integer);
+----
+Table created with id = 24	
+
+<main>:4
+INSERT INTO t1 VALUES (ARRAY [-1.0, 1.0, 1.0], -1), (ARRAY [-2.0, 1.0, 1.0], -2), (ARRAY [-3.0, 1.0, 1.0], -3), (ARRAY [-4.0, 1.0, 1.0], -4), (ARRAY [1.0, 1.0, 1.0], 1), (ARRAY [2.0, 1.0, 1.0], 2), (ARRAY [3.0, 1.0, 1.0], 3), (ARRAY [4.0, 1.0, 1.0], 4);
+----
+0	
+
+<main>:7
+EXPLAIN (o) SELECT v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 3;
+----
+=== OPTIMIZER ===
+TopN { n=3, order_bys=[("Default", "l2_dist([1.000000,1.000000,1.000000], #0.0)")]}
+  Projection { exprs=["#0.0"] }
+    SeqScan { table=t1 }
+	
+
+<main>:10
+EXPLAIN (o) SELECT * FROM (SELECT v1, ARRAY [0.5, 1.0, 1.0] <-> v1 as distance FROM t1) ORDER BY distance LIMIT 3;
+----
+=== OPTIMIZER ===
+TopN { n=3, order_bys=[("Default", "#0.1")]}
+  Projection { exprs=["#0.0", "l2_dist([0.500000,1.000000,1.000000], #0.0)"] }
+    SeqScan { table=t1 }
+	
+
+<main>:13
+EXPLAIN (o) SELECT * FROM (SELECT v1, ARRAY [0.5, 1.0, 1.0] <=> v1 as distance FROM t1) ORDER BY distance LIMIT 3;
+----
+=== OPTIMIZER ===
+TopN { n=3, order_bys=[("Default", "#0.1")]}
+  Projection { exprs=["#0.0", "cosine_similarity([0.500000,1.000000,1.000000], #0.0)"] }
+    SeqScan { table=t1 }
+	
+
+<main>:16
+EXPLAIN (o) SELECT * FROM (SELECT v1, inner_product(ARRAY [0.5, 1.0, 1.0], v1) as distance FROM t1) ORDER BY distance LIMIT 3;
+----
+=== OPTIMIZER ===
+TopN { n=3, order_bys=[("Default", "#0.1")]}
+  Projection { exprs=["#0.0", "inner_product([0.500000,1.000000,1.000000], #0.0)"] }
+    SeqScan { table=t1 }
+	
+
+<main>:19
+SELECT v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 3;
+----
+[1,1,1]	
+[2,1,1]	
+[3,1,1]	
+
+<main>:22
+SELECT * FROM (SELECT v1, ARRAY [0.5, 1.0, 1.0] <-> v1 as distance FROM t1) ORDER BY distance LIMIT 3;
+----
+[1,1,1]	0.500000	
+[2,1,1]	1.500000	
+[-1,1,1]	1.500000	
+
+<main>:25
+SELECT * FROM (SELECT v1, ARRAY [0.5, 1.0, 1.0] <=> v1 as distance FROM t1) ORDER BY distance LIMIT 3;
+----
+[1,1,1]	0.037750	
+[2,1,1]	0.183503	
+[3,1,1]	0.296474	
+
+<main>:28
+SELECT * FROM (SELECT v1, inner_product(ARRAY [0.5, 1.0, 1.0], v1) as distance FROM t1) ORDER BY distance LIMIT 3;
+----
+[4,1,1]	-4.000000	
+[3,1,1]	-3.500000	
+[2,1,1]	-3.000000	
+

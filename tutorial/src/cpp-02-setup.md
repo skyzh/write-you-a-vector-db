@@ -81,17 +81,22 @@ We have already provided the implementation of values executor that produces the
 
 You will also need to get all vector indexes from the catalog (using the executor context), and insert the corresponding data into the vector index. All vector indexes can be dynamically casted to `VectorIndex*`. You can use `index->GetKeyAttrs()` to retrieve the vector column to build index on, and it should always be one column of vector type. After you know which column to build the index, you can extract the `Value` from the child executor (values) output tuple, and then use `Value::GetVector` to convert it to a `std::vector<double>` vector. With that, you may call `index->InsertVectorEntry` to insert the data into vector indexes.
 
+You can get necessary information (i.e., table oid) from the query plan.
+
 ### Sequential Scan
 
 In sequential scan, you may create a table iterator and store it in the executor class in `Init`, and emit tuple one by one in `Next`. You do not need to consider the case that a tuple might have been deleted. In this tutorial, all tables are append-only.
 
 You may get the table heap structure by accessing the catalog using executor context. After getting the table heap, you may create a table iterator by using `MakeIterator`. You may retrieve the current tuple pointed by the iterator by calling `TableIterator::GetTuple`, and move to the next tuple by using prefix `++` operator. `TableIterator::IsEnd` indicates whether there are more tuples in the table heap.
 
+You can get necessary information (i.e., table oid) from the query plan.
+
 ## Test Cases
 
 You can run the test cases using SQLLogicTest.
 
 ```
+make -j8 sqllogictest
 ./bin/bustub-sqllogictest ../test/sql/vector.01-insert-scan.slt --verbose
 ```
 
@@ -102,7 +107,7 @@ The test cases do not do any correctness checks and you will need to compare wit
 <summary>Reference Test Result</summary>
 
 ```
-{{#include vector.01-insert-scan.slt.reference}}
+{{#include vector.01-insert-scan.slt.ref}}
 ```
 
 </details>

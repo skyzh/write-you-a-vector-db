@@ -1,0 +1,83 @@
+<main>:1
+CREATE TABLE t1(v1 VECTOR(3), v2 integer);
+----
+Table created with id = 24	
+
+<main>:4
+CREATE INDEX t1v1ivfflat ON t1 USING ivfflat (v1 vector_l2_ops) WITH (lists = 10, probe_lists = 3);
+----
+Index created with id = 0 with type = VectorIVFFlat	
+
+<main>:7
+CREATE INDEX t1v1hnsw ON t1 USING hnsw (v1 vector_l2_ops) WITH (m = 5, ef_construction = 64, ef_search = 10);
+----
+Index created with id = 1 with type = VectorHNSW	
+
+<main>:10
+EXPLAIN (o) SELECT v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 2;
+----
+=== OPTIMIZER ===
+Projection { exprs=["#0.0"] }
+  VectorIndexScan { index_oid=1, index_name=t1v1hnsw, table_oid=24, table_name=t1 base_vector=[1.000000,1.000000,1.000000], limit=2 }
+	
+
+<main>:13
+EXPLAIN (o) SELECT * FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 2;
+----
+=== OPTIMIZER ===
+VectorIndexScan { index_oid=1, index_name=t1v1hnsw, table_oid=24, table_name=t1 base_vector=[1.000000,1.000000,1.000000], limit=2 }
+	
+
+<main>:16
+EXPLAIN (o) SELECT v1, ARRAY [1.0, 1.0, 1.0] <-> v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 2;
+----
+=== OPTIMIZER ===
+Projection { exprs=["#0.0", "l2_dist([1.000000,1.000000,1.000000], #0.0)"] }
+  VectorIndexScan { index_oid=1, index_name=t1v1hnsw, table_oid=24, table_name=t1 base_vector=[1.000000,1.000000,1.000000], limit=2 }
+	
+
+<main>:19
+EXPLAIN (o) SELECT v2, v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 2;
+----
+=== OPTIMIZER ===
+Projection { exprs=["#0.1", "#0.0"] }
+  VectorIndexScan { index_oid=1, index_name=t1v1hnsw, table_oid=24, table_name=t1 base_vector=[1.000000,1.000000,1.000000], limit=2 }
+	
+
+<main>:22
+set vector_index_method=none
+----
+
+<main>:25
+EXPLAIN (o) SELECT v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 2;
+----
+=== OPTIMIZER ===
+TopN { n=2, order_bys=[("Default", "l2_dist([1.000000,1.000000,1.000000], #0.0)")]}
+  Projection { exprs=["#0.0"] }
+    SeqScan { table=t1 }
+	
+
+<main>:28
+set vector_index_method=ivfflat
+----
+
+<main>:31
+EXPLAIN (o) SELECT v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 2;
+----
+=== OPTIMIZER ===
+Projection { exprs=["#0.0"] }
+  VectorIndexScan { index_oid=0, index_name=t1v1ivfflat, table_oid=24, table_name=t1 base_vector=[1.000000,1.000000,1.000000], limit=2 }
+	
+
+<main>:34
+set vector_index_method=hnsw
+----
+
+<main>:37
+EXPLAIN (o) SELECT v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 2;
+----
+=== OPTIMIZER ===
+Projection { exprs=["#0.0"] }
+  VectorIndexScan { index_oid=1, index_name=t1v1hnsw, table_oid=24, table_name=t1 base_vector=[1.000000,1.000000,1.000000], limit=2 }
+	
+
