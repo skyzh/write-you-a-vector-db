@@ -117,6 +117,8 @@ SELECT v1, inner_product(ARRAY [1.0, 1.0, 1.0], v1) as distance FROM t1;
 
 ## Bonus Tasks
 
+At this point, you should have implemented the basic read and write flows when a user requests to store some data in the system. You may choose to complete the below bonus tasks to challenge yourself.
+
 **Implement the Buffer Pool Manager**
 
 We already provide you a mock buffer pool manager and a table heap so that you do not need to interact with the disk and persist data to the disk. You can implement a real buffer pool manager based on [project 1](https://15445.courses.cs.cmu.edu/fall2023/project1/) of 15-445/645. Remember to revert both the buffer pool manager change and the table heap change before starting implementing the project, otherwise there will be memory leaks and deadlock issues.
@@ -128,3 +130,5 @@ You may implement the delete and update executor to update the data in the table
 **Insert Validation**
 
 It is possible that a user might insert a vector of dimension 3 or 5 to a `VECTOR(4)` column. In insertion executor, you may do some validations to ensure the received tuples are of the correct schema.
+
+*Again, please keep your implementation in this section private and do not put them in a public repo, especially if you want to approach the bonus tasks, because they overlap with the CMU-DB's Database Systems course projects.*

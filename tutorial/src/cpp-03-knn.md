@@ -44,3 +44,13 @@ The first step is to write an optimizer rule to convert sort and limit into a to
 Then, implement the top-n executor.
 
 ## Test Cases
+
+## Bonus Tasks
+
+Now that you have a better view of how BusTub works, you may choose to complete the below bonus tasks to enhance your understanding and challenge yourself.
+
+**Construct vectors from string**
+
+Currently, the query processing layer only supports creating a vector from array keyword and a list of decimal values like `SELECT ARRAY [1.0, 1.0, 1.0]`. You may extend the syntax to support (1) create a vector from integers `SELECT ARRAY [1, 1.0, 1]` and (2) create a vector from string `SELECT '[1.0, 1.0, 1.0]'::VECTOR(3)`.
+
+*Again, please keep your implementation in this section private and do not put them in a public repo because they overlap with the CMU-DB's Database Systems course projects.*

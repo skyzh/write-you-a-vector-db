@@ -6,7 +6,7 @@
   - [Naive K-Nearest Neighbors](./cpp-03-knn.md)
   - [Matching a Vector Index](./cpp-04-optimizer.md)
   - [IVFFlat Index](./cpp-05-ivfflat.md)
-  - [NSW Index](./cpp-06-nsw.md)
+  - [NSW Index](./cpp-06-01-nsw.md)
   - [HNSW Index](./cpp-06-02-hnsw.md)
   - [Working on Large Datasets (WIP)](./cpp-07-large-dataset.md)
 
