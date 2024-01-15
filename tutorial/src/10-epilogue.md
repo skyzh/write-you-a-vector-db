@@ -8,3 +8,5 @@ Adding vector capabilities to a database system is relatively easy. In Professor
 > *--Ottertune's Databases in 2023: A Year in Review*
 
 Personally speaking, vector database is still a new concept to me. I still remember my first involvement with vector databases while interning at Neon in the summer of 2023. One day, Nikita added me to a Slack channel called `#vector`, where I discovered that Konstantin was working on a new vector extension for PostgreSQL called [pgembedding](https://github.com/neondatabase/pg_embedding) incorporating HNSW support. Eventually, this extension got discontinued after pgvector added HNSW support later in 2023. Nevertheless, it was my initial exposure to vector searches and vector databases, and the challenges that developers face when dealing with vector indexes in relational databases are exciting areas for long-term exploration.
+
+At the end of the tutorial, I would like to thank the 15-445 course staff to land my giant pull request https://github.com/cmu-db/bustub/pull/682 that adds vector type to the upstream BusTub repo. Thank you Yuchen, Avery, and Ruijie for reviewing my stuff and supporting my work!
