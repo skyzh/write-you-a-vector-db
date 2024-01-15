@@ -1,6 +1,8 @@
 # Write You a Vector Database
 
-A tutorial on how to add vector capabilities to an existing database system.
+A tutorial on how to add vector capabilities to a relational database system.
+
+You may access the tutorial at [https://skyzh.github.io/write-you-a-vector-db](https://skyzh.github.io/write-you-a-vector-db). 
 
 We plan to release two variants of this tutorial: a C++ version and a Rust version.
 
