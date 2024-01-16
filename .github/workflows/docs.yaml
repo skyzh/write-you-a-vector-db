@@ -23,10 +23,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - name: setup mdbook
-        uses: peaceiris/actions-mdbook@v1
-        with:
-          mdbook-version: 'latest'
+      - name: setup rust toolchain
+        run: rustup show
+      - uses: taiki-e/install-action@mdbook
       - run: mv tutorial/theme/head.hbs._ tutorial/theme/head.hbs
       - run: cd tutorial && mdbook build
       - name: upload dist

@@ -22,6 +22,54 @@ HNSW adds layered structure to the NSW index, therefore making the search proces
 
 ![](./vector-db/06-hnsw-architecture.svg)
 
+## Index Lookup
+
+![](./vector-db/06-hnsw-explore.svg)
+
+The algorithm starts from the upper-most layer. As above, it first searches the nearest neighbor to the search target in layer 2, then use that neighbor as the entry point to search the nearest neighbor in layer 1, and lastly, use the entry point to find the k-nearest (3-nearest) neighbors in layer 0.
+
+**Pseudo Code**
+
+```
+ep = upper-most level entry point
+for go down one level until last level:
+    ep <- layers[level].search(ep=ep, limit=1, search_target)
+return layers[0].search(ep=ep, limit=limit, search_target)
+```
+
+## Insertion
+
+Before inserting, we will need to decide which layer and below levels to insert the vector. From the HNSW paper, this is computed by \\( \text{level} = \lfloor - \ln (\text{unif} (0 \ldots 1)) \times m_L \rfloor \\).
+
+
+For example, we decide to add the vector to level 1 and below.
+
+![](./vector-db/06-hnsw-insert-1.svg)
+
+The algorihm searches the entry point to level 1 by searching the nearest neighbor starting from the upper-most layer. When it reaches level 1 and below, it searches `ef_construction` neighbors as the entry point, and selects the m-nearest neighbors from the `ef_construction` nodes to establish edges.
+
+![](./vector-db/06-hnsw-insert-2.svg)
+
+**Pseudo Code**
+
+```
+ep = upper-most level entry point
+target_level = generate random level based on m_L
+for go down one level until target_level + 1
+    ep <- layers[level].search(ep=ep, limit=1, search_target)
+for go down one level until level 0
+    ep <- layers[level].search(ep=ep, limit=ef_construction, search_target)
+    neighbors <- m-nearest neighbor in ep
+    connect neighbors with search_target
+    purge edges of neighbors if larger than m_max of that layer
+```
+
+You may also refer to the HNSW paper for a more detailed pseudo code.
+
+## Implementation
+
+You have already implemented an NSW index in the previous chapter. Therefore, you may change the HNSW index implementation to have multiple layers of NSW. In your implementation, you do not need to reuse your NSW's insertion implementation as we will need to reuse the entry points from the previous layer in the HNSW insertion process.
+
 ## Testing
 
 At this point, you can run the test cases using SQLLogicTest.

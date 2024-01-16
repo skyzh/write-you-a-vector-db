@@ -116,7 +116,7 @@ And we only keep the k-nearest neighbor connections after inserting the new vect
 
 ## Implementation
 
-You may implement the NSW index in `hnsw_index.cpp` at this point. The starter code implements the HNSW index class as a one-layer index, which is equivalent to the NSW index.
+You may implement the NSW index in `hnsw_index.cpp` at this point. The starter code implements the HNSW index class as a one-layer index, which is equivalent to the NSW index. You will need to use the following parameters in your implementation:
 
 ## Testing
 
