@@ -8,7 +8,7 @@
   - [IVFFlat Index](./cpp-05-ivfflat.md)
   - [NSW Index](./cpp-06-01-nsw.md)
   - [HNSW Index](./cpp-06-02-hnsw.md)
-  - [Working on Large Datasets (WIP)](./cpp-07-large-dataset.md)
+  - [Benchmarking on Large Datasets (WIP)](./cpp-07-large-dataset.md)
 
 - [The Rust Way (over RisingLight) (WIP)](./rust-01-overview.md)
 
