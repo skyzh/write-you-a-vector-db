@@ -9,7 +9,7 @@ INSERT INTO t1 VALUES (ARRAY [0.0, 1.0, 1.0], 0), (ARRAY [1.0, 1.0, 1.0], 1), (A
 0	
 
 <main>:7
-CREATE INDEX t1v1hnsw ON t1 USING hnsw (v1 vector_l2_ops) WITH (m = 3, ef_construction = 2, ef_search = 2);
+CREATE INDEX t1v1hnsw ON t1 USING hnsw (v1 vector_l2_ops) WITH (m = 3, ef_construction = 3, ef_search = 3);
 ----
 Index created with id = 0 with type = VectorHNSW	
 
