@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xl="http://www.w3.org/1999/xlink" xmlns:dc="http://purl.org/dc/elements/1.1/" viewBox="143 234 537 331" width="537" height="331">
+  <defs>
+    <marker orient="auto" overflow="visible" markerUnits="strokeWidth" id="FilledArrow_Marker" stroke-linejoin="miter" stroke-miterlimit="10" viewBox="-1 -4 10 8" markerWidth="10" markerHeight="8" color="black">
+      <g>
+        <path d="M 8 0 L 0 -3 L 0 3 Z" fill="currentColor" stroke="currentColor" stroke-width="1"/>
+      </g>
+    </marker>
+  </defs>
+  <g id="05-nsw-explore-3" stroke="none" stroke-opacity="1" fill-opacity="1" fill="none" stroke-dasharray="none">
+    <title>05-nsw-explore-3</title>
+    <rect fill="white" x="143" y="234" width="537" height="331"/>
+    <g id="05-nsw-explore-3_Layer_1">
+      <title>Layer 1</title>
+      <g id="Graphic_2">
+        <circle cx="259" cy="324.304" r="7.50001198426422" fill="#00bfc0"/>
+      </g>
+      <g id="Graphic_3">
+        <circle cx="275.5" cy="384" r="7.50001198426422" fill="#ccc"/>
+      </g>
+      <g id="Graphic_4">
+        <circle cx="334" cy="330" r="7.50001198426421" fill="#ccc"/>
+      </g>
+      <g id="Graphic_5">
+        <circle cx="455" cy="276" r="7.50001198426422" fill="#ccc"/>
+      </g>
+      <g id="Graphic_6">
+        <circle cx="473" cy="421.5" r="7.50001198426421" fill="#ccc"/>
+      </g>
+      <g id="Graphic_7">
+        <circle cx="564.5" cy="375.5" r="7.50001198426423" fill="#00bfc0"/>
+      </g>
+      <g id="Graphic_8">
+        <circle cx="626" cy="300" r="7.50001198426425" fill="#ccc"/>
+      </g>
+      <g id="Graphic_9">
+        <circle cx="383.5" cy="242" r="7.50001198426422" fill="#ccc"/>
+      </g>
+      <g id="Line_10">
+        <line x1="265.2577" y1="320.1672" x2="377.2423" y2="246.13682" stroke="#7f8080" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_11">
+        <line x1="260.99843" y1="331.5342" x2="273.50157" y2="376.7698" stroke="#7f8080" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_12">
+        <line x1="266.4786" y1="324.87198" x2="326.5214" y2="329.43203" stroke="#7f8080" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_13">
+        <line x1="337.6779" y1="323.46152" x2="379.8221" y2="248.53848" stroke="#7f8080" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_14">
+        <line x1="328.4889" y1="335.08717" x2="281.0111" y2="378.91283" stroke="#7f8080" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_15">
+        <line x1="340.85076" y1="326.94264" x2="448.14924" y2="279.05736" stroke="#7f8080" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_16">
+        <line x1="448.22495" y1="272.7783" x2="390.27505" y2="245.2217" stroke="#7f8080" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_17">
+        <line x1="455.92086" y1="283.4436" x2="472.07914" y2="414.0564" stroke="#7f8080" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_18">
+        <line x1="460.5508" y1="281.0439" x2="558.9492" y2="370.4561" stroke="#7f8080" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_19">
+        <line x1="569.23705" y1="369.6846" x2="621.26295" y2="305.8154" stroke="#7f8080" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_20">
+        <line x1="462.42763" y1="277.04247" x2="618.5724" y2="298.95753" stroke="#7f8080" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_21">
+        <line x1="620.1261" y1="304.66454" x2="478.87387" y2="416.83546" stroke="#7f8080" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_22">
+        <line x1="479.7027" y1="418.13035" x2="557.7973" y2="378.86965" stroke="#7f8080" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_23">
+        <circle cx="376" cy="462.196" r="7.50001198426422" fill="#ccc"/>
+      </g>
+      <g id="Line_24">
+        <line x1="370.0801" y1="457.5899" x2="281.41992" y2="388.6061" stroke="#7f8080" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Line_25">
+        <line x1="373.72856" y1="455.0466" x2="336.27144" y2="337.1494" stroke="#7f8080" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_26">
+        <text transform="translate(586 367.304)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" fill="black" x="0" y="13">Entry Point #1</tspan>
+        </text>
+      </g>
+      <g id="Graphic_27">
+        <circle cx="409" cy="450.196" r="7.50001198426422" fill="#3a8eed"/>
+      </g>
+      <g id="Graphic_28">
+        <text transform="translate(425.852 442)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" fill="black" x="0" y="13">Search Vector</tspan>
+        </text>
+      </g>
+      <g id="Graphic_29">
+        <text transform="translate(148.5 316.108)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" fill="black" x="0" y="13">Entry Point #2</tspan>
+        </text>
+      </g>
+      <g id="Graphic_35">
+        <circle cx="304" cy="499" r="7.50001198426421" fill="black"/>
+      </g>
+      <g id="Graphic_34">
+        <text transform="translate(325.5 490.804)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" fill="black" x="0" y="13">Visited</tspan>
+        </text>
+      </g>
+      <g id="Graphic_33">
+        <circle cx="304" cy="525.392" r="7.50001198426423" fill="#00bfc0"/>
+      </g>
+      <g id="Graphic_32">
+        <text transform="translate(325.5 517.196)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" fill="black" x="0" y="13">In Candidate Queue + Visited</tspan>
+        </text>
+      </g>
+      <g id="Graphic_31">
+        <circle cx="304" cy="551.784" r="7.50001198426425" fill="#f26077"/>
+      </g>
+      <g id="Graphic_30">
+        <text transform="translate(325.5 543.588)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" fill="black" x="0" y="13">Processing</tspan>
+        </text>
+      </g>
+      <g id="Line_36">
+        <line x1="443.482" y1="368.01452" x2="540.631" y2="375.7175" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+      <g id="Graphic_37">
+        <text transform="translate(390 357.5)" fill="black">
+          <tspan font-family="Helvetica Neue" font-size="14" fill="black" x="0" y="13">Nearest</tspan>
+        </text>
+      </g>
+      <g id="Line_38">
+        <line x1="385" y1="359.1584" x2="277.66147" y2="335.16008" marker-end="url(#FilledArrow_Marker)" stroke="black" stroke-linecap="round" stroke-linejoin="round" stroke-width="1"/>
+      </g>
+    </g>
+  </g>
+</svg>
