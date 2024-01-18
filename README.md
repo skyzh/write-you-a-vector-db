@@ -4,7 +4,9 @@
 
 A tutorial on how to add vector capabilities to a relational database system.
 
-You may access the tutorial at [https://skyzh.github.io/write-you-a-vector-db](https://skyzh.github.io/write-you-a-vector-db). 
+Access the tutorial at [https://skyzh.github.io/write-you-a-vector-db](https://skyzh.github.io/write-you-a-vector-db).
+
+Join the write-you-a-vector-db community: [![Join skyzh's Discord Server](https://dcbadge.vercel.app/api/server/ZgXzxpua3H)](https://skyzh.dev/join/discord)
 
 We plan to release two variants of this tutorial: a C++ version and a Rust version.
 
