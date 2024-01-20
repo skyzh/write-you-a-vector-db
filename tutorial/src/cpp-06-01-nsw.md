@@ -139,4 +139,18 @@ The test cases do not do any correctness checks and you will need to compare wit
 
 </details>
 
+## Bonus Tasks
+
+**Implement Better Neighbor-Selection Algorithm**
+
+The paper [Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs](https://arxiv.org/abs/1603.09320) describes two ways of selection a neighbor: simply based on distance (as in this chapter), or a better way with heuristics.
+
+**Persist Data to Disk**
+
+You may implement the buffer pool manager and think of ways to persist the index data to the disk.
+
+**Deletion and Updates**
+
+The current implementation (and vector index interfaces) only supports insertions. You may add new interfaces to the vector index and implement updates and deletions.
+
 {{#include copyright.md}}
