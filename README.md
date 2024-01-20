@@ -17,3 +17,7 @@ In the to-be-expected Rust version, you will implement vector capabilities over 
 You may join skyzh's Discord server and study with the write-you-a-vector-db community.
 
 [![Join skyzh's Discord Server](https://dcbadge.vercel.app/api/server/ZgXzxpua3H)](https://skyzh.dev/join/discord)
+
+## License
+
+The BusTub vector-db starter code and solution are under MIT license. Please note that there are some specific files that overlap with the CMU-DB's Database Systems course and we cannot make them public (and you should not either). The author reserves the full copyright of the tutorial (markdown files and figures).
