@@ -62,3 +62,5 @@ As of writing (at the beginning of 2024), Chi obtained his master's degree in Co
 Disclaimer: This tutorial is not affiliated with Carnegie Mellon University or CMU-DB Group. The C++ version of this tutorial is NOT a part/extension of CMU's 15-445/645 Database Systems course.
 
 </div>
+
+{{#include copyright.md}}

@@ -52,3 +52,5 @@ The `bustub-vectordb` repository implements some stub code for you so that you c
 **Vector Indexes**. The codebase adds support for vector indexes besides B+ tree and hash table indexes.
 
 **Vector Executors**. With the vector index conversion optimizer rule and the vector index scan executor, users will be able to scan the vector index when running some specific k-nearest neighbor SQLs.
+
+{{#include copyright.md}}

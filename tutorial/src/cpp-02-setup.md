@@ -134,3 +134,5 @@ You may implement the delete and update executor to update the data in the table
 It is possible that a user might insert a vector of dimension 3 or 5 to a `VECTOR(4)` column. In insertion executor, you may do some validations to ensure the received tuples are of the correct schema.
 
 *Again, please keep your implementation in this section private and do not put them in a public repo, especially if you want to approach the bonus tasks, because they overlap with the CMU-DB's Database Systems course projects.*
+
+{{#include copyright.md}}

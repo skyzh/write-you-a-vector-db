@@ -131,3 +131,5 @@ If the later inserted data have a different distribution compared with the data 
 **Deletion and Updates**
 
 The current implementation (and vector index interfaces) only supports insertions. You may add new interfaces to the vector index and implement updates and deletions.
+
+{{#include copyright.md}}

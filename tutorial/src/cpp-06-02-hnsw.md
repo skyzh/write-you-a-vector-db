@@ -90,3 +90,5 @@ The test cases do not do any correctness checks and you will need to compare wit
 ```
 
 </details>
+
+{{#include copyright.md}}

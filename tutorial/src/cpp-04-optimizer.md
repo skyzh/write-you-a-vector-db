@@ -120,3 +120,5 @@ TopN { n=2, order_bys=[("Default", "#0.1")]}
 ```
 
 This query saves one extra computation of the distance compared with the one in the sqllogictest. You may modify your optimizer rule to convert this query into a vector index scan.
+
+{{#include copyright.md}}
