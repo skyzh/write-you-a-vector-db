@@ -44,7 +44,7 @@ To complete the Rust version of this tutorial, you will need to know Rust and fe
 
 You may join skyzh's Discord server and study with the write-you-a-vector-db community.
 
-[![Join skyzh's Discord Server](https://dcbadge.vercel.app/api/server/ZgXzxpua3H)](https://skyzh.dev/join/discord)
+[![Join skyzh's Discord Server](discord-badge.svg)](https://skyzh.dev/join/discord)
 
 ## About the Author
 

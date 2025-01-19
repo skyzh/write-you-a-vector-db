@@ -6,7 +6,7 @@ At this point, you should have learned how to add vector capabilities to an exis
 
 To help us continously improve the course and enhance your (or other students') learning experience, we sincerely hope that you can tell us something about your learning path. Your feedback is important for us!
 
-[![Join skyzh's Discord Server](https://dcbadge.vercel.app/api/server/ZgXzxpua3H)](https://skyzh.dev/join/discord)
+[![Join skyzh's Discord Server](discord-badge.svg)](https://skyzh.dev/join/discord)
 
 ## Vector Databases or Databases with Vector Extension?
 
