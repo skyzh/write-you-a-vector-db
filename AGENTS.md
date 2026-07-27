@@ -32,7 +32,7 @@ requirement.
   and recall measurement. It must not depend on Arrow or DataFusion.
 - `rust/vector-datafusion` owns Arrow conversion, the table provider, SQL
   pattern recognition, and execution-plan metadata.
-- `tutorial/src` is the mdBook source. `tutorial/book` is generated and must not
+- `course/src` is the mdBook source. `course/book` is generated and must not
   be edited.
 - The `bustub-vectordb-*` submodules are the unmaintained legacy C++ course.
 - Do not weaken fallback tests: unsupported SQL shapes must retain DataFusion's
@@ -47,7 +47,7 @@ cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo run -p vector-datafusion --example sql
-mdbook build tutorial
+mdbook build course
 ```
 
 The release-mode recall example is informational rather than a correctness

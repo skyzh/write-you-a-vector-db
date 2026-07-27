@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="628" viewBox="0 0 1200 628" role="img" aria-labelledby="title description">
+  <title id="title">Write You a Vector Database</title>
+  <desc id="description">Build vector search in Rust, measure recall, and use the indexes from SQL through Apache DataFusion.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#fffdf8"/>
+      <stop offset="1" stop-color="#f0f5f4"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d7532f"/>
+      <stop offset="1" stop-color="#8f2d56"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
+      <feDropShadow dx="0" dy="12" stdDeviation="18" flood-color="#25322f" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <rect width="1200" height="628" fill="url(#background)"/>
+  <circle cx="1110" cy="80" r="170" fill="#d7532f" opacity="0.06"/>
+  <circle cx="648" cy="610" r="230" fill="#347a70" opacity="0.05"/>
+
+  <g font-family="Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif">
+    <rect x="68" y="54" width="350" height="38" rx="19" fill="#173b36"/>
+    <text x="243" y="79" text-anchor="middle" fill="#ffffff" font-size="15" font-weight="700" letter-spacing="1.7">A HANDS-ON RUST SYSTEMS COURSE</text>
+
+    <text x="68" y="176" fill="#17201e" font-size="64" font-weight="760" letter-spacing="-2.2">Build vector search.</text>
+    <text x="68" y="249" fill="#17201e" font-size="64" font-weight="760" letter-spacing="-2.2">Use it from SQL.</text>
+
+    <rect x="69" y="290" width="76" height="6" rx="3" fill="url(#accent)"/>
+    <text x="68" y="347" fill="#43504d" font-size="23" font-weight="600">Exact k-NN · IVFFlat · NSW · HNSW</text>
+    <text x="68" y="386" fill="#5d6966" font-size="21">Recall-first evaluation · Apache DataFusion</text>
+
+    <g filter="url(#shadow)">
+      <rect x="716" y="67" width="416" height="476" rx="24" fill="#ffffff" stroke="#dbe2df"/>
+    </g>
+    <circle cx="750" cy="101" r="5" fill="#d7532f"/>
+    <circle cx="768" cy="101" r="5" fill="#e5b443"/>
+    <circle cx="786" cy="101" r="5" fill="#347a70"/>
+    <text x="1100" y="107" text-anchor="end" fill="#81908c" font-size="13" font-weight="700" letter-spacing="1.2">SQL</text>
+
+    <g font-family="SFMono-Regular, Consolas, Liberation Mono, monospace" font-size="19">
+      <text x="746" y="157" fill="#8f2d56">SELECT</text>
+      <text x="824" y="157" fill="#25322f">id, payload</text>
+      <text x="746" y="190" fill="#8f2d56">FROM</text>
+      <text x="806" y="190" fill="#25322f">points</text>
+      <text x="746" y="223" fill="#8f2d56">ORDER BY</text>
+      <text x="746" y="256" fill="#25322f">cosine_distance(...)</text>
+      <text x="746" y="289" fill="#8f2d56">LIMIT</text>
+      <text x="817" y="289" fill="#25322f">10;</text>
+    </g>
+
+    <path d="M778 383 L847 336 L923 375 L1004 326 L1072 385" fill="none" stroke="#9db0ab" stroke-width="3"/>
+    <path d="M778 383 L860 429 L923 375 L1008 436 L1072 385" fill="none" stroke="#9db0ab" stroke-width="3"/>
+    <path d="M847 336 L860 429 M1004 326 L1008 436" fill="none" stroke="#c3cfcc" stroke-width="2"/>
+    <g fill="#ffffff" stroke="#347a70" stroke-width="4">
+      <circle cx="778" cy="383" r="11"/>
+      <circle cx="847" cy="336" r="11"/>
+      <circle cx="860" cy="429" r="11"/>
+      <circle cx="923" cy="375" r="13" fill="#347a70"/>
+      <circle cx="1004" cy="326" r="11"/>
+      <circle cx="1008" cy="436" r="11"/>
+      <circle cx="1072" cy="385" r="11"/>
+    </g>
+
+    <rect x="773" y="474" width="302" height="43" rx="21.5" fill="#173b36"/>
+    <text x="924" y="502" text-anchor="middle" fill="#ffffff" font-family="SFMono-Regular, Consolas, Liberation Mono, monospace" font-size="16" font-weight="700">VectorIndexScanExec</text>
+
+    <text x="68" y="572" fill="#17201e" font-size="20" font-weight="800" letter-spacing="1.1">WRITE YOU A VECTOR DATABASE</text>
+    <text x="1132" y="572" text-anchor="end" fill="#687571" font-size="18" font-weight="650">github.com/skyzh</text>
+  </g>
+</svg>

@@ -1,6 +1,6 @@
 # Write You a Vector Database
 
-[Preface](./00-introduction.md)
+[Build Vector Search in Rust](./00-introduction.md)
 
 - [🚧 The Rust Course](./rust-01-overview.md)
   - [Exact Search and the SQL Baseline](./rust-02-exact.md)

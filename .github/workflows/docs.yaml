@@ -26,12 +26,11 @@ jobs:
       - name: setup rust toolchain
         run: rustup show
       - uses: taiki-e/install-action@mdbook
-      - run: mv tutorial/theme/head.hbs._ tutorial/theme/head.hbs
-      - run: cd tutorial && mdbook build
+      - run: cd course && mdbook build
       - name: upload dist
         uses: actions/upload-pages-artifact@v3
         with:
-          path: tutorial/book/
+          path: course/book/
   deploy:
     runs-on: ubuntu-latest
     # Add a dependency to the build job

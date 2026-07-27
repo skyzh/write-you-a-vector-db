@@ -1,8 +1,8 @@
 # Where to Go Next
 
-A one-week course can make the central tradeoffs visible, but it cannot turn a teaching system into a production vector
-database. The proposed Rust course deliberately stops after an immutable in-memory collection with exact, IVFFlat, HNSW,
-and SQL query support.
+A short course can make the central tradeoffs visible, but it cannot turn a teaching system into a production vector
+database. The Rust course stops after an immutable in-memory collection with exact, IVFFlat, NSW, HNSW, and SQL query
+support.
 
 Once that system works, several extensions make good independent projects.
 

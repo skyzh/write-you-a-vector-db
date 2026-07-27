@@ -4,8 +4,10 @@ language = "en"
 multilingual = false
 src = "src"
 title = "Write You a Vector Database"
+description = "Build vector search in Rust: exact k-NN, IVFFlat, NSW, HNSW, recall benchmarks, and SQL integration with Apache DataFusion."
 
 [output.html]
 mathjax-support = true
 additional-css = ["custom.css"]
 git-repository-url = "https://github.com/skyzh/write-you-a-vector-db"
+site-url = "/write-you-a-vector-db/"

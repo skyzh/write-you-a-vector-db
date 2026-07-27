@@ -1,10 +1,19 @@
-# Preface
+# Build Vector Search in Rust—and Use It from SQL
 
-![Write You a Vector Database](vectordb-banner-vertical.png)
+![Write You a Vector Database — Build vector search in Rust, then use it from SQL](vectordb-social.png)
 
-Write You a Vector Database is a short hands-on course for systems and backend engineers. You will build a small vector
-search engine in Rust, first with exact nearest-neighbor search and then with approximate indexes. The final system answers
-SQL top-k queries through DataFusion and makes the tradeoff between recall, latency, and memory visible.
+Write You a Vector Database is a short, hands-on systems course. You will build exact k-nearest-neighbor search, IVFFlat,
+NSW, and HNSW from scratch in Rust; measure every approximate index against an exact recall oracle; then use the same
+indexes from SQL through Apache DataFusion.
+
+The course is for systems and backend engineers who want to understand vector database internals instead of calling an ANN
+library as a black box. One cumulative implementation connects the algorithms to the database boundary:
+
+```text
+exact search → recall and latency → IVFFlat → NSW → HNSW → SQL with DataFusion
+```
+
+**[Start with the Rust course overview](./rust-01-overview.md)** to see the complete learning path.
 
 <div class="warning">
 
@@ -16,7 +25,7 @@ preview. Learner starter/completed refs and recorded human review remain release
 The original 2024 C++ course is preserved as an [unmaintained legacy edition](./cpp-01-overview.md). It is no longer the
 path we recommend to new learners.
 
-## Why Build a Vector Database?
+## Why Build Vector Search from Scratch?
 
 Embeddings turn text, images, and other data into fixed-dimensional vectors. A vector database stores those vectors and
 retrieves the items closest to a query vector under a distance metric. Exact search compares the query with every stored
