@@ -1,7 +1,6 @@
 [book]
 authors = ["Alex Chi Z"]
 language = "en"
-multilingual = false
 src = "src"
 title = "Write You a Vector Database"
 description = "Build vector search in Rust: exact k-NN, IVFFlat, NSW, HNSW, recall benchmarks, and SQL integration with Apache DataFusion."
