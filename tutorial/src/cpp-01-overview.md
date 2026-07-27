@@ -1,5 +1,13 @@
 # The C++ Way (over BusTub)
 
+<div class="warning">
+
+**Legacy edition:** This is the unmaintained 2024 version of the course. The starter and solution repositories are
+preserved for existing readers, but new development is focused on the [Rust course](./rust-01-overview.md). We do not plan
+to update this edition for newer BusTub versions or complete its unfinished large-dataset chapter.
+
+</div>
+
 In this section, we will implement a vector database extension over the BusTub educational system.
 
 ## Overview
