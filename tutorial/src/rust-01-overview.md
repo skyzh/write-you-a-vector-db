@@ -3,53 +3,22 @@
 > 🚧 **Course status:** The cumulative reference implementation, focused tests, and executable chapters are available as
 > a preview. Learner starter/completed refs and recorded human review remain release requirements.
 
-The Rust course should be library-first and SQL-first at the boundary. Students will build vector indexes in a standalone
-crate, then integrate the crate with DataFusion as the final required chapter. The course should not be HTTP-first, and it
-should not be implemented as a large fork of DataFusion.
+The Rust course builds vector indexes in a standalone crate, then connects them to SQL through DataFusion in the final
+required chapter. The same collection and search interfaces remain independently testable without Arrow or a query
+engine. At the boundary, a small adapter makes the relationship between SQL semantics and index execution visible.
 
-This direction preserves the original idea behind Write You a Vector Database: vector search fits naturally into a SQL
-system. The difference from the legacy C++ edition is that the Rust core remains independently testable. The final adapter
-demonstrates that SQL integration is a small planning and execution boundary rather than a reason to entangle the index
-with a database codebase.
+## SQL Integration Boundary
 
-## Choosing the Foundation
-
-We considered three foundations.
-
-| Foundation | What it gives us | Main cost | Course fit |
-| --- | --- | --- | --- |
-| RisingLight | A small educational SQL database and partially implemented vector plumbing | Students must cross its type, array, storage, catalog, optimizer, and executor layers before focusing on ANN | Best if the course is about modifying a database fork |
-| DataFusion adapter | Maintained SQL parsing, planning, Arrow execution, vector distance functions, and public extension APIs | The adapter must preserve SQL semantics and pin a compatible release | Best way to show that an independent vector engine integrates cleanly with SQL |
-| HTTP adapter | A familiar product API with little query-planning work | A day of JSON, routing, validation, and server lifecycle contributes little to the SQL integration goal | Useful follow-up, not the required path |
-
-### Why Not Build Directly in RisingLight?
-
-RisingLight remains a valuable educational database. Work completed in 2025 added a vector type, distance expressions,
-fixed-width vector storage, `CREATE INDEX` binding, and an optimizer rule that recognizes vector top-k queries. The
-[tracking issue](https://github.com/risinglightdb/risinglight/issues/864), however, still leaves vector indexes and the
-external integration unfinished.
-
-A RisingLight course would teach how one feature crosses every layer of a relational database. That is a good course, but
-it is not a short one if students must also implement IVFFlat and HNSW carefully. Pinning RisingLight would also leave the
-course responsible for maintaining a database fork.
-
-The RisingLight work should remain a design reference and a possible follow-up chapter. It should not be the required
-student workspace for this short course.
-
-### Why a DataFusion Adapter?
-
-[DataFusion](https://datafusion.apache.org/) is an extensible SQL query engine rather than a durable database. That is an
-advantage here: the course can provide the storage and indexes while DataFusion provides the SQL surface. DataFusion
-already supports [`array_distance`, `cosine_distance`, and inner-product
+[DataFusion](https://datafusion.apache.org/) provides SQL parsing, planning, Arrow execution, and the extension points used
+by the course. It already supports [`array_distance`, `cosine_distance`, and inner-product
 functions](https://datafusion.apache.org/user-guide/sql/scalar_functions.html#array-functions). A custom
 [`TableProvider`](https://datafusion.apache.org/library-user-guide/custom-table-providers.html) exposes the collection. The
 preview pins DataFusion 54.1.0 and uses its public `ExecutionPlan::try_pushdown_sort` and `with_fetch` extension points: the
 built-in physical optimizer offers the scan a requested ordering, removes the generic sort after the scan accepts it, and
 passes the literal limit to the index.
 
-DataFusion also recommends extension APIs instead of maintaining a major fork because its internals evolve quickly. The
-course should therefore pin one release, keep all DataFusion-specific code in an adapter crate, and avoid asking students
-to edit DataFusion itself.
+All DataFusion-specific code lives in the adapter crate. Students use the pinned public APIs and do not edit DataFusion
+itself.
 
 The course begins and ends with the same query:
 
@@ -64,7 +33,7 @@ In the opening chapter, DataFusion evaluates the distance for every row and perf
 chapter, the adapter recognizes the compatible metric, constant query vector, ordering direction, and literal limit, then
 produces the course-defined `VectorIndexScanExec`. `EXPLAIN` makes the change visible.
 
-Queries outside the supported pattern must retain the exact plan. In particular, the short course will not claim that
+Queries outside the supported pattern retain the exact plan. In particular, the short course does not claim that
 arbitrary `WHERE` predicates can be applied after an ANN top-k without changing the result. Refusing an unsafe rewrite is
 part of demonstrating that the integration is intuitive rather than magical.
 
@@ -74,7 +43,7 @@ the filter first returns tenant A's point. The required adapter must keep the ex
 
 ## Architecture
 
-The dependency direction should remain:
+The dependency direction is:
 
 ```text
 DataFusion SQL adapter --> collection API --> exact / IVF / graph index
@@ -91,7 +60,7 @@ enough for students to explain line by line.
 
 ## System Contracts
 
-The starter code should establish these contracts before students implement an ANN index.
+The course architecture establishes these contracts before students implement an ANN index.
 
 1. A collection has one fixed dimension and one distance metric. A query or bulk-loaded point with another dimension is
    rejected.
@@ -103,7 +72,7 @@ The starter code should establish these contracts before students implement an A
 6. SQL uses an ANN scan only when the adapter can prove that the query matches the index contract. All other queries use
    DataFusion's exact plan.
 
-These rules should be visible in public types, tests, and `EXPLAIN` output rather than scattered across chapter prose.
+These rules are visible in public types, tests, and `EXPLAIN` output rather than scattered across chapter prose.
 
 ## Short Course Structure
 
@@ -142,7 +111,7 @@ Before finishing the course, students should be able to explain:
 
 ## What We Intentionally Leave Out
 
-A short course needs a hard boundary. The required implementation will not include:
+A short course needs a hard boundary. The required implementation does not include:
 
 - online upserts and deletes after an index is built;
 - persistent point or index formats, write-ahead logging, crash recovery, background rebuilds, or compaction;
@@ -152,43 +121,6 @@ A short course needs a hard boundary. The required implementation will not inclu
 - an HTTP or production-compatible database protocol.
 
 These are follow-up projects, not hidden requirements. The final collection is useful for bulk-load-and-query workloads and
-for demonstrating SQL integration, but the book will not call it production-ready.
-
-## Chapter Standard
-
-The chapters should follow the conventions established by Mini-LSM and tiny-llm without copying their schedule.
-
-1. **Capability first.** State what works at the end of the chapter and show the before/after system boundary.
-2. **Invariants before code.** Name metric, ordering, ownership, representation, and approximation rules before listing functions
-   to fill in.
-3. **Predict before coding.** Use one small heap, posting list, graph, or query plan that students can trace by hand.
-4. **Focused tasks.** Each task names the files, required behavior, and smallest test command. Bonus work cannot be required
-   by a later chapter.
-5. **One runnable ladder.** Each chapter's checkpoint is the starting point for the next. Benchmark selectors preserve
-   earlier checkpoints instead of silently changing them.
-6. **Chapter checkpoint.** Combine supplied tests with at least one condition the suite does not prove, such as recall on an
-   adversarial distribution or rejection of an unsafe SQL rewrite.
-7. **Test your understanding.** Ask for concrete counterexamples, traces, plans, or measurements. Performance questions must
-   state the workload assumptions.
-8. **Readings are support, not substitutes.** Link primary papers and official documentation where concepts are introduced,
-   while keeping the local terminology and contracts consistent.
-
-## Release Gate
-
-The Rust course should not be announced as available until all required chapters have:
-
-- starter code with intentional TODOs and no hidden dependency on bonus work;
-- a complete reference implementation;
-- focused and cumulative tests;
-- a pinned Rust toolchain and DataFusion release, plus an integration spike that demonstrates both the exact and custom
-  `EXPLAIN` plans used by the book;
-- deterministic CI fixtures that run on Linux and macOS;
-- a benchmark dataset with documented provenance, license, size, checksum, download steps, expected runtime, and a smaller
-  checked-in substitute for correctness tests;
-- a documented command that builds, tests, benchmarks, and runs the SQL checkpoint; and
-- a rendered chapter reviewed against the actual student diff.
-
-The summary should not contain empty implementation pages or release-date promises. Course status is a capability
-statement, not a calendar estimate.
+for demonstrating SQL integration, but it is not a production database.
 
 {{#include copyright.md}}

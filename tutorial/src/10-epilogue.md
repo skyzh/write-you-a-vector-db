@@ -45,8 +45,8 @@ performance. A vector index is useful only when its speedup is attached to a res
 
 ## Feedback
 
-The Rust course is still a design proposal. Feedback about the scope, ordering, datasets, or architecture is especially
-valuable before the starter checkpoints are created.
+The Rust course is available as an executable preview. Feedback about the scope, ordering, datasets, and learner
+checkpoints is welcome before the starter/completed refs are published.
 
 [![Join skyzh's Discord Server](discord-badge.svg)](https://skyzh.dev/join/discord)
 

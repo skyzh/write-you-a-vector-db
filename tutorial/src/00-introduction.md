@@ -2,15 +2,14 @@
 
 ![Write You a Vector Database](vectordb-banner-vertical.png)
 
-Write You a Vector Database is a one-week hands-on course for systems and backend engineers. You will build a small vector
-search engine in Rust, first with exact nearest-neighbor search and then with approximate indexes. The final system will
-answer SQL top-k queries through DataFusion and make the tradeoff between recall, latency, and memory visible.
+Write You a Vector Database is a short hands-on course for systems and backend engineers. You will build a small vector
+search engine in Rust, first with exact nearest-neighbor search and then with approximate indexes. The final system answers
+SQL top-k queries through DataFusion and makes the tradeoff between recall, latency, and memory visible.
 
 <div class="warning">
 
-**Course status:** This book currently describes the proposed Rust course and its learning path. The new starter code,
-reference implementation, tests, and implementation chapters do not exist yet. Do not begin the course expecting runnable
-Rust assignments.
+**Course status:** The cumulative reference implementation, focused tests, and executable chapters are available as a
+preview. Learner starter/completed refs and recorded human review remain release requirements.
 
 </div>
 
@@ -30,14 +29,14 @@ the wrong workload. The implementation is small enough to understand, but the en
 
 ## What You Will Build
 
-The proposed course has one cumulative Rust implementation:
+The course has one cumulative Rust implementation:
 
 1. An exact-search collection with stable point IDs and a bounded top-k operator.
 2. A benchmark and recall harness that treats exact search as the correctness oracle.
 3. IVFFlat, NSW, and HNSW indexes behind the same search interface.
 4. A thin DataFusion adapter that turns a safe SQL top-k pattern into a vector-index scan.
 
-The core will be an ordinary Rust library. DataFusion supplies SQL parsing, planning, Arrow arrays, and execution, but the
+The core is an ordinary Rust library. DataFusion supplies SQL parsing, planning, Arrow arrays, and execution, but the
 collection and index remain independent of it. This separation makes the integration small enough to understand and shows
 which responsibilities belong to the SQL engine and which belong to the vector index.
 
@@ -54,8 +53,8 @@ After completing the course, you should be able to:
 
 ## What This Course Will Not Cover
 
-The required path will not implement embedding models, persistent index files, online updates or deletes after an index is
-built, crash recovery, filtered ANN search, distributed execution, GPU kernels, or an HTTP service. It will also avoid
+The required path does not implement embedding models, persistent index files, online updates or deletes after an index is
+built, crash recovery, filtered ANN search, distributed execution, GPU kernels, or an HTTP service. It also avoids
 calling an existing ANN library for the algorithms students are meant to learn.
 
 Those boundaries keep the course focused on vector search. They also make every required component small enough to test,
@@ -71,17 +70,16 @@ small subset of DataFusion's extension interface used by the final chapter.
 
 ## How to Use This Book
 
-The implementation is the laboratory. Each chapter will begin with a capability, a small set of invariants, and a
-prediction exercise. It will end with focused tests, a chapter checkpoint, and questions that require evidence from the
+The implementation is the laboratory. Each chapter begins with a capability, a small set of invariants, and a prediction
+exercise. It ends with focused tests, a chapter checkpoint, and questions that require evidence from the
 implementation or benchmark rather than recall from the prose.
 
-Every chapter will start from the runnable checkpoint produced by the previous chapter. New algorithms will first be
-compared with an exact oracle and then integrated behind the existing collection API. The same SQL query shown in the
-opening chapter will run through the ANN index in the final chapter. A later chapter will never become an undeclared
+Every chapter starts from the runnable checkpoint produced by the previous chapter. New algorithms are first compared with
+an exact oracle and then integrated behind the existing collection API. The same SQL query shown in the opening chapter
+runs through the ANN index in the final chapter. A later chapter never becomes an undeclared
 prerequisite for an earlier one.
 
-The book will publish chapters only when the matching starter code, reference checkpoint, and tests exist. Until
-then, the [Rust course overview](./rust-01-overview.md) is a design proposal rather than an assignment specification.
+The [Rust course overview](./rust-01-overview.md) shows the complete learning path and the current preview boundary.
 
 ## Community
 
