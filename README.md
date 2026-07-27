@@ -2,11 +2,19 @@
 
 # Write You a Vector Database
 
-Write You a Vector Database is being redesigned as a one-week, Rust-first hands-on course. The new course will build a
-small vector search engine as a Rust library and integrate it with SQL through a thin DataFusion adapter.
+Write You a Vector Database is being redesigned as a short, Rust-first hands-on course. The new course builds a small
+vector search engine as a Rust library and integrates it with SQL through a thin DataFusion adapter.
 
-The redesigned course is not runnable yet. The book currently contains the proposed architecture and one-week learning
-path so that the scope can be reviewed before a new starter repository and reference checkpoints are created.
+The executable reference preview now includes deterministic exact search, a recall harness, IVFFlat, NSW, HNSW, and a
+DataFusion 54.1.0 table provider that pushes compatible vector top-k queries into the selected index. Learner starter and
+completed checkpoint refs have not been published, so the Rust course is still marked as a preview rather than ready.
+
+Run the implementation with:
+
+```shell
+cargo test --workspace
+cargo run -p vector-datafusion --example sql
+```
 
 Read the course at [https://skyzh.github.io/write-you-a-vector-db](https://skyzh.github.io/write-you-a-vector-db).
 

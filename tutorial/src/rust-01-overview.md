@@ -1,7 +1,7 @@
 # 🚧 The Rust Course
 
-> 🚧 **Course status:** This is the proposed architecture and one-week curriculum. Chapters will be added only with
-> matching starter code, reference checkpoints, and tests.
+> 🚧 **Course status:** The cumulative reference implementation, focused tests, and executable chapters are available as
+> a preview. Learner starter/completed refs and recorded human review remain release requirements.
 
 The Rust course should be library-first and SQL-first at the boundary. Students will build vector indexes in a standalone
 crate, then integrate the crate with DataFusion as the final required chapter. The course should not be HTTP-first, and it
@@ -34,7 +34,7 @@ it is not a short one if students must also implement IVFFlat and HNSW carefully
 course responsible for maintaining a database fork.
 
 The RisingLight work should remain a design reference and a possible follow-up chapter. It should not be the required
-student workspace for this one-week course.
+student workspace for this short course.
 
 ### Why a DataFusion Adapter?
 
@@ -42,8 +42,10 @@ student workspace for this one-week course.
 advantage here: the course can provide the storage and indexes while DataFusion provides the SQL surface. DataFusion
 already supports [`array_distance`, `cosine_distance`, and inner-product
 functions](https://datafusion.apache.org/user-guide/sql/scalar_functions.html#array-functions). A custom
-[`TableProvider`](https://datafusion.apache.org/library-user-guide/custom-table-providers.html) can expose the collection,
-and DataFusion's public extension points can lower a recognized top-k pattern to a custom execution plan.
+[`TableProvider`](https://datafusion.apache.org/library-user-guide/custom-table-providers.html) exposes the collection. The
+preview pins DataFusion 54.1.0 and uses its public `ExecutionPlan::try_pushdown_sort` and `with_fetch` extension points: the
+built-in physical optimizer offers the scan a requested ordering, removes the generic sort after the scan accepts it, and
+passes the literal limit to the index.
 
 DataFusion also recommends extension APIs instead of maintaining a major fork because its internals evolve quickly. The
 course should therefore pin one release, keep all DataFusion-specific code in an adapter crate, and avoid asking students
@@ -59,10 +61,10 @@ LIMIT 10;
 ```
 
 In the opening chapter, DataFusion evaluates the distance for every row and performs a generic top-k sort. In the final
-chapter, the adapter recognizes the compatible metric, constant query vector, ascending ordering, and literal limit, then
-produces the course-defined `VectorIndexScan`. `EXPLAIN` makes the change visible.
+chapter, the adapter recognizes the compatible metric, constant query vector, ordering direction, and literal limit, then
+produces the course-defined `VectorIndexScanExec`. `EXPLAIN` makes the change visible.
 
-Queries outside the supported pattern must retain the exact plan. In particular, the one-week course will not claim that
+Queries outside the supported pattern must retain the exact plan. In particular, the short course will not claim that
 arbitrary `WHERE` predicates can be applied after an ANN top-k without changing the result. Refusing an unsafe rewrite is
 part of demonstrating that the integration is intuitive rather than magical.
 
@@ -103,11 +105,11 @@ The starter code should establish these contracts before students implement an A
 
 These rules should be visible in public types, tests, and `EXPLAIN` output rather than scattered across chapter prose.
 
-## One-Week Course Structure
+## Short Course Structure
 
-"One week" describes the overall scope, not a rule that every topic receives one equal day. The proposed required path is
-roughly 17 to 23 focused hours. Learners may spread it across more sessions, and the final estimates should be calibrated
-against the actual starter diffs before release.
+The required path is intended to fit roughly one focused week, but it is not divided into artificial days. Learners may
+spread it across more sessions, and final estimates will be calibrated against the unpublished starter diffs before
+release.
 
 The topics below are separate chapters because each produces a coherent, reviewable checkpoint. Their time budgets reflect
 content density: IVFFlat and the graph indexes are longer than the baseline, evaluation, and adapter chapters.
@@ -115,14 +117,14 @@ content density: IVFFlat and the graph indexes are longer than the baseline, eva
 | Chapter | Initial estimate | Before | After |
 | --- | ---: | --- | --- |
 | Exact search and the SQL baseline | 2–3 hours | Vectors are ordinary arrays, and the target SQL query has no index. | Dimensions and metrics have explicit semantics, a bounded heap returns deterministic exact top-k results, and `EXPLAIN` records the exhaustive DataFusion plan. |
-| Benchmark and recall | 2–3 hours | Correctness examples are small and qualitative. | A seeded harness records exact ground truth, recall, p50/p99 latency, throughput, build time, memory, and dataset metadata. |
-| IVFFlat | 4–5 hours, likely two sessions | Exact search visits every vector. | Seeded k-means, inverted lists, and `nprobe` form a complete IVFFlat index with a measured recall/latency curve. |
+| Benchmark and recall | 2–3 hours | Correctness examples are small and qualitative. | A seeded harness records exact ground truth, recall, p50/p99 latency, build time, and workload metadata. |
+| IVFFlat | 4–5 hours, likely two sessions | Exact search visits every vector. | Seeded k-means, inverted lists, and `probes` form a complete IVFFlat index with a measured recall/latency curve. |
 | NSW | 3–4 hours | Only partition-based ANN is available. | Greedy and beam search, incremental insertion, and neighbor pruning form a searchable single-layer graph. |
 | HNSW | 3–4 hours | Every graph search begins in the same layer. | Random levels, entry points, cross-layer descent, and `ef_search` form a hierarchical graph index. |
-| Use the index from SQL | 3–4 hours | DataFusion still evaluates every distance and performs a generic top-k. | The adapter lowers the safe SQL pattern to `VectorIndexScan`, preserves exact fallback, and compares both plans on the same workload. |
+| Use the index from SQL | 3–4 hours | DataFusion still evaluates every distance and performs a generic top-k. | The adapter accepts the compatible sort as `VectorIndexScanExec`, preserves exact fallback, and compares both plans on the same workload. |
 
 The ordering is intentional. Exact search becomes the first working implementation and the oracle for every approximate
-index. The benchmark comes before ANN so `nprobe`, beam width, and `ef_search` are evaluated rather than guessed. IVFFlat
+index. The benchmark comes before ANN so `probes`, beam width, and `ef_search` are evaluated rather than guessed. IVFFlat
 introduces the recall/latency tradeoff with a simple candidate-generation model. HNSW follows NSW so hierarchy is the only
 new graph idea in that chapter. SQL integration comes last so it wraps an already tested search contract.
 
@@ -134,13 +136,13 @@ Before finishing the course, students should be able to explain:
 
 - why deterministic top-k ordering matters;
 - why every ANN performance number needs a recall number from the same query set;
-- how `nprobe` and `ef_search` change the candidate budget in different index families;
+- how `probes` and `ef_search` change the candidate budget in different index families;
 - which SQL expression shapes are safe to lower to an ANN scan; and
 - why a filtered or differently ordered query must fall back to exact execution in the required implementation.
 
 ## What We Intentionally Leave Out
 
-A one-week course needs a hard boundary. The required implementation will not include:
+A short course needs a hard boundary. The required implementation will not include:
 
 - online upserts and deletes after an index is built;
 - persistent point or index formats, write-ahead logging, crash recovery, background rebuilds, or compaction;

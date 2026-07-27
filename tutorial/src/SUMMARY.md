@@ -3,6 +3,12 @@
 [Preface](./00-introduction.md)
 
 - [🚧 The Rust Course](./rust-01-overview.md)
+  - [Exact Search and the SQL Baseline](./rust-02-exact.md)
+  - [Measure Recall Before Optimizing](./rust-03-evaluation.md)
+  - [Restrict Search with IVFFlat](./rust-04-ivfflat.md)
+  - [Navigate a Proximity Graph with NSW](./rust-05-nsw.md)
+  - [Add Hierarchy with HNSW](./rust-06-hnsw.md)
+  - [Use the Index from DataFusion SQL](./rust-07-datafusion.md)
 - [Where to Go Next](./10-epilogue.md)
 
 ---
