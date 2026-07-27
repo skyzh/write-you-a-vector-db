@@ -47,7 +47,7 @@ cargo fmt --all -- --check
 cargo clippy --workspace --all-targets -- -D warnings
 cargo test --workspace
 cargo run -p vector-datafusion --example sql
-mdbook build course
+course/sitemap.sh --check
 ```
 
 The release-mode recall example is informational rather than a correctness

@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  pull_request:
   workflow_dispatch:
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
@@ -22,17 +23,21 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: setup rust toolchain
         run: rustup show
       - uses: taiki-e/install-action@mdbook
-      - run: cd course && mdbook build
+      - name: install sitemap generator
+        run: npm install --global static-sitemap-cli@2.2.7
+      - name: build course and check sitemap
+        run: course/sitemap.sh --check
       - name: upload dist
         uses: actions/upload-pages-artifact@v3
         with:
           path: course/book/
   deploy:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.repository == 'skyzh/write-you-a-vector-db'
     # Add a dependency to the build job
     needs: build
     # Deploy to the github-pages environment
