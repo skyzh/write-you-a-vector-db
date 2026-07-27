@@ -1,6 +1,7 @@
 # Summary
 
 - [Build Vector Search Inside a SQL Database](./00-introduction.md)
+- [Rust Course Design Proposal](./rust-01-overview.md)
 - [C++ Course over BusTub](./cpp-01-overview.md)
   - [Vector Expressions and Storage](./cpp-02-setup.md)
   - [Naive K-Nearest Neighbors](./cpp-03-knn.md)
@@ -15,4 +16,3 @@
 # WIP Chapters
 
 - [Benchmarking on Large Datasets (WIP)](./cpp-07-large-dataset.md)
-- [Rust Course (In Development)](./rust-01-overview.md)
