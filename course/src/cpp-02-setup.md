@@ -1,5 +1,7 @@
 # Vector Expressions and Storage
 
+{{#include cpp-deprecation.md}}
+
 In this chapter, we will walk through some ramp-up tasks to get familiar with the BusTub system. You will be able to store vectors inside the system and compute vector distances after finishing all required tasks.
 
 The list of files that you will likely need to modify:

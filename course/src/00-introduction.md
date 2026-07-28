@@ -2,77 +2,85 @@
 
 ![Write You a Vector Database — Build vector search, then use it from SQL](vectordb-social.png)
 
-Write You a Vector Database is a hands-on course about the internals behind SQL vector search. You will add vector values
-and similarity expressions to a relational database, implement exact k-nearest-neighbor execution, build approximate
-indexes from scratch, and connect those indexes to the query optimizer.
-
-The published course follows one cumulative path:
-
-```text
-vector storage → exact k-nearest neighbors → index selection → IVFFlat → NSW → HNSW
-```
-
-**[Start with the course overview](./cpp-01-overview.md)** to see the chapter dependencies and implementation boundary.
-
-## Why Build Vector Search from Scratch?
-
-Embeddings represent text, images, and other data as fixed-dimensional vectors. A vector database retrieves the items
-closest to a query vector under a distance metric. Exact search compares the query with every stored vector. Approximate
-nearest-neighbor indexes avoid much of that work in exchange for returning an imperfect result set.
-
-PostgreSQL with [pgvector](https://github.com/pgvector/pgvector) exposes these capabilities through ordinary database
-objects and SQL:
-
-```sql
-CREATE TABLE items (id bigserial PRIMARY KEY, embedding vector(3));
-SELECT * FROM items ORDER BY embedding <-> '[3,1,2]' LIMIT 5;
-CREATE INDEX ON items USING hnsw (embedding vector_l2_ops);
-```
-
-This course builds the same shape of functionality inside an educational relational database. The goal is not only to
-understand IVFFlat and HNSW as algorithms, but also to see how vector types, expressions, storage, execution, optimization,
-and indexes fit together behind one SQL query.
-
-## What You Will Build
-
-The published implementation path uses C++17 and a modified version of CMU-DB's
-[BusTub](https://github.com/cmu-db/bustub) educational database. Across the course, you will implement:
-
-1. vector values, distance expressions, and compact storage;
-2. deterministic exact top-k execution;
-3. optimizer rules that match compatible SQL queries with vector indexes;
-4. an IVFFlat index built with k-means clustering; and
-5. graph search and construction through NSW and HNSW.
-
-The exercises implement the index algorithms directly instead of delegating them to Faiss or another ANN library. They
-also keep SQL as the integration surface instead of spending the course on HTTP routing and serialization.
-
-## Course Status
-
-The C++/BusTub edition is the current published path. The separate
-[Rust course design proposal](./rust-01-overview.md) specifies a standalone vector core and a thin DataFusion SQL adapter.
-The Rust edition will be published only when its implementation, tests, and learner checkpoints are available.
-
-## Prerequisites
-
-You should know basic relational database concepts and be comfortable with systems programming. Prior experience with
-vector search or database internals is not required.
-
-The published path uses modern C++ and BusTub's C++17 codebase. If you need a refresher on the language features used by
-BusTub, complete the [C++ primer](https://15445.courses.cs.cmu.edu/fall2023/project0/) from CMU's Database Systems course.
-
-## Solution and Publication Rules
-
-A solution is available on the `vectordb-solution` branch of
-[skyzh/bustub-vectordb](https://github.com/skyzh/bustub-vectordb), except for material that overlaps with CMU's Database
-Systems course.
+Write You a Vector Database is a short hands-on course for systems and backend engineers. You will build a small in-memory
+vector database in Rust, first with exact nearest-neighbor search and then with approximate indexes. The final system will
+answer SQL top-k queries through DataFusion and make the tradeoff between recall, latency, and memory visible.
 
 <div class="warning">
 
-Some exercises overlap with Carnegie Mellon University's Database Systems course. Follow each chapter's instructions
-about which parts of your implementation may be published.
+**Course status:** The published book currently contains the Rust design proposal, not runnable Rust assignments. Learner
+starter and completed checkpoints have not been published.
 
 </div>
+
+The original 2024 C++/BusTub course is preserved as a
+[deprecated, unmaintained edition](./cpp-01-overview.md). It is no longer the recommended path for new learners.
+
+## Why Build a Vector Database?
+
+Embeddings turn text, images, and other data into fixed-dimensional vectors. A vector database stores those vectors and
+retrieves the items closest to a query vector under a distance metric. Exact search compares the query with every stored
+vector. Approximate nearest-neighbor (ANN) indexes avoid much of that work in exchange for returning an imperfect result
+set.
+
+This course builds vector search as a database feature rather than as an isolated ANN library. The goal is not only to
+understand IVFFlat and HNSW as algorithms, but also to see how vectors, distance expressions, query planning, execution,
+and indexes fit together behind one SQL top-k query.
+
+## What You Will Build
+
+The proposed course has one cumulative Rust implementation:
+
+1. An exact-search collection with stable point IDs and a bounded top-k operator.
+2. A benchmark and recall harness that treats exact search as the correctness oracle.
+3. IVFFlat, NSW, and HNSW indexes behind the same search interface.
+4. A thin DataFusion adapter that turns a safe SQL top-k pattern into a vector-index scan.
+
+The core will be an ordinary Rust library. DataFusion supplies SQL parsing, planning, Arrow arrays, and execution, but the
+collection and indexes remain independent of it. This separation makes the integration small enough to understand and
+shows which responsibilities belong to the SQL engine and which belong to the vector index.
+
+## Learning Goals
+
+After completing the course, you should be able to:
+
+- define the semantics and edge cases of Euclidean, cosine, and inner-product search;
+- implement exact top-k search without sorting the entire collection;
+- explain how IVFFlat and HNSW trade build cost, memory, latency, and recall;
+- design benchmarks that compare ANN results with exact ground truth;
+- recognize when a SQL top-k query can safely use an approximate index; and
+- separate a storage and search engine from its SQL interface.
+
+## What This Course Will Not Cover
+
+The required path will not implement embedding models, persistent index files, online updates or deletes after an index is
+built, crash recovery, filtered ANN search, distributed execution, GPU kernels, or an HTTP service. It will also avoid
+calling an existing ANN library for the algorithms students are meant to learn.
+
+Those boundaries keep the course focused on vector search. They also make every required component small enough to test,
+measure, and explain.
+
+## Prerequisites
+
+You should be comfortable with Rust ownership, traits, error handling, iterators, and Cargo. You should also know basic
+database concepts such as records, indexes, SQL ordering, and query plans.
+
+Prior knowledge of nearest-neighbor algorithms, Apache Arrow, or DataFusion is not required. The course will introduce the
+small subset of DataFusion's extension interface used by the final chapter.
+
+## How to Use This Book
+
+Start with the [Rust course design proposal](./rust-01-overview.md). It defines the selected architecture, system
+contracts, progression, and scope. Implementation chapters will be published only with matching starter code, completed
+checkpoints, and focused tests.
+
+Each implementation chapter will begin with an observable capability, the relevant invariants, and a small prediction
+exercise. It will end with focused verification and questions that require evidence from the implementation or benchmark
+rather than recall from the prose.
+
+Every chapter will start from the runnable state produced by its prerequisite. New algorithms will first be compared with
+an exact oracle and then integrated behind the existing collection API. The same SQL query shown in the design proposal
+will run through the ANN index in the final chapter.
 
 ## Community
 
@@ -88,8 +96,8 @@ AgateDB, TerarkDB, RisingWave, Neon, and RisingLight, and served as a teaching a
 
 <div class="warning">
 
-This course is not affiliated with Carnegie Mellon University or the CMU-DB Group. Its C++ edition is not part of CMU's
-15-445/645 Database Systems course.
+This course is not affiliated with Carnegie Mellon University or the CMU-DB Group. The deprecated C++ edition is not part
+of CMU's 15-445/645 Database Systems course.
 
 </div>
 

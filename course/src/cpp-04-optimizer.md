@@ -1,5 +1,7 @@
 # Matching a Vector Index
 
+{{#include cpp-deprecation.md}}
+
 Before building and using vector indexes, we will need to identify SQL queries that can be converted to an index scan, and use the index when it is possible to do so. In this task, you will implement the code to identify such queries and convert them into a vector index search plan node.
 
 The list of files that you will likely need to modify:
