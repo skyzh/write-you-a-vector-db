@@ -13,6 +13,10 @@ The third checkpoint adds `vector-datafusion`. It matches a compatible SQL
 top-k sort to `FlatIndex`, keeps unsupported shapes on DataFusion's exhaustive
 path, and establishes the SQLLogicTest runner used by every ANN chapter.
 
+IVFFlat is the first ANN checkpoint. Seeded k-means builds the inverted lists,
+`probes` controls the candidate budget, and `vector.02-ivfflat.slt` exercises
+the index through the SQL matcher.
+
 Run it with:
 
 ```sh

@@ -10,7 +10,7 @@ use datafusion::common::DataFusionError;
 use datafusion::execution::context::SessionContext;
 use datafusion::physical_plan::collect;
 use sqllogictest::{AsyncDB, DBOutput, DefaultColumnType, Runner};
-use vector_core::{IndexConfig, Metric};
+use vector_core::{IndexConfig, IvfFlatConfig, Metric};
 use vector_datafusion::{VectorRow, VectorTable};
 
 struct DataFusionDb {
@@ -138,7 +138,18 @@ fn database(config: IndexConfig) -> Result<DataFusionDb, DataFusionError> {
 
 #[tokio::test]
 async fn vector_sqllogictests() {
-    let cases = [("vector.01-index-match.slt", IndexConfig::Flat)];
+    let cases = [
+        ("vector.01-index-match.slt", IndexConfig::Flat),
+        (
+            "vector.02-ivfflat.slt",
+            IndexConfig::IvfFlat(IvfFlatConfig {
+                partitions: 3,
+                probes: 3,
+                iterations: 8,
+                seed: 7,
+            }),
+        ),
+    ];
 
     for (filename, config) in cases {
         let mut runner = Runner::new(move || {

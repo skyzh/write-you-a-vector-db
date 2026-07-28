@@ -9,6 +9,7 @@ reference preview; learner checkpoint refs remain a release prerequisite.
 | `VDB-EXACT` | Fixed-dimension metrics and deterministic exact top-k | None | `rust/vector-core/src/{dataset,metric,flat,search}.rs` |
 | `VDB-EVAL` | Seeded ground truth, recall, and latency measurement | `VDB-EXACT` | `rust/vector-core/examples/recall.rs` |
 | `VDB-SQL` | Match safe top-k SQL and establish the SQLLogicTest ladder | `VDB-EVAL` | `rust/vector-datafusion` |
+| `VDB-IVF` | Seeded k-means, inverted lists, and probe-controlled ANN | `VDB-SQL` | `rust/vector-core/src/ivf.rs` and `vector.02-ivfflat.slt` |
 
 Every chapter names its required tests and stop condition. Persistence, online
 mutation, filtered ANN, and an HTTP API are follow-up projects, not hidden

@@ -19,7 +19,7 @@ contracts, query planning, and execution boundary that make SQL vector search wo
 ## Course Status
 
 The [Rust course preview](https://skyzh.github.io/write-you-a-vector-db/rust-01-overview) now includes exact search, recall
-measurement, and the DataFusion SQL index-matching checkpoint. ANN chapters follow on the same test boundary. Learner
+measurement, DataFusion SQL index matching, and IVFFlat. Graph-index chapters follow on the same test boundary. Learner
 starter/completed checkpoint refs have not been published yet.
 
 ```shell

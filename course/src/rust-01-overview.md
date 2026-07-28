@@ -2,9 +2,9 @@
 
 <div class="warning">
 
-**Course status:** Exact search, recall evaluation, SQL index matching, and their focused tests are available as a preview.
-The ANN implementations remain later cumulative chapters. Learner starter/completed refs and recorded human review remain
-release requirements.
+**Course status:** Exact search, recall evaluation, SQL index matching, IVFFlat, and their focused tests are available as a
+preview. The graph implementations remain later cumulative chapters. Learner starter/completed refs and recorded human
+review remain release requirements.
 
 </div>
 

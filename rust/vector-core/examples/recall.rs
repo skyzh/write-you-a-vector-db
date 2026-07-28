@@ -1,6 +1,8 @@
 use std::time::{Duration, Instant};
 
-use vector_core::{Dataset, FlatIndex, Metric, VectorIndex, recall_at_k};
+use vector_core::{
+    Dataset, FlatIndex, IvfFlatConfig, IvfFlatIndex, Metric, VectorIndex, recall_at_k,
+};
 
 const ROWS: usize = 2_000;
 const DIMENSIONS: usize = 16;
@@ -32,15 +34,18 @@ fn main() -> vector_core::Result<()> {
         .collect::<vector_core::Result<Vec<_>>>()?;
 
     let started = Instant::now();
-    let baseline = FlatIndex::try_new(dataset, Metric::Cosine)?;
-    let build_time = started.elapsed();
-    report(
-        "flat_baseline",
-        &baseline,
-        build_time,
-        &queries,
-        &ground_truth,
+    let ivf = IvfFlatIndex::try_new(
+        dataset,
+        Metric::Cosine,
+        IvfFlatConfig {
+            partitions: 32,
+            probes: 6,
+            iterations: 12,
+            seed: 7,
+        },
     )?;
+    let ivf_build = started.elapsed();
+    report("ivf_flat", &ivf, ivf_build, &queries, &ground_truth)?;
     Ok(())
 }
 

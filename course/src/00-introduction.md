@@ -8,8 +8,8 @@ answer SQL top-k queries through DataFusion and make the tradeoff between recall
 
 <div class="warning">
 
-**Course status:** Exact search, recall evaluation, and SQL index matching are available as an executable reference
-preview. Learner starter and completed checkpoints have not been published.
+**Course status:** Exact search, recall evaluation, SQL index matching, and IVFFlat are available as an executable
+reference preview. Learner starter and completed checkpoints have not been published.
 
 </div>
 
