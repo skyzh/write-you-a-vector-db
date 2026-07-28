@@ -23,9 +23,9 @@ retrieves the items closest to a query vector under a distance metric. Exact sea
 vector. Approximate nearest-neighbor (ANN) indexes avoid much of that work in exchange for returning an imperfect result
 set.
 
-That exchange makes vector search a useful systems course. A result can be valid but have poor recall; an index can make
-queries faster while making writes, memory use, or recovery harder; and a benchmark can look impressive while measuring
-the wrong workload. The implementation is small enough to understand, but the engineering choices are real.
+This course builds vector search as a database feature rather than as an isolated ANN library. The goal is not only to
+understand IVFFlat and HNSW as algorithms, but also to see how vectors, distance expressions, query planning, execution,
+and indexes fit together behind one SQL top-k query.
 
 ## What You Will Build
 

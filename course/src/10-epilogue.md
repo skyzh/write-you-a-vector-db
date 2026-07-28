@@ -1,8 +1,19 @@
 # Where to Go Next
 
-A one-week course can make the central tradeoffs visible, but it cannot turn a teaching system into a production vector
-database. The proposed Rust course deliberately stops after an immutable in-memory collection with exact, IVFFlat, NSW,
-HNSW, and SQL query support.
+This short course can make the central tradeoffs visible, but it cannot turn a teaching system into a production vector
+database. The course stops after an immutable in-memory collection with exact, IVFFlat, NSW, HNSW, and SQL query support.
+
+## One SQL Query, Many Layers
+
+Vector search does not have to live behind a separate service. A SQL engine can support it through a small set of
+extension points: vector values and distance expressions at the interface, exact or approximate indexes underneath, and
+a planner rule that connects an `ORDER BY` distance query with `LIMIT k` to the right execution plan. The code at each
+boundary can be small; making the boundaries agree is the database work.
+
+Andy Pavlo made a similar observation in
+[Databases in 2023: A Year in Review](https://ottertune.com/blog/2023-databases-retrospective): vector search spread quickly
+because it can often be added as a new access method and index rather than a new database architecture. This course lets
+you see that integration layer by layer, behind one SQL top-k query.
 
 Once that system works, several extensions make good independent projects.
 
@@ -42,6 +53,17 @@ Once that system works, several extensions make good independent projects.
 
 For any extension, keep the exact implementation as an oracle, state the workload, and report correctness together with
 performance. A vector index is useful only when its speedup is attached to a result-quality and lifecycle contract.
+
+## Why This Course Exists
+
+My first close look at vector databases came during my 2023 internship at Neon. Nikita added me to a Slack channel called
+`#vector`, where Konstantin was building [pg_embedding](https://github.com/neondatabase/pg_embedding), a PostgreSQL
+extension with HNSW support. The project was later discontinued after pgvector added HNSW, but it left me with the question
+that became this course: what actually has to change inside a database to make one SQL vector query work?
+
+That question first became a BusTub course. Thanks to Yuchen, Avery, Ruijie, and the 15-445 course staff for reviewing and
+merging the [upstream vector-type change](https://github.com/cmu-db/bustub/pull/682) that made it possible. The Rust and
+DataFusion course continues the same investigation with a small in-memory system whose layers can be read end to end.
 
 ## Feedback
 
