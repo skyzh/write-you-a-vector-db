@@ -84,14 +84,14 @@ The required path is sized for roughly one focused week, but it is not divided i
 it across more sessions. The chapters follow conceptual density: IVFFlat and the graph indexes are longer than the
 baseline, evaluation, and adapter chapters.
 
-| ID | Chapter | Prerequisite | Initial estimate | Before | After |
-| --- | --- | --- | ---: | --- | --- |
-| `VDB-EXACT` | Exact search and the SQL baseline | None | 2–3 hours | Vectors are ordinary arrays, and the target SQL query has no index. | Dimensions and metrics have explicit semantics, a bounded heap returns deterministic exact top-k results, and `EXPLAIN` records the exhaustive DataFusion plan. |
-| `VDB-EVAL` | Benchmark and recall | `VDB-EXACT` | 2–3 hours | Correctness examples are small and qualitative. | A seeded harness records exact ground truth, recall, p50/p99 latency, build time, and workload metadata. |
-| `VDB-IVF` | IVFFlat | `VDB-EVAL` | 4–5 hours, likely two sessions | Exact search visits every vector. | Seeded k-means, inverted lists, and `probes` form a complete IVFFlat index with a measured recall/latency curve. |
-| `VDB-NSW` | NSW | `VDB-EVAL` | 3–4 hours | Only partition-based ANN is available. | Greedy and beam search, incremental insertion, and neighbor pruning form a searchable single-layer graph. |
-| `VDB-HNSW` | HNSW | `VDB-NSW` | 3–4 hours | Every graph search begins in the same layer. | Random levels, entry points, cross-layer descent, and `ef_search` form a hierarchical graph index. |
-| `VDB-SQL` | Use the index from SQL | `VDB-EXACT` and one ANN chapter | 3–4 hours | DataFusion still evaluates every distance and performs a generic top-k. | The adapter accepts the compatible sort as `VectorIndexScanExec`, preserves exact fallback, and compares both plans on the same workload. |
+| Chapter | Prerequisite | Initial estimate | Before | After |
+| --- | --- | ---: | --- | --- |
+| Exact search and the SQL baseline | None | 2–3 hours | Vectors are ordinary arrays, and the target SQL query has no index. | Dimensions and metrics have explicit semantics, a bounded heap returns deterministic exact top-k results, and `EXPLAIN` records the exhaustive DataFusion plan. |
+| Benchmark and recall | Exact search and the SQL baseline | 2–3 hours | Correctness examples are small and qualitative. | A seeded harness records exact ground truth, recall, p50/p99 latency, build time, and workload metadata. |
+| IVFFlat | Benchmark and recall | 4–5 hours, likely two sessions | Exact search visits every vector. | Seeded k-means, inverted lists, and `probes` form a complete IVFFlat index with a measured recall/latency curve. |
+| NSW | Benchmark and recall | 3–4 hours | Only partition-based ANN is available. | Greedy and beam search, incremental insertion, and neighbor pruning form a searchable single-layer graph. |
+| HNSW | NSW | 3–4 hours | Every graph search begins in the same layer. | Random levels, entry points, cross-layer descent, and `ef_search` form a hierarchical graph index. |
+| Use the index from SQL | Exact search and one ANN chapter | 3–4 hours | DataFusion still evaluates every distance and performs a generic top-k. | The adapter accepts the compatible sort as `VectorIndexScanExec`, preserves exact fallback, and compares both plans on the same workload. |
 
 The ordering is intentional. Exact search becomes the first working implementation and the oracle for every approximate
 index. The benchmark comes before ANN so `probes`, beam width, and `ef_search` are evaluated rather than guessed. IVFFlat
