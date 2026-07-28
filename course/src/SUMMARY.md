@@ -2,6 +2,7 @@
 
 - [Build Vector Search Inside a SQL Database](./00-introduction.md)
 - [Rust Course Design Proposal](./rust-01-overview.md)
+  - [Exact Search and Ground Truth](./rust-02-exact.md)
 - [Where to Go Next](./10-epilogue.md)
 
 ---
