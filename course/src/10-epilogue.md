@@ -61,9 +61,10 @@ My first close look at vector databases came during my 2023 internship at Neon. 
 extension with HNSW support. The project was later discontinued after pgvector added HNSW, but it left me with the question
 that became this course: what actually has to change inside a database to make one SQL vector query work?
 
-That question first became a BusTub course. Thanks to Yuchen, Avery, Ruijie, and the 15-445 course staff for reviewing and
-merging the [upstream vector-type change](https://github.com/cmu-db/bustub/pull/682) that made it possible. The Rust and
-DataFusion course continues the same investigation with a small in-memory system whose layers can be read end to end.
+That question led me to build the original version of this course on BusTub. Thanks to Yuchen, Avery, Ruijie, and the
+15-445 course staff for reviewing and merging the
+[upstream vector-type change](https://github.com/cmu-db/bustub/pull/682) that made it possible. The Rust and DataFusion
+course continues the same investigation with a small in-memory system whose layers can be read end to end.
 
 ## Feedback
 
