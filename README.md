@@ -1,23 +1,44 @@
-![banner](tutorial/src/vectordb-banner-horizontal.png)
+![Write You a Vector Database — Build vector search, then use it from SQL](course/src/vectordb-social.png)
 
 # Write You a Vector Database
 
-A tutorial on how to add vector capabilities to a relational database system.
+Write You a Vector Database is a hands-on course for systems and backend engineers. Build pgvector-style vector storage
+and similarity search inside a relational database, then implement IVFFlat, NSW, and HNSW and teach the query optimizer to
+use those indexes for SQL top-k queries.
 
-Access the tutorial at [https://skyzh.github.io/write-you-a-vector-db](https://skyzh.github.io/write-you-a-vector-db).
+**[Read the course](https://skyzh.github.io/write-you-a-vector-db/)**
 
-We plan to release two variants of this tutorial: a C++ version and a Rust version.
+The course focuses on the boundary where algorithms become database features:
 
-In the C++ version, you will implement pgvector-like capabilities on a modified version of CMU-DB's [BusTub](https://github.com/cmu-db/bustub) educational database system. You will implement vector storage, vector expressions, and vector indexes over BusTub.
+```text
+vector storage → exact k-nearest neighbors → index selection → IVFFlat → NSW → HNSW
+```
 
-In the to-be-expected Rust version, you will implement vector capabilities over the [RisingLight](https://github.com/risinglightdb/risinglight) educational database system. We are actively working on it. [[Tracking Issue]](https://github.com/risinglightdb/risinglight/issues/864)
+Instead of hiding vector search behind an HTTP API or an ANN library, the exercises expose the type system, execution
+engine, optimizer, and index internals that make SQL vector search work.
+
+## Published Course
+
+The current implementation path uses C++17 and a modified version of CMU-DB's
+[BusTub](https://github.com/cmu-db/bustub) educational database. A redesigned Rust edition is in development and is not
+yet part of the published course.
+
+By the end of the published path, you will have implemented:
+
+- vector values, distance expressions, and compact storage;
+- deterministic exact top-k execution;
+- optimizer matching for compatible vector-index queries;
+- an IVFFlat index built with k-means clustering; and
+- graph search and construction through NSW and HNSW.
 
 ## Community
 
-You may join skyzh's Discord server and study with the write-you-a-vector-db community.
+Join skyzh's Discord server to study with the write-you-a-vector-db community.
 
-[![Join skyzh's Discord Server](tutorial/src/discord-badge.svg)](https://skyzh.dev/join/discord)
+[![Join skyzh's Discord Server](course/src/discord-badge.svg)](https://skyzh.dev/join/discord)
 
 ## License
 
-The BusTub vector-db starter code and solution are under MIT license. Please note that there are some specific files that overlap with the CMU-DB's Database Systems course and we cannot make them public (and you should not either). The author reserves the full copyright of the tutorial (markdown files and figures).
+The BusTub vector-db starter code and solution are under the MIT license. Some files overlap with CMU's Database Systems
+course and must not be made public. The author reserves the full copyright of the course materials, including Markdown
+files and figures.
