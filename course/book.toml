@@ -1,11 +1,12 @@
 [book]
 authors = ["Alex Chi Z"]
 language = "en"
-multilingual = false
 src = "src"
 title = "Write You a Vector Database"
+description = "Build vector database internals hands-on: vector storage, exact k-nearest neighbors, IVFFlat, NSW, HNSW, and SQL query integration."
 
 [output.html]
 mathjax-support = true
 additional-css = ["custom.css"]
 git-repository-url = "https://github.com/skyzh/write-you-a-vector-db"
+site-url = "/write-you-a-vector-db/"

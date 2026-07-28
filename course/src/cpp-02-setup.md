@@ -14,7 +14,7 @@ src/include/execution/expressions/vector_expression.h
 
 <div class="warning">
 
-**WARNING:** In this tutorial, you will implement a simplified version of the sequential scan and the insert executor. These implementations are different from the 15-445 course but we still recommend you not including these files in your git repository.
+**WARNING:** In this course, you will implement a simplified version of the sequential scan and the insert executor. These implementations are different from the 15-445 course but we still recommend you not including these files in your git repository.
 
 </div>
 
@@ -90,7 +90,7 @@ You can get necessary information (i.e., table oid) from the query plan.
 
 ### Sequential Scan
 
-In sequential scan, you may create a table iterator and store it in the executor class in `Init`, and emit tuple one by one in `Next`. You do not need to consider the case that a tuple might have been deleted. In this tutorial, all tables are append-only.
+In sequential scan, you may create a table iterator and store it in the executor class in `Init`, and emit tuple one by one in `Next`. You do not need to consider the case that a tuple might have been deleted. In this course, all tables are append-only.
 
 You may get the table heap structure by accessing the catalog using executor context. After getting the table heap, you may create a table iterator by using `MakeIterator`. You may retrieve the current tuple pointed by the iterator by calling `TableIterator::GetTuple`, and move to the next tuple by using prefix `++` operator. `TableIterator::IsEnd` indicates whether there are more tuples in the table heap.
 
