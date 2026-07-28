@@ -17,11 +17,12 @@ vector storage → exact k-nearest neighbors → index selection → IVFFlat →
 Instead of hiding vector search behind an HTTP API or an ANN library, the exercises expose the type system, execution
 engine, optimizer, and index internals that make SQL vector search work.
 
-## Published Course
+## Course Editions
 
 The current implementation path uses C++17 and a modified version of CMU-DB's
-[BusTub](https://github.com/cmu-db/bustub) educational database. A redesigned Rust edition is in development and is not
-yet part of the published course.
+[BusTub](https://github.com/cmu-db/bustub) educational database. A separate
+[Rust course design proposal](course/src/rust-01-overview.md) defines a short path that keeps the vector indexes in a
+standalone crate and connects them to SQL through DataFusion. The Rust edition is not yet part of the published course.
 
 By the end of the published path, you will have implemented:
 

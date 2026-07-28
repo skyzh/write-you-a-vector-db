@@ -49,8 +49,9 @@ also keep SQL as the integration surface instead of spending the course on HTTP 
 
 ## Course Status
 
-The C++/BusTub edition is the current published path. A redesigned Rust edition is in development and will be published
-only when its implementation, tests, and learner checkpoints are available.
+The C++/BusTub edition is the current published path. The separate
+[Rust course design proposal](./rust-01-overview.md) specifies a standalone vector core and a thin DataFusion SQL adapter.
+The Rust edition will be published only when its implementation, tests, and learner checkpoints are available.
 
 ## Prerequisites
 
