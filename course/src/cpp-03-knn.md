@@ -1,124 +1,135 @@
-# Naive K-Nearest Neighbors
+# Exact K-Nearest Neighbors
 
 {{#include cpp-deprecation.md}}
 
-In this task, we will implement a naive k-nearest neighbor search by simply scanning the table, computing the distance, and retrieving the k-nearest elements.
+This chapter turns an ordinary table scan into exact k-nearest-neighbor search. First you will implement general-purpose
+sort and limit executors. Then you will replace that pair with a bounded Top-N executor.
 
-The list of files that you will likely need to modify:
+Complete [Vector Expressions and Storage](./cpp-02-setup.md) first. You will likely modify these private BusTub assignment
+files:
 
-```
-src/execution/sort_executor.cpp                      (KEEP PRIVATE)
-src/execution/topn_executor.cpp                      (KEEP PRIVATE)
-src/execution/limit_executor.cpp                     (KEEP PRIVATE)
-src/include/execution/executors/sort_executor.h      (KEEP PRIVATE)
-src/include/execution/executors/topn_executor.h      (KEEP PRIVATE)
-src/include/execution/executors/limit_executor.h     (KEEP PRIVATE)
-src/optimizer/sort_limit_as_topn.cpp                 (KEEP PRIVATE)
+```text
+src/execution/sort_executor.cpp
+src/execution/topn_executor.cpp
+src/execution/limit_executor.cpp
+src/include/execution/executors/sort_executor.h
+src/include/execution/executors/topn_executor.h
+src/include/execution/executors/limit_executor.h
+src/optimizer/sort_limit_as_topn.cpp
 ```
 
 <div class="warning">
 
-**WARNING:** Some part of this chapter overlaps with the CMU-DB's Database System course and we ask you NOT to put the above files in a public repo.
+These files overlap with CMU's Database Systems assignments. Keep them in a private repository.
 
 </div>
 
-## Naive K-Nearest Neighbors
-
-In vector databases, one of the most important operations is to find nearest neighbors to a user-provided vector in the vector table using a specified vector distance function. In this task, you will need to implement some query executors in order to support nearest neighbor SQL queries as below:
+## The Query
 
 ```sql
 CREATE TABLE t1(v1 VECTOR(3), v2 integer);
 SELECT v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 3;
 ```
 
-The query scans the table, computes the distances between vectors in the table and `<1.0, 1.0, 1.0>`, and returns 3 nearest neighbors to the query vector. Explain the query, and you will see the query plan as below.
+The query scans every row, computes its distance from `[1, 1, 1]`, and returns the three smallest distances. Before the
+Top-N rewrite, its plan has this shape:
 
-```
-bustub> explain (o) SELECT v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 3;
-=== OPTIMIZER ===
+```text
 Limit { limit=3 }
   Sort { order_bys=[("Default", "l2_dist([1.000000,1.000000,1.000000], #0.0)")] }
     Projection { exprs=["#0.0"] }
       SeqScan { table=t1 }
 ```
 
-BusTub uses limit and sort executor to process this SQL query. In this part, you will need to implement these two executors, and optimize them into a top-k executor which computes nearest-k neighbors more efficiently.
+`#0.0` means column 0 from child 0. Evaluate each order-by expression against the child tuple and the child's output
+schema.
 
+## Checkpoint 1: Sort and Limit
 
-## Sort and Limit Executor
+The sort executor is a pipeline breaker: `Init` consumes and stores every `(Tuple, RID)` from its child, then sorts the
+stored entries. `Next` emits them one at a time. Keep the RID paired with its tuple throughout the sort.
 
-The sort executor pulls all the data from the child executor, sort them in memory, and emit the data the the parent executor. You should order the data as indicated in the query plan. In the above example, the query plan indicates the data to be ordered by `l2_dist([1.000000,1.000000,1.000000], #0.0)` in the default (ascending) order. `#0.0` is a column value expression which returns the *first* column in the *first* child executor. You may use `Evaluate` on an expression to retrieve the distance to be ordered.
+**Course rules:**
 
-After getting all the data and RIDs from the child executor in sort executor's `Init` function, you can use `std::sort` to sort the tuples. The comparison function should be implemented as a for loop over the query plan's order-by requirement. You can then implement sort executor's `Next` function as emitting sorted tuples one by one.
+- Compare order-by expressions from left to right. Continue to the next expression only when the current values tie.
+- `Default` has ascending behavior. Support both explicit ascending and descending order.
+- The required tests use non-null sort keys. If you add null support, define its placement consistently.
+- Preserve any order among complete ties; the vector reference allows tied rows to appear in either order.
 
-Limit executor returns the first `limit` number of elements from the child executor. You can get all necessary information in the query plan, and stop getting data from the child executor and emitting to the parent executor when the limit is reached.
+The limit executor initializes its child and forwards at most `limit` entries. It must handle `limit = 0` and a child with
+fewer rows without pulling or emitting an extra tuple.
 
-After implementing these two executors, you should be able to get k-nearest neighbors of the base vector in BusTub.
+From `bustub-vectordb/build`, run:
 
-## Testing Sort + Limit
-
-At this point, you can run the test cases using SQLLogicTest.
-
-```
+```shell
 make -j8 sqllogictest
+./bin/bustub-sqllogictest ../test/sql/p3.16-sort-limit.slt
 ./bin/bustub-sqllogictest ../test/sql/vector.02-naive-knn.slt --verbose
 ```
 
-The test cases do not do any correctness checks and you will need to compare with the below output by yourself. Your result could be different from the reference solution because your way of breaking the tie (i.e., when two distances are the same) might be different.
-
+The first file checks multi-column ascending and descending order. The vector file exercises all three distance functions;
+compare its exact-query rows with the first reference output.
 
 <details>
 
-<summary>Reference Test Result</summary>
+<summary>Sort + Limit Reference</summary>
 
-```
+```text
 {{#include vector.02-naive-knn.slt.1.ref}}
 ```
 
 </details>
 
+## Checkpoint 2: Bounded Top-N
 
-## Top-N Optimization
+Sorting all `n` rows costs `O(n log n)` and stores all `n` entries. For `LIMIT k`, a max-heap can retain only the best `k`
+entries in `O(n log k)` time and `O(k)` space.
 
-To retrieve the k-nearest neighbor, you do not need to sort the entire dataset. You may use a binary heap (`priority_queue` in C++ STL) to compute the same result set with more efficiency. This requires you to combine sort and limit executor into a single top-n executor.
+First implement `OptimizeSortLimitAsTopN`. It should replace only a `Limit` whose direct child is a `Sort`, copy the sort's
+order-by list and the limit into a `TopNPlanNode`, and preserve the sort's child.
 
-The first step is to write an optimizer rule to convert sort and limit into a top-n executor. You will need to match a limit plan node with a sort child plan node, get necessary information (order-bys and limit), and then create a top-n plan node. There are already some example optimizer rule implementaions and you may refer to them.
+Then implement `TopNExecutor`:
 
-Then, you may implement the top-n executor. The logic is similar to the sort executor that you do all the computation work in the `Init` function and then emit the top-k tuples in the `Next` function one by one. You will need to maintain a max-heap that contains the minimum k elements when scanning from the child executor.
+1. initialize the child;
+2. evaluate the same full ordering used by `SortExecutor`;
+3. keep at most `k` best `(Tuple, RID)` entries in a max-heap, with the worst retained entry at the top; and
+4. emit the retained entries in final best-to-worst order.
 
-*Related Lectures*
+Popping a max-heap directly produces the worst retained row first. Reverse that sequence, or use another equivalent
+method, before `Next` begins emitting. `GetNumInHeap()` must report the bounded container's size because the focused test
+uses it to catch implementations that secretly store the whole input.
 
-* [Query Planning & Optimization (CMU Intro to Database Systems)](https://www.youtube.com/watch?v=ePGPVJCyCAk&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=15)
+**Prediction:** If the input distances are `4, 1, 3, 2` and `k = 2`, which values remain after each input? The final output
+must be `1, 2`, even though the heap's top is `2`.
 
-## Testing TopN
+Run:
 
-At this point, you can run the test cases using SQLLogicTest.
-
-```
-make -j8 sqllogictest
+```shell
+./bin/bustub-sqllogictest ../test/sql/p3.17-topn.slt
 ./bin/bustub-sqllogictest ../test/sql/vector.02-naive-knn.slt --verbose
 ```
 
-The test cases do not do any correctness checks and you will need to compare with the below output by yourself. Your result could be different from the reference solution because your way of breaking the tie (i.e., when two distances are the same) might be different. Note that you should see `TopN` instead of sort and limit plan nodes in your explain result.
+The `EXPLAIN` output should now contain `TopN` instead of `Limit` over `Sort`, and its query rows should match the exact
+checkpoint apart from allowed tie ordering.
 
 <details>
 
-<summary>Reference Test Result</summary>
+<summary>Top-N Reference</summary>
 
-```
+```text
 {{#include vector.02-naive-knn.slt.2.ref}}
 ```
 
 </details>
 
-## Bonus Tasks
+You are done when you can explain why changing the Top-N heap from a max-heap to a min-heap would retain the wrong end of
+the ordering, and how the optimizer rewrite preserves the original plan's result.
 
-Now that you have a better view of how BusTub works, you may choose to complete the below bonus tasks to enhance your understanding and challenge yourself.
+*Related lecture:* [Query Planning & Optimization (CMU Intro to Database Systems)](https://www.youtube.com/watch?v=ePGPVJCyCAk&list=PLSE8ODhjZXjbj8BMuIrRcacnQh20hmY9g&index=15)
 
-**Construct vectors from string**
+## Optional Extension
 
-Currently, the query processing layer only supports creating a vector from array keyword and a list of decimal values like `SELECT ARRAY [1.0, 1.0, 1.0]`. You may extend the syntax to support (1) create a vector from integers `SELECT ARRAY [1, 1.0, 1]` and (2) create a vector from string `SELECT '[1.0, 1.0, 1.0]'::VECTOR(3)`.
-
-*Again, please keep your implementation in this section private and do not put them in a public repo because they overlap with the CMU-DB's Database Systems course projects.*
+Extend vector construction to accept mixed integer and decimal array literals, or a cast such as
+`'[1.0, 1.0, 1.0]'::VECTOR(3)`.
 
 {{#include copyright.md}}
