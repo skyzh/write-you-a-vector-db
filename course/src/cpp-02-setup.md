@@ -85,6 +85,12 @@ once, then calls `Next` until it returns `false`. An executor initializes its ch
 
 ### Insert Executor
 
+Run this statement in `bustub-shell` to inspect the insert plan directly:
+
+```sql
+EXPLAIN (o) INSERT INTO t1 VALUES (ARRAY [1.0, 2.0, 3.0]);
+```
+
 An `INSERT` plan pulls rows from a child `Values` executor:
 
 ```text
@@ -153,11 +159,28 @@ RID from the one returned by `InsertTuple`?
 You are done when you can trace an input vector from `ValuesExecutor`, through tuple storage and `InsertVectorEntry`, and
 back through `SeqScanExecutor`, and explain how the schema and RID preserve its meaning and identity.
 
-## Optional Extensions
+## Bonus Tasks
 
-- Add dimension validation before inserting into a `VECTOR(n)` column.
-- Add delete and update support, including corresponding vector-index changes.
-- Replace the in-memory buffer-pool path with the full BusTub storage project only if you are prepared to maintain that
-  larger scope privately.
+### Implement the Buffer Pool Manager
+
+The starter provides a mock buffer pool manager and a modified table heap, so the required course path keeps all data in
+memory. As a bonus, you can replace them with the persistent buffer pool manager from
+[project 1](https://15445.courses.cs.cmu.edu/fall2023/project1/) of CMU 15-445/645. Revert both the starter's buffer-pool
+change and its table-heap change before beginning; reverting only one side can cause memory leaks and deadlocks.
+
+### Implement Delete and Update
+
+Implement the delete and update executors so they update both the table heap and every vector index. BusTub marks deleted
+tuples instead of immediately removing their storage, so use `UpdateTupleMeta` for deletion and model an update as a
+deletion followed by an insertion. You will also need to extend `VectorIndex` with a way to remove entries.
+
+### Validate Inserts
+
+Add dimension validation before inserting into a `VECTOR(n)` column. For example, reject a vector of dimension 3 or 5
+when the column is declared as `VECTOR(4)`.
+
+These tasks overlap further with CMU's Database Systems projects. **KEEP PRIVATE** applies to every implementation in this
+section: add the affected files to your solution repository's `.gitignore`, do not commit or publish them, and keep the
+entire starter clone private because its placeholder files are already tracked.
 
 {{#include copyright.md}}

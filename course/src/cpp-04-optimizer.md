@@ -17,7 +17,17 @@ src/optimizer/optimizer_custom_rules.cpp
 ## Start from the Unoptimized Shape
 
 The pinned starter runs `OptimizeAsVectorIndexScan` before `OptimizeSortLimitAsTopN`. Keep that order for the default path
-and match a `Limit` over `Sort`:
+and match a `Limit` over `Sort`. After creating `t1` and a compatible vector index, run these statements directly in
+`bustub-shell` to exercise the supported projections:
+
+```sql
+EXPLAIN (o) SELECT v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 2;
+EXPLAIN (o) SELECT * FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 2;
+EXPLAIN (o) SELECT v1, ARRAY [1.0, 1.0, 1.0] <-> v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 2;
+EXPLAIN (o) SELECT v2, v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 2;
+```
+
+Before the vector-index rewrite, the first query has this plan shape:
 
 ```text
 Limit { limit=2 }

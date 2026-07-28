@@ -9,18 +9,20 @@ Complete [Vector Expressions and Storage](./cpp-02-setup.md) first. You will lik
 files:
 
 ```text
-src/execution/sort_executor.cpp
-src/execution/topn_executor.cpp
-src/execution/limit_executor.cpp
-src/include/execution/executors/sort_executor.h
-src/include/execution/executors/topn_executor.h
-src/include/execution/executors/limit_executor.h
-src/optimizer/sort_limit_as_topn.cpp
+src/execution/sort_executor.cpp                      (KEEP PRIVATE)
+src/execution/topn_executor.cpp                      (KEEP PRIVATE)
+src/execution/limit_executor.cpp                     (KEEP PRIVATE)
+src/include/execution/executors/sort_executor.h      (KEEP PRIVATE)
+src/include/execution/executors/topn_executor.h      (KEEP PRIVATE)
+src/include/execution/executors/limit_executor.h     (KEEP PRIVATE)
+src/optimizer/sort_limit_as_topn.cpp                 (KEEP PRIVATE)
 ```
 
 <div class="warning">
 
-These files overlap with CMU's Database Systems assignments. Keep them in a private repository.
+These files overlap with CMU's Database Systems assignments. **KEEP PRIVATE** means that you must add these paths to your
+solution repository's `.gitignore` and must not commit or publish them. The starter already tracks placeholder versions,
+so adding them to `.gitignore` inside the starter clone is not enough to hide your changes. Keep the entire clone private.
 
 </div>
 
@@ -32,7 +34,13 @@ SELECT v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 3;
 ```
 
 The query scans every row, computes its distance from `[1, 1, 1]`, and returns the three smallest distances. Before the
-Top-N rewrite, its plan has this shape:
+Top-N rewrite, run the following statement in `bustub-shell`:
+
+```sql
+EXPLAIN (o) SELECT v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 3;
+```
+
+Its plan has this shape:
 
 ```text
 Limit { limit=3 }
