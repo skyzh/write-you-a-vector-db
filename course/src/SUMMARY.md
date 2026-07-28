@@ -1,6 +1,6 @@
 # Summary
 
-- [Build Vector Search in Rust and Use It from SQL](./00-introduction.md)
+- [Build Vector Search Inside a SQL Database](./00-introduction.md)
 - [Rust Course Design Proposal](./rust-01-overview.md)
 - [Where to Go Next](./10-epilogue.md)
 

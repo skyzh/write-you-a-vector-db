@@ -1,9 +1,9 @@
-# Build Vector Search in Rust—and Use It from SQL
+# Build Vector Search Inside a SQL Database
 
 ![Write You a Vector Database — Build vector search, then use it from SQL](vectordb-social.png)
 
-Write You a Vector Database is a short hands-on course for systems and backend engineers. You will build a small vector
-search engine in Rust, first with exact nearest-neighbor search and then with approximate indexes. The final system will
+Write You a Vector Database is a short hands-on course for systems and backend engineers. You will build a small in-memory
+vector database in Rust, first with exact nearest-neighbor search and then with approximate indexes. The final system will
 answer SQL top-k queries through DataFusion and make the tradeoff between recall, latency, and memory visible.
 
 <div class="warning">

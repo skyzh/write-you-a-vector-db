@@ -2,7 +2,7 @@
 
 # Write You a Vector Database
 
-Write You a Vector Database is a short, Rust-first systems course. Build exact and approximate vector search from scratch,
+Write You a Vector Database is a short, Rust-first systems course. Build a small in-memory vector database in Rust,
 measure recall honestly, and connect the resulting indexes to SQL through DataFusion.
 
 **[Read the course](https://skyzh.github.io/write-you-a-vector-db/)**

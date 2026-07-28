@@ -3,7 +3,7 @@ authors = ["Alex Chi Z"]
 language = "en"
 src = "src"
 title = "Write You a Vector Database"
-description = "Build vector database internals hands-on: vector storage, exact k-nearest neighbors, IVFFlat, NSW, HNSW, and SQL query integration."
+description = "Build a small in-memory vector database in Rust: exact k-nearest neighbors, IVFFlat, NSW, HNSW, recall measurement, and SQL integration through DataFusion."
 
 [output.html]
 mathjax-support = true
