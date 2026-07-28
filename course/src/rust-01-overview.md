@@ -3,7 +3,7 @@
 <div class="warning">
 
 **Course status:** This page specifies the selected architecture and progression. The Rust edition is not a runnable
-learner course yet; starter and completed checkpoints have not been published, and human review remains unrecorded.
+learner course yet; starter and completed checkpoints have not been published.
 
 </div>
 

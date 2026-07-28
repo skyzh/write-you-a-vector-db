@@ -1,4 +1,6 @@
-# HNSW (Hierarchical Navigable Small Worlds) Index
+# HNSW (Hierarchical Navigable Small Worlds) Index (WIP)
+
+{{#include cpp-deprecation.md}}
 
 Now that we built NSW indexes in the previous chapter, we can now have multiple layers of NSW indexes and add hierarchy to the index structure to make it more efficient.
 

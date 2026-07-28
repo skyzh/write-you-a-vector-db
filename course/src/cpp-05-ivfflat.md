@@ -1,5 +1,7 @@
 # IVFFlat (Inverted File Flat) Index
 
+{{#include cpp-deprecation.md}}
+
 IVFFlat (InVerted File Flat) Index is a simple vector index that splits data into buckets (aka. quantization-based index) so as to accelerate vector similarities search.
 
 The list of files that you will likely need to modify:

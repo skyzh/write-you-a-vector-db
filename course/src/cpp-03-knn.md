@@ -1,5 +1,7 @@
 # Naive K-Nearest Neighbors
 
+{{#include cpp-deprecation.md}}
+
 In this task, we will implement a naive k-nearest neighbor search by simply scanning the table, computing the distance, and retrieving the k-nearest elements.
 
 The list of files that you will likely need to modify:

@@ -1,5 +1,6 @@
 # NSW (Navigable Small Worlds) Index
 
+{{#include cpp-deprecation.md}}
 
 Before building the so-called HNSW (Hierarchical Navigable Small Worlds) index, we will start with the basic component of the HNSW index -- NSW (Navigable Small Worlds). In this chapter, we will build a graph-based index structure for vectors.
 
