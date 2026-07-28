@@ -1,15 +1,16 @@
-# Rust Course Design Proposal
+# Rust Course Preview
 
 <div class="warning">
 
-**Course status:** This page specifies the selected architecture and progression. The Rust edition is not a runnable
-learner course yet; starter and completed checkpoints have not been published.
+**Course status:** Exact search, recall evaluation, SQL index matching, and their focused tests are available as a preview.
+The ANN implementations remain later cumulative chapters. Learner starter/completed refs and recorded human review remain
+release requirements.
 
 </div>
 
-The Rust course builds vector indexes in a standalone crate, then connects them to SQL through DataFusion in the final
-required chapter. The collection and search interfaces remain independently testable without Arrow or a query engine. At
-the boundary, a small adapter makes the relationship between SQL semantics and index execution visible.
+The Rust course builds exact search in a standalone crate, establishes the SQL index-matching boundary through DataFusion,
+before implementing IVFFlat, NSW, and HNSW behind that boundary. The collection and search interfaces remain independently
+testable without Arrow or a query engine, while SQLLogicTest will exercise every later index through the public SQL path.
 
 ## SQL Integration Boundary
 
@@ -24,7 +25,7 @@ index.
 All DataFusion-specific code lives in the adapter crate. Students use the pinned public APIs and do not edit DataFusion
 itself.
 
-The course begins and ends with the same query:
+The course keeps returning to the same query:
 
 ```sql
 SELECT id, payload
@@ -33,9 +34,10 @@ ORDER BY cosine_distance(embedding, [0.1, 0.2, 0.3])
 LIMIT 10;
 ```
 
-In the opening chapter, DataFusion evaluates the distance for every row and performs a generic top-k sort. In the final
-chapter, the adapter recognizes the compatible metric, constant query vector, ordering direction, and literal limit, then
-produces the course-defined `VectorIndexScanExec`. `EXPLAIN` makes the change visible.
+The exact chapter first defines ground truth. The index-matching chapter then recognizes the compatible metric, constant
+query vector, ordering direction, and literal limit and produces the course-defined `VectorIndexScanExec` backed by
+`FlatIndex`. Each ANN chapter will change the selected index and add a SQLLogicTest without changing the SQL contract.
+`EXPLAIN` makes the choice visible.
 
 Queries outside the supported pattern retain the exact plan. In particular, the course does not claim that arbitrary
 `WHERE` predicates can be applied after an ANN top-k without changing the result. Refusing an unsafe rewrite is part of
@@ -53,7 +55,7 @@ The dependency direction is:
 DataFusion SQL adapter --> collection API --> exact / IVF / graph index
                                ^
                                |
-                    tests, datasets, benchmark
+              unit tests, SQLLogicTest, benchmark
 ```
 
 The adapter owns Arrow conversion, SQL-pattern recognition, plan properties, and result batches. The collection owns IDs,
@@ -86,21 +88,22 @@ baseline, evaluation, and adapter chapters.
 
 | Chapter | Prerequisite | Initial estimate | Before | After |
 | --- | --- | ---: | --- | --- |
-| Exact search and the SQL baseline | None | 2–3 hours | Vectors are ordinary arrays, and the target SQL query has no index. | Dimensions and metrics have explicit semantics, a bounded heap returns deterministic exact top-k results, and `EXPLAIN` records the exhaustive DataFusion plan. |
-| Benchmark and recall | Exact search and the SQL baseline | 2–3 hours | Correctness examples are small and qualitative. | A seeded harness records exact ground truth, recall, p50/p99 latency, build time, and workload metadata. |
-| IVFFlat | Benchmark and recall | 4–5 hours, likely two sessions | Exact search visits every vector. | Seeded k-means, inverted lists, and `probes` form a complete IVFFlat index with a measured recall/latency curve. |
-| NSW | Benchmark and recall | 3–4 hours | Only partition-based ANN is available. | Greedy and beam search, incremental insertion, and neighbor pruning form a searchable single-layer graph. |
+| Exact search and ground truth | None | 2–3 hours | Vectors are ordinary arrays. | Dimensions and metrics have explicit semantics, and a bounded heap returns deterministic exact top-k results. |
+| Benchmark and recall | Exact search and ground truth | 2–3 hours | Correctness examples are small and qualitative. | A seeded harness records exact ground truth, recall, p50/p99 latency, build time, and workload metadata. |
+| Match a vector index from SQL | Benchmark and recall | 3–4 hours | Exact search is only a Rust API. | The adapter accepts a compatible sort as `VectorIndexScanExec`, preserves exact fallback, and establishes the SQLLogicTest ladder with `FlatIndex`. |
+| IVFFlat | SQL index matching | 4–5 hours, likely two sessions | The matched scan still visits every vector. | Seeded k-means, inverted lists, and `probes` form a complete IVFFlat index measured through Rust and SQL tests. |
+| NSW | IVFFlat checkpoint | 3–4 hours | Only partition-based ANN is available. | Greedy and beam search, incremental insertion, and neighbor pruning form a searchable single-layer graph exercised through SQL. |
 | HNSW | NSW | 3–4 hours | Every graph search begins in the same layer. | Random levels, entry points, cross-layer descent, and `ef_search` form a hierarchical graph index. |
-| Use the index from SQL | Exact search and one ANN chapter | 3–4 hours | DataFusion still evaluates every distance and performs a generic top-k. | The adapter accepts the compatible sort as `VectorIndexScanExec`, preserves exact fallback, and compares both plans on the same workload. |
 
-The ordering is intentional. Exact search becomes the first working implementation and the oracle for every approximate
-index. The benchmark comes before ANN so `probes`, beam width, and `ef_search` are evaluated rather than guessed. IVFFlat
-introduces the recall/latency tradeoff with a simple candidate-generation model. HNSW follows NSW so hierarchy is the only
-new graph idea in that chapter. SQL integration comes last so it wraps an already tested search contract.
+The ordering is intentional. Exact search becomes the oracle, and the benchmark comes before ANN so `probes`, beam width,
+and `ef_search` are evaluated rather than guessed. SQL index matching comes next: using `FlatIndex` isolates planner and
+fallback semantics from approximation and creates a SQLLogicTest harness before any ANN implementation needs it. IVFFlat,
+NSW, and HNSW will then add one index and one SQL checkpoint apiece. HNSW follows NSW so hierarchy is the only new graph idea in
+that chapter.
 
-SQL appears in the opening and final chapters rather than consuming the middle of the course. Students know the target
-plan from the beginning, but the ANN algorithms remain ordinary library code. The final chapter demonstrates how little
-adapter code is needed and how much semantic care that small amount of code still requires.
+The ANN algorithms remain ordinary library code, but they will not be tested only through that library boundary. The
+same SQL query and plan contract will accompany each implementation chapter, making integration failures visible at the commit
+where the index is introduced.
 
 Before finishing the course, students should be able to explain:
 

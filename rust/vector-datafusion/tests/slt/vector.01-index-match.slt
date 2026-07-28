@@ -1,0 +1,29 @@
+# Assert the physical scan, not only the query results. The runner extracts the
+# vector scan line from DataFusion's actual multiline EXPLAIN result.
+query T
+EXPLAIN SELECT id, payload FROM points
+ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 3;
+----
+VectorIndexScanExec: index=flat, metric=Euclidean, query_dim=3, fetch=Some(3)
+
+query IT
+SELECT id, payload FROM points
+ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 3;
+----
+1 point-1
+0 point-0
+2 point-2
+
+# Filters are deliberately evaluated by DataFusion's exact fallback.
+query T
+EXPLAIN SELECT id FROM points WHERE id >= 4
+ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 2;
+----
+VectorScanExec: rows=8, fetch=None
+
+query I
+SELECT id FROM points WHERE id >= 4
+ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 2;
+----
+4
+5

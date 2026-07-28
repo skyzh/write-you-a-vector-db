@@ -8,8 +8,8 @@ answer SQL top-k queries through DataFusion and make the tradeoff between recall
 
 <div class="warning">
 
-**Course status:** The published book currently contains the Rust design proposal, not runnable Rust assignments. Learner
-starter and completed checkpoints have not been published.
+**Course status:** Exact search, recall evaluation, and SQL index matching are available as an executable reference
+preview. Learner starter and completed checkpoints have not been published.
 
 </div>
 
@@ -29,12 +29,12 @@ and indexes fit together behind one SQL top-k query.
 
 ## What You Will Build
 
-The proposed course has one cumulative Rust implementation:
+The course has one cumulative Rust implementation:
 
 1. An exact-search collection with stable point IDs and a bounded top-k operator.
 2. A benchmark and recall harness that treats exact search as the correctness oracle.
-3. IVFFlat, NSW, and HNSW indexes behind the same search interface.
-4. A thin DataFusion adapter that turns a safe SQL top-k pattern into a vector-index scan.
+3. A thin DataFusion adapter and SQLLogicTest runner that match a safe SQL top-k pattern to an exact index scan.
+4. IVFFlat, NSW, and HNSW indexes exercised through that same SQL boundary.
 
 The core will be an ordinary Rust library. DataFusion supplies SQL parsing, planning, Arrow arrays, and execution, but the
 collection and indexes remain independent of it. This separation makes the integration small enough to understand and
@@ -65,8 +65,8 @@ measure, and explain.
 You should be comfortable with Rust ownership, traits, error handling, iterators, and Cargo. You should also know basic
 database concepts such as records, indexes, SQL ordering, and query plans.
 
-Prior knowledge of nearest-neighbor algorithms, Apache Arrow, or DataFusion is not required. The course will introduce the
-small subset of DataFusion's extension interface used by the final chapter.
+Prior knowledge of nearest-neighbor algorithms, Apache Arrow, or DataFusion is not required. The course introduces the
+small subset of DataFusion's extension interface used by the SQL index-matching chapter.
 
 ## How to Use This Book
 

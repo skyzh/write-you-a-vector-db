@@ -3,6 +3,8 @@ mod flat;
 mod metric;
 mod search;
 
+use std::sync::Arc;
+
 pub use dataset::Dataset;
 pub use flat::FlatIndex;
 pub use metric::Metric;
@@ -47,4 +49,17 @@ pub trait VectorIndex: std::fmt::Debug + Send + Sync {
     fn dataset(&self) -> &Dataset;
     fn metric(&self) -> Metric;
     fn search(&self, query: &[f32], k: usize) -> Result<Vec<Neighbor>>;
+}
+
+#[derive(Debug, Clone)]
+pub enum IndexConfig {
+    Flat,
+}
+
+impl IndexConfig {
+    pub fn build(self, dataset: Dataset, metric: Metric) -> Result<Arc<dyn VectorIndex>> {
+        match self {
+            Self::Flat => Ok(Arc::new(FlatIndex::try_new(dataset, metric)?)),
+        }
+    }
 }
