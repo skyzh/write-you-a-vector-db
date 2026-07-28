@@ -2,15 +2,14 @@
 
 <div class="warning">
 
-**Course status:** Exact search, recall evaluation, SQL index matching, IVFFlat, NSW, and their focused tests are available
-as a preview. HNSW remains the final cumulative chapter. Learner starter/completed refs and recorded human review remain
-release requirements.
+**Course status:** The cumulative reference implementation, focused tests, SQLLogicTests, and executable chapters are
+available as a preview. Learner starter/completed refs and recorded human review remain release requirements.
 
 </div>
 
 The Rust course builds exact search in a standalone crate, establishes the SQL index-matching boundary through DataFusion,
-before implementing IVFFlat, NSW, and HNSW behind that boundary. The collection and search interfaces remain independently
-testable without Arrow or a query engine, while SQLLogicTest will exercise every later index through the public SQL path.
+and then implements IVFFlat, NSW, and HNSW behind that boundary. The collection and search interfaces remain independently
+testable without Arrow or a query engine, while SQLLogicTest exercises every later index through the public SQL path.
 
 ## SQL Integration Boundary
 
@@ -36,7 +35,7 @@ LIMIT 10;
 
 The exact chapter first defines ground truth. The index-matching chapter then recognizes the compatible metric, constant
 query vector, ordering direction, and literal limit and produces the course-defined `VectorIndexScanExec` backed by
-`FlatIndex`. Each ANN chapter will change the selected index and add a SQLLogicTest without changing the SQL contract.
+`FlatIndex`. Each ANN chapter changes the selected index and adds a SQLLogicTest without changing the SQL contract.
 `EXPLAIN` makes the choice visible.
 
 Queries outside the supported pattern retain the exact plan. In particular, the course does not claim that arbitrary
@@ -98,11 +97,11 @@ baseline, evaluation, and adapter chapters.
 The ordering is intentional. Exact search becomes the oracle, and the benchmark comes before ANN so `probes`, beam width,
 and `ef_search` are evaluated rather than guessed. SQL index matching comes next: using `FlatIndex` isolates planner and
 fallback semantics from approximation and creates a SQLLogicTest harness before any ANN implementation needs it. IVFFlat,
-NSW, and HNSW will then add one index and one SQL checkpoint apiece. HNSW follows NSW so hierarchy is the only new graph idea in
+NSW, and HNSW then add one index and one SQL checkpoint apiece. HNSW follows NSW so hierarchy is the only new graph idea in
 that chapter.
 
-The ANN algorithms remain ordinary library code, but they will not be tested only through that library boundary. The
-same SQL query and plan contract will accompany each implementation chapter, making integration failures visible at the commit
+The ANN algorithms remain ordinary library code, but they are no longer tested only through that library boundary. The
+same SQL query and plan contract accompany each implementation chapter, making integration failures visible at the commit
 where the index is introduced.
 
 Before finishing the course, students should be able to explain:

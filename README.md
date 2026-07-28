@@ -18,9 +18,11 @@ contracts, query planning, and execution boundary that make SQL vector search wo
 
 ## Course Status
 
-The [Rust course preview](https://skyzh.github.io/write-you-a-vector-db/rust-01-overview) now includes exact search, recall
-measurement, DataFusion SQL index matching, IVFFlat, and NSW. HNSW follows on the same test boundary. Learner
-starter/completed checkpoint refs have not been published yet.
+The [Rust course preview](https://skyzh.github.io/write-you-a-vector-db/rust-01-overview) includes a cumulative reference
+implementation, focused Rust tests, and SQLLogicTests through DataFusion. Learner starter/completed checkpoint refs have
+not been published yet, so it is executable reference material rather than a released assignment sequence.
+
+Run the implementation with:
 
 ```shell
 cargo test --workspace

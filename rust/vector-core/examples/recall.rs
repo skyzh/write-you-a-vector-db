@@ -1,7 +1,8 @@
 use std::time::{Duration, Instant};
 
 use vector_core::{
-    Dataset, FlatIndex, IvfFlatConfig, IvfFlatIndex, Metric, VectorIndex, recall_at_k,
+    Dataset, FlatIndex, HnswConfig, HnswIndex, IvfFlatConfig, IvfFlatIndex, Metric, VectorIndex,
+    recall_at_k,
 };
 
 const ROWS: usize = 2_000;
@@ -35,7 +36,7 @@ fn main() -> vector_core::Result<()> {
 
     let started = Instant::now();
     let ivf = IvfFlatIndex::try_new(
-        dataset,
+        dataset.clone(),
         Metric::Cosine,
         IvfFlatConfig {
             partitions: 32,
@@ -46,6 +47,21 @@ fn main() -> vector_core::Result<()> {
     )?;
     let ivf_build = started.elapsed();
     report("ivf_flat", &ivf, ivf_build, &queries, &ground_truth)?;
+
+    let started = Instant::now();
+    let hnsw = HnswIndex::try_new(
+        dataset,
+        Metric::Cosine,
+        HnswConfig {
+            max_connections: 12,
+            ef_construction: 64,
+            ef_search: 40,
+            max_level: 12,
+            seed: 7,
+        },
+    )?;
+    let hnsw_build = started.elapsed();
+    report("hnsw", &hnsw, hnsw_build, &queries, &ground_truth)?;
     Ok(())
 }
 

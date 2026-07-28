@@ -8,8 +8,8 @@ answer SQL top-k queries through DataFusion and make the tradeoff between recall
 
 <div class="warning">
 
-**Course status:** Exact search, recall evaluation, SQL index matching, IVFFlat, and NSW are available as an executable
-reference preview. Learner starter and completed checkpoints have not been published.
+**Course status:** The cumulative reference implementation, focused tests, and executable chapters are available as a
+preview. Learner starter/completed refs and recorded human review remain release requirements.
 
 </div>
 
@@ -36,7 +36,7 @@ The course has one cumulative Rust implementation:
 3. A thin DataFusion adapter and SQLLogicTest runner that match a safe SQL top-k pattern to an exact index scan.
 4. IVFFlat, NSW, and HNSW indexes exercised through that same SQL boundary.
 
-The core will be an ordinary Rust library. DataFusion supplies SQL parsing, planning, Arrow arrays, and execution, but the
+The core is an ordinary Rust library. DataFusion supplies SQL parsing, planning, Arrow arrays, and execution, but the
 collection and indexes remain independent of it. This separation makes the integration small enough to understand and
 shows which responsibilities belong to the SQL engine and which belong to the vector index.
 
@@ -53,8 +53,8 @@ After completing the course, you should be able to:
 
 ## What This Course Will Not Cover
 
-The required path will not implement embedding models, persistent index files, online updates or deletes after an index is
-built, crash recovery, filtered ANN search, distributed execution, GPU kernels, or an HTTP service. It will also avoid
+The required path does not implement embedding models, persistent index files, online updates or deletes after an index is
+built, crash recovery, filtered ANN search, distributed execution, GPU kernels, or an HTTP service. It also avoids
 calling an existing ANN library for the algorithms students are meant to learn.
 
 Those boundaries keep the course focused on vector search. They also make every required component small enough to test,
@@ -70,17 +70,15 @@ small subset of DataFusion's extension interface used by the SQL index-matching 
 
 ## How to Use This Book
 
-Start with the [Rust course design proposal](./rust-01-overview.md). It defines the selected architecture, system
-contracts, progression, and scope. Implementation chapters will be published only with matching starter code, completed
-checkpoints, and focused tests.
+The implementation is the laboratory. Each chapter begins with a capability, a small set of invariants, and a prediction
+exercise. It ends with focused tests, a chapter checkpoint, and questions that require evidence from the
+implementation or benchmark rather than recall from the prose.
 
-Each implementation chapter will begin with an observable capability, the relevant invariants, and a small prediction
-exercise. It will end with focused verification and questions that require evidence from the implementation or benchmark
-rather than recall from the prose.
+Every chapter starts from the runnable checkpoint produced by the previous chapter. New algorithms are first compared with
+an exact oracle and then integrated behind the existing collection API. A later chapter never becomes an undeclared
+prerequisite for an earlier one.
 
-Every chapter will start from the runnable state produced by its prerequisite. New algorithms will first be compared with
-an exact oracle and then integrated behind the existing collection API. The same SQL query shown in the design proposal
-will run through the ANN index in the final chapter.
+The [Rust course overview](./rust-01-overview.md) shows the complete learning path and the current preview boundary.
 
 ## Community
 

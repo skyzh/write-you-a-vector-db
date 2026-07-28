@@ -2,30 +2,39 @@
 
 This workspace is the executable reference preview for the Rust course.
 
-The first checkpoint implements validated datasets, Euclidean/cosine/dot
-metrics, and deterministic exact top-k search in `vector-core`.
+```text
+vector-datafusion  ->  vector-core  ->  Dataset
+  Arrow + SQL          exact / IVF      Vec<f32>
+  plan pushdown        NSW / HNSW
+```
 
-The second checkpoint adds recall measurement and a deterministic in-process
-workload. At this point the harness compares exact search with itself; later
-chapters replace the candidate index without changing the measurement loop.
+`vector-core` has no Arrow or SQL dependency. `vector-datafusion` exposes a
+fixed schema—`id`, `payload`, `embedding`—and recognizes one-column top-k sorts
+whose distance function, direction, literal query vector, and table metric all
+agree. DataFusion 54.1.0's built-in sort-pushdown rule then replaces its generic
+top-k sort with `VectorIndexScanExec` and passes the literal `LIMIT` through
+`ExecutionPlan::with_fetch`.
 
-The third checkpoint adds `vector-datafusion`. It matches a compatible SQL
-top-k sort to `FlatIndex`, keeps unsupported shapes on DataFusion's exhaustive
-path, and establishes the SQLLogicTest runner used by every ANN chapter.
+The course establishes this SQL index-matching boundary with exact search
+before implementing ANN. Each IVFFlat, NSW, and HNSW chapter then adds a
+SQLLogicTest case under `vector-datafusion/tests/slt`, using the same query and
+plan contract as the first exact checkpoint.
 
-IVFFlat is the first ANN checkpoint. Seeded k-means builds the inverted lists,
-`probes` controls the candidate budget, and `vector.02-ivfflat.slt` exercises
-the index through the SQL matcher.
-
-NSW adds best-first traversal over a bounded-degree proximity graph. Its
-focused Rust test checks a high-budget search and its SQLLogicTest reuses the
-same top-k query as the exact and IVFFlat checkpoints.
-
-Run it with:
+Run the tests and the SQL plan demonstration:
 
 ```sh
 cargo test --workspace
 cargo test -p vector-datafusion --test sqllogictest
-cargo run --release -p vector-core --example recall
 cargo run -p vector-datafusion --example sql
 ```
+
+Measure recall and latency on a deterministic in-process fixture:
+
+```sh
+cargo run --release -p vector-core --example recall
+```
+
+The SQL adapter deliberately refuses filters, non-literal query vectors,
+multiple sort keys, metric mismatches, and the wrong sort direction. Those
+queries keep DataFusion's exhaustive `SortExec` plan. Filtered ANN, persistence,
+and online mutation are outside the preview's contract.

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use datafusion::arrow::array::UInt64Array;
 use datafusion::arrow::util::pretty::pretty_format_batches;
 use datafusion::execution::context::SessionContext;
-use vector_core::{IndexConfig, Metric};
+use vector_core::{HnswConfig, IndexConfig, Metric};
 use vector_datafusion::{VectorRow, VectorTable};
 
 fn rows() -> Vec<VectorRow> {
@@ -118,6 +118,29 @@ async fn wrong_metric_and_direction_are_not_lowered() {
         !non_literal.contains("VectorIndexScanExec"),
         "{non_literal}"
     );
+}
+
+#[tokio::test]
+async fn approximate_index_is_visible_in_explain() {
+    let context = context(
+        Metric::Cosine,
+        IndexConfig::Hnsw(HnswConfig {
+            max_connections: 3,
+            ef_construction: 5,
+            ef_search: 5,
+            max_level: 4,
+            seed: 7,
+        }),
+    )
+    .await;
+    let plan = explain(
+        &context,
+        "SELECT id FROM points ORDER BY cosine_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 2",
+    )
+    .await;
+    assert!(plan.contains("VectorIndexScanExec"), "{plan}");
+    assert!(plan.contains("index=hnsw"), "{plan}");
+    assert!(plan.contains("fetch=Some(2)"), "{plan}");
 }
 
 #[tokio::test]

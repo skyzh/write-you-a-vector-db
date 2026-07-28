@@ -1,12 +1,13 @@
 # Summary
 
 - [Build Vector Search Inside a SQL Database](./00-introduction.md)
-- [Rust Course Design Proposal](./rust-01-overview.md)
+- [Rust Course Preview](./rust-01-overview.md)
   - [Exact Search and Ground Truth](./rust-02-exact.md)
   - [Measure Recall Before Optimizing](./rust-03-evaluation.md)
   - [Match a Vector Index from SQL](./rust-04-index-match.md)
   - [Restrict Search with IVFFlat](./rust-05-ivfflat.md)
   - [Navigate a Proximity Graph with NSW](./rust-06-nsw.md)
+  - [Add Hierarchy with HNSW](./rust-07-hnsw.md)
 - [Where to Go Next](./10-epilogue.md)
 
 ---

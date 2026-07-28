@@ -10,7 +10,7 @@ use datafusion::common::DataFusionError;
 use datafusion::execution::context::SessionContext;
 use datafusion::physical_plan::collect;
 use sqllogictest::{AsyncDB, DBOutput, DefaultColumnType, Runner};
-use vector_core::{IndexConfig, IvfFlatConfig, Metric, NswConfig};
+use vector_core::{HnswConfig, IndexConfig, IvfFlatConfig, Metric, NswConfig};
 use vector_datafusion::{VectorRow, VectorTable};
 
 struct DataFusionDb {
@@ -155,6 +155,16 @@ async fn vector_sqllogictests() {
                 max_connections: 4,
                 ef_construction: 8,
                 ef_search: 8,
+            }),
+        ),
+        (
+            "vector.04-hnsw.slt",
+            IndexConfig::Hnsw(HnswConfig {
+                max_connections: 4,
+                ef_construction: 8,
+                ef_search: 8,
+                max_level: 4,
+                seed: 7,
             }),
         ),
     ];

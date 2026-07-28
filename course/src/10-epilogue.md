@@ -68,8 +68,8 @@ course continues the same investigation with a small in-memory system whose laye
 
 ## Feedback
 
-The Rust course is still a design proposal. Feedback about the scope, ordering, datasets, or architecture is especially
-valuable before learner checkpoints are published.
+The Rust course is available as an executable preview. Feedback about the scope, ordering, datasets, and learner
+checkpoints is welcome before the starter/completed refs are published.
 
 [![Join skyzh's Discord Server](discord-badge.svg)](https://skyzh.dev/join/discord)
 

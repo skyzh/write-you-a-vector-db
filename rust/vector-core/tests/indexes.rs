@@ -1,6 +1,6 @@
 use vector_core::{
-    Dataset, FlatIndex, IvfFlatConfig, IvfFlatIndex, Metric, Neighbor, NswConfig, NswIndex,
-    VectorIndex, recall_at_k,
+    Dataset, FlatIndex, HnswConfig, HnswIndex, IvfFlatConfig, IvfFlatIndex, Metric, Neighbor,
+    NswConfig, NswIndex, VectorIndex, recall_at_k,
 };
 
 fn line_dataset(size: usize) -> Dataset {
@@ -131,4 +131,26 @@ fn nsw_high_ef_matches_exact_search_on_connected_fixture() {
     let actual = nsw.search_with_ef(&query, 10, 64).unwrap();
     assert_eq!(recall_at_k(&expected, &actual, 10), 1.0);
     assert!(nsw.adjacency().iter().all(|neighbors| neighbors.len() <= 8));
+}
+
+#[test]
+fn hnsw_is_seeded_and_high_ef_recovers_neighbors() {
+    let config = HnswConfig {
+        max_connections: 8,
+        ef_construction: 40,
+        ef_search: 32,
+        max_level: 8,
+        seed: 99,
+    };
+    let dataset = line_dataset(96);
+    let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();
+    let left = HnswIndex::try_new(dataset.clone(), Metric::Euclidean, config).unwrap();
+    let right = HnswIndex::try_new(dataset, Metric::Euclidean, config).unwrap();
+
+    assert_eq!(left.levels(), right.levels());
+    assert_eq!(left.top_level(), *left.levels().iter().max().unwrap());
+    let query = [72.6, 3.0];
+    let expected = exact.search(&query, 10).unwrap();
+    let actual = left.search_with_ef(&query, 10, 96).unwrap();
+    assert_eq!(recall_at_k(&expected, &actual, 10), 1.0);
 }

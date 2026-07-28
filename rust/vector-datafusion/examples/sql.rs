@@ -3,7 +3,7 @@ use std::sync::Arc;
 use datafusion::common::Result;
 use datafusion::execution::config::SessionConfig;
 use datafusion::execution::context::SessionContext;
-use vector_core::{IndexConfig, Metric};
+use vector_core::{HnswConfig, IndexConfig, Metric};
 use vector_datafusion::{VectorRow, VectorTable};
 
 const QUERY: &str = "SELECT id, payload FROM points \
@@ -19,7 +19,13 @@ fn table() -> Result<VectorTable> {
             VectorRow::new(5, vec![0.0, 0.0, 1.0], "five"),
         ],
         Metric::Cosine,
-        IndexConfig::Flat,
+        IndexConfig::Hnsw(HnswConfig {
+            max_connections: 3,
+            ef_construction: 5,
+            ef_search: 5,
+            max_level: 4,
+            seed: 7,
+        }),
     )
 }
 
