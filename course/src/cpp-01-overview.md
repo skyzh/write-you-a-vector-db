@@ -3,8 +3,8 @@
 {{#include cpp-deprecation.md}}
 
 In this edition, you will add vector search to a modified version of BusTub, CMU's educational database system. The last
-fully specified checkpoint is a one-layer NSW index. The HNSW and large-dataset pages are optional work-in-progress notes,
-not complete assignments.
+fully specified implementation checkpoint is a one-layer NSW index. The HNSW page remains an optional design sketch. If
+you complete that extension in your private repository, the SIFT1M chapter is a runnable optional benchmark capstone.
 
 ## Course Order
 
@@ -22,12 +22,13 @@ The diagram shows the same dependencies. It is useful as a map, but it does not 
 
 ## Environment Setup
 
-Use the course's frozen 2024 starter. Its default `main` branch is the course version; these chapters were checked against
-commit `74de667e5d168f14fff9c9ea23af246a85f9785f`.
+Use the course's frozen BusTub snapshot. These chapters and the SIFT1M benchmark were checked against commit
+`50a884ec89c7bc63d5ab779d6342bfecb34e0caa`.
 
 ```shell
 git clone https://github.com/skyzh/bustub-vectordb
 cd bustub-vectordb
+git checkout 50a884ec89c7bc63d5ab779d6342bfecb34e0caa
 ```
 
 The intended environments are Ubuntu 22.04 and macOS. Follow the starter repository's **Build** section to install its
@@ -66,8 +67,8 @@ Then build the two course binaries:
 make -j8 shell sqllogictest
 ```
 
-The policy option lets the starter's older vendored CMake projects configure under CMake 4. All later build and test
-commands assume that your working directory is `bustub-vectordb/build`.
+The policy option lets the starter's older vendored CMake projects configure under CMake 4. Unless a chapter creates a
+separate build directory, later build and test commands assume that your working directory is `bustub-vectordb/build`.
 
 Run the SQL shell:
 
@@ -92,6 +93,8 @@ The starter narrows BusTub to the parts used by this course:
 - **Vector expressions.** The parser, type system, and expression tree already recognize three vector-distance operations.
 - **Vector-index interfaces.** `VectorIndex`, `IVFFlatIndex`, and `HNSWIndex` connect index construction, insertion, and lookup.
 - **Vector-index execution.** A plan node and executor can turn ordered vector-index RIDs back into table tuples.
+- **SIFT1M benchmark harness.** An optional executable loads the standard 128-dimensional corpus, runs HNSW queries, and
+  reports 1-nearest-neighbor recall at ranks 1, 10, and 100.
 
 Some executor work overlaps with CMU's Database Systems assignments. **KEEP PRIVATE** means that you must add those files
 to your solution repository's `.gitignore` and must not commit or publish them. The starter already tracks placeholder
