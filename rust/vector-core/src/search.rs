@@ -1,5 +1,5 @@
 use std::cmp::Ordering;
-use std::collections::BinaryHeap;
+use std::collections::{BinaryHeap, HashSet};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Neighbor {
@@ -58,4 +58,22 @@ impl TopK {
         neighbors.sort_unstable();
         neighbors
     }
+}
+
+pub fn recall_at_k(expected: &[Neighbor], actual: &[Neighbor], k: usize) -> f64 {
+    let denominator = expected.len().min(k);
+    if denominator == 0 {
+        return 1.0;
+    }
+    let expected = expected
+        .iter()
+        .take(k)
+        .map(|neighbor| neighbor.row)
+        .collect::<HashSet<_>>();
+    let matches = actual
+        .iter()
+        .take(k)
+        .filter(|neighbor| expected.contains(&neighbor.row))
+        .count();
+    matches as f64 / denominator as f64
 }

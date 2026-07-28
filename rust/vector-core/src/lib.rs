@@ -6,7 +6,7 @@ mod search;
 pub use dataset::Dataset;
 pub use flat::FlatIndex;
 pub use metric::Metric;
-pub use search::Neighbor;
+pub use search::{Neighbor, recall_at_k};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VectorError {
