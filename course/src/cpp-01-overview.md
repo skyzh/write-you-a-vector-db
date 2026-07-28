@@ -22,18 +22,18 @@ The diagram shows the same dependencies. It is useful as a map, but it does not 
 
 ## Environment Setup
 
-Use the course's pinned 2024 starter. Commands and interfaces in these chapters were checked against commit
-`74de667e5d168f14fff9c9ea23af246a85f9785f`.
+Use the course's frozen 2024 starter. Its default `main` branch is the course version; these chapters were checked against
+commit `74de667e5d168f14fff9c9ea23af246a85f9785f`.
 
 ```shell
 git clone https://github.com/skyzh/bustub-vectordb
 cd bustub-vectordb
-git checkout 74de667e5d168f14fff9c9ea23af246a85f9785f
 ```
 
 The intended environments are Ubuntu 22.04 and macOS. Follow the starter repository's **Build** section to install its
-platform packages. The project uses CMake, C++17, and LLVM/Clang 14. New Apple Clang releases are not a compatible
-substitute: the starter treats deprecation warnings from its 2024 dependencies as errors.
+platform packages. The project uses CMake, C++17, and LLVM/Clang 14. Use LLVM/Clang 14 even if your Mac already has a
+newer Apple Clang. Newer compilers warn about deprecated code in the starter's 2024 dependencies, and the starter treats
+those warnings as build errors.
 
 From the `bustub-vectordb` directory, create a build directory:
 
@@ -93,8 +93,10 @@ The starter narrows BusTub to the parts used by this course:
 - **Vector-index interfaces.** `VectorIndex`, `IVFFlatIndex`, and `HNSWIndex` connect index construction, insertion, and lookup.
 - **Vector-index execution.** A plan node and executor can turn ordered vector-index RIDs back into table tuples.
 
-Some executor work overlaps with CMU's Database Systems assignments. Keep the files marked **KEEP PRIVATE** in a private
-repository and follow the academic-integrity notice in the starter repository.
+Some executor work overlaps with CMU's Database Systems assignments. **KEEP PRIVATE** means that you must add those files
+to your solution repository's `.gitignore` and must not commit or publish them. The starter already tracks placeholder
+versions of these files, so adding them to `.gitignore` inside the starter clone is not enough to hide your changes. Keep
+the entire clone private and follow the academic-integrity notice in the starter repository.
 
 ## How to Check Each Chapter
 

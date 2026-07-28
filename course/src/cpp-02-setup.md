@@ -17,8 +17,10 @@ src/include/execution/expressions/vector_expression.h
 
 <div class="warning">
 
-The simplified insert and sequential-scan executors overlap with CMU's Database Systems assignments. Keep those four
-executor files in a private repository.
+The simplified insert and sequential-scan executors overlap with CMU's Database Systems assignments. **KEEP PRIVATE**
+means that you must add those four paths to your solution repository's `.gitignore` and must not commit or publish them.
+The starter already tracks placeholder versions of these files, so adding them to `.gitignore` inside the starter clone is
+not enough to hide your changes. Keep the entire clone private.
 
 </div>
 
