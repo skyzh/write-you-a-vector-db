@@ -14,3 +14,4 @@ https://skyzh.github.io/write-you-a-vector-db/rust-02-exact
 https://skyzh.github.io/write-you-a-vector-db/rust-03-evaluation
 https://skyzh.github.io/write-you-a-vector-db/rust-04-index-match
 https://skyzh.github.io/write-you-a-vector-db/rust-05-ivfflat
+https://skyzh.github.io/write-you-a-vector-db/rust-06-nsw

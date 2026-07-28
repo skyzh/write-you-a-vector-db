@@ -17,6 +17,10 @@ IVFFlat is the first ANN checkpoint. Seeded k-means builds the inverted lists,
 `probes` controls the candidate budget, and `vector.02-ivfflat.slt` exercises
 the index through the SQL matcher.
 
+NSW adds best-first traversal over a bounded-degree proximity graph. Its
+focused Rust test checks a high-budget search and its SQLLogicTest reuses the
+same top-k query as the exact and IVFFlat checkpoints.
+
 Run it with:
 
 ```sh

@@ -6,6 +6,7 @@
   - [Measure Recall Before Optimizing](./rust-03-evaluation.md)
   - [Match a Vector Index from SQL](./rust-04-index-match.md)
   - [Restrict Search with IVFFlat](./rust-05-ivfflat.md)
+  - [Navigate a Proximity Graph with NSW](./rust-06-nsw.md)
 - [Where to Go Next](./10-epilogue.md)
 
 ---

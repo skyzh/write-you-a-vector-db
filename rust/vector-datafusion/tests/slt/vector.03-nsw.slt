@@ -1,0 +1,15 @@
+query T
+EXPLAIN SELECT id, payload FROM points
+ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 5;
+----
+VectorIndexScanExec: index=nsw, metric=Euclidean, query_dim=3, fetch=Some(5)
+
+query IT
+SELECT id, payload FROM points
+ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 5;
+----
+1 point-1
+0 point-0
+2 point-2
+3 point-3
+4 point-4
