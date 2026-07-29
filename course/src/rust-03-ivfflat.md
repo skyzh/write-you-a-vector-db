@@ -16,8 +16,8 @@ supplied exact oracle.
 You will modify:
 
 ```text
-rust/vector-core-starter/src/ivf.rs
-rust/vector-core-starter/src/search.rs        recall_at_k only
+rust/vector-starter/core/src/ivf.rs
+rust/vector-starter/core/src/search.rs        recall_at_k only
 ```
 
 Do not change the Day 1 DataFusion rule. The workload, public APIs, tests, and Arrow execution path are already supplied.

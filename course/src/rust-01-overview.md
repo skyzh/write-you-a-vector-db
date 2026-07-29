@@ -24,14 +24,15 @@ bring-up; learner work begins at the table and extension boundary.
 
 ## Choose the Learner Workspace
 
-The Cargo workspace under `rust/` has paired crates:
+The Cargo workspace under `rust/` separates learner and reference trees:
 
 ```text
-vector-core-starter          validated dataset TODOs, supplied exact helpers, and IVFFlat TODOs
-vector-datafusion-starter    Day 1 Arrow table and optimizer-rule TODOs
-
-vector-core                  completed core reference
-vector-datafusion            completed DataFusion reference
+vector-starter/
+  core/                      validated dataset and IVFFlat TODOs
+  datafusion/                Day 1 Arrow table and optimizer-rule TODOs
+vector/
+  core/                      completed core reference
+  datafusion/                completed DataFusion reference
 ```
 
 The starter keeps the same public APIs, tests, examples, and file layout as the reference. Implement the TODOs in chapter

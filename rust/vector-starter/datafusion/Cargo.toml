@@ -9,7 +9,7 @@ rust-version.workspace = true
 async-trait.workspace = true
 datafusion.workspace = true
 tokio.workspace = true
-vector-core = { package = "vector-core-starter", path = "../vector-core-starter" }
+vector-core = { package = "vector-core-starter", path = "../core" }
 
 [dev-dependencies]
 sqllogictest.workspace = true

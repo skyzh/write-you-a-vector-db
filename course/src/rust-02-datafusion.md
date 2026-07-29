@@ -12,8 +12,8 @@ needs: validated vectors, a `TableProvider`, a physical scan, and a rule that re
 You will modify:
 
 ```text
-rust/vector-core-starter/src/dataset.rs
-rust/vector-datafusion-starter/src/lib.rs
+rust/vector-starter/core/src/dataset.rs
+rust/vector-starter/datafusion/src/lib.rs
 ```
 
 The starter supplies metric math, a small `FlatIndex` used as an oracle and index-selection test double, Arrow result
@@ -57,7 +57,7 @@ exists. On Day 2, `index=ivf_flat` will appear behind the same rule.
 
 ## Checkpoint 1: Validate the In-Memory Dataset
 
-Implement the three TODOs in `vector-core-starter/src/dataset.rs`.
+Implement the three TODOs in `vector-starter/core/src/dataset.rs`.
 
 `Dataset::try_new` reads the first row to establish dimension, rejects an empty dataset or zero-dimensional vector, then
 checks every row for equal length and finite components. Store the vectors as `Arc<[Vec<f32>]>`; later exact and
@@ -83,7 +83,7 @@ its top-k heap.
 
 ## Checkpoint 2: Turn Rows into an Arrow Table
 
-Implement `VectorTable::try_new` in `vector-datafusion-starter/src/lib.rs`.
+Implement `VectorTable::try_new` in `vector-starter/datafusion/src/lib.rs`.
 
 ### Preserve Identity
 
