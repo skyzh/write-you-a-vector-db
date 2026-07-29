@@ -8,8 +8,8 @@ answer SQL top-k queries through DataFusion and make the tradeoff between recall
 
 <div class="warning">
 
-**Course status:** The published book currently contains the Rust design proposal, not runnable Rust assignments. Learner
-starter and completed checkpoints have not been published.
+**Course status:** Day 1 is ready to implement: an in-memory Arrow table and DataFusion optimizer rule. The repository
+includes learner starter code, focused tests, and a separate completed reference.
 
 </div>
 
@@ -24,29 +24,27 @@ vector. Approximate nearest-neighbor (ANN) indexes avoid much of that work in ex
 set.
 
 This course builds vector search as a database feature rather than as an isolated ANN library. The goal is not only to
-understand IVFFlat and HNSW as algorithms, but also to see how vectors, distance expressions, query planning, execution,
+understand IVFFlat as an algorithm, but also to see how vectors, distance expressions, query planning, execution,
 and indexes fit together behind one SQL top-k query.
 
 ## What You Will Build
 
-The proposed course has one cumulative Rust implementation:
+The course has one cumulative Rust implementation:
 
-1. An exact-search collection with stable point IDs and a bounded top-k operator.
-2. A benchmark and recall harness that treats exact search as the correctness oracle.
-3. IVFFlat, NSW, and HNSW indexes behind the same search interface.
-4. A thin DataFusion adapter that turns a safe SQL top-k pattern into a vector-index scan.
+1. An Arrow-backed vector table and a conservative DataFusion optimizer rule that selects a vector-index scan.
 
-The core will be an ordinary Rust library. DataFusion supplies SQL parsing, planning, Arrow arrays, and execution, but the
-collection and indexes remain independent of it. This separation makes the integration small enough to understand and
-shows which responsibilities belong to the SQL engine and which belong to the vector index.
+The core is an ordinary Rust library. The learner-built DataFusion adapter turns a safe SQL top-k pattern into a
+vector-index scan before the approximate index exists, while the collection and index remain independent of Arrow and
+the query engine. DataFusion supplies exact distance, sort, and limit execution, so the Rust path does not duplicate an
+exact k-nearest-neighbor executor chapter.
 
 ## Learning Goals
 
 After completing the course, you should be able to:
 
 - define the semantics and edge cases of Euclidean, cosine, and inner-product search;
-- implement exact top-k search without sorting the entire collection;
-- explain how IVFFlat and HNSW trade build cost, memory, latency, and recall;
+- map stable vector rows into Arrow arrays and a DataFusion `TableProvider`;
+- explain how IVFFlat trades build cost, memory, latency, and recall;
 - design benchmarks that compare ANN results with exact ground truth;
 - recognize when a SQL top-k query can safely use an approximate index; and
 - separate a storage and search engine from its SQL interface.
@@ -65,22 +63,19 @@ measure, and explain.
 You should be comfortable with Rust ownership, traits, error handling, iterators, and Cargo. You should also know basic
 database concepts such as records, indexes, SQL ordering, and query plans.
 
-Prior knowledge of nearest-neighbor algorithms, Apache Arrow, or DataFusion is not required. The course will introduce the
-small subset of DataFusion's extension interface used by the final chapter.
+Prior knowledge of nearest-neighbor algorithms, Apache Arrow, or DataFusion is not required. Day 1 introduces the small
+subset of DataFusion's extension interface used by the course.
 
 ## How to Use This Book
 
-Start with the [Rust course design proposal](./rust-01-overview.md). It defines the selected architecture, system
-contracts, progression, and scope. Implementation chapters will be published only with matching starter code, completed
-checkpoints, and focused tests.
+Start with the [Rust course](./rust-01-overview.md). It defines the architecture, system contracts, learner workspace,
+progression, and scope. Both days pair the book with starter code, focused tests, and a separate reference solution.
 
-Each implementation chapter will begin with an observable capability, the relevant invariants, and a small prediction
-exercise. It will end with focused verification and questions that require evidence from the implementation or benchmark
-rather than recall from the prose.
+Each implementation day begins with an observable capability, the relevant invariants, and a small prediction exercise.
+It ends with focused verification and questions that require evidence from the implementation or benchmark rather than
+recall from the prose.
 
-Every chapter will start from the runnable state produced by its prerequisite. New algorithms will first be compared with
-an exact oracle and then integrated behind the existing collection API. The same SQL query shown in the design proposal
-will run through the ANN index in the final chapter.
+Day 1 makes the table and optimizer rule runnable before later algorithms, with physical-plan and result evidence.
 
 ## Community
 

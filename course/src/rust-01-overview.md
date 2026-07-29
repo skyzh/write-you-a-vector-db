@@ -1,30 +1,15 @@
-# Rust Course Design Proposal
+# Build Vector Search in Rust
 
 <div class="warning">
 
-**Course status:** This page specifies the selected architecture and progression. The Rust edition is not a runnable
-learner course yet; starter and completed checkpoints have not been published.
+**Course status:** Day 1 is ready to learn from and implement. The repository includes learner starter code, focused
+tests, and a separate reference solution.
 
 </div>
 
-The Rust course builds vector indexes in a standalone crate, then connects them to SQL through DataFusion in the final
-required chapter. The collection and search interfaces remain independently testable without Arrow or a query engine. At
-the boundary, a small adapter makes the relationship between SQL semantics and index execution visible.
-
-## SQL Integration Boundary
-
-[DataFusion](https://datafusion.apache.org/) provides SQL parsing, planning, Arrow execution, and the extension points used
-by the course. It supports [`array_distance`, `cosine_distance`, and inner-product
-functions](https://datafusion.apache.org/user-guide/sql/scalar_functions.html#array-functions). A custom
-[`TableProvider`](https://datafusion.apache.org/library-user-guide/custom-table-providers.html) exposes the collection. The
-design pins DataFusion 54.1.0 and uses `ExecutionPlan::try_pushdown_sort` and `with_fetch`: the physical optimizer offers
-the scan a requested ordering, removes the generic sort after the scan accepts it, and passes the literal limit to the
-index.
-
-All DataFusion-specific code lives in the adapter crate. Students use the pinned public APIs and do not edit DataFusion
-itself.
-
-The course begins and ends with the same query:
+In Day 1, you will connect an in-memory vector table to DataFusion and implement the optimizer rule that selects a safe
+vector-index scan. This integration comes before ANN algorithms so later index implementations can be tested through SQL
+as soon as they work.
 
 ```sql
 SELECT id, payload
@@ -33,95 +18,112 @@ ORDER BY cosine_distance(embedding, [0.1, 0.2, 0.3])
 LIMIT 10;
 ```
 
-In the opening chapter, DataFusion evaluates the distance for every row and performs a generic top-k sort. In the final
-chapter, the adapter recognizes the compatible metric, constant query vector, ordering direction, and literal limit, then
-produces the course-defined `VectorIndexScanExec`. `EXPLAIN` makes the change visible.
+DataFusion already implements vector distance expressions, exact sorting, and `LIMIT`. The course does not ask you to
+rebuild exact k-nearest-neighbor execution. The starter supplies a small flat oracle for algorithm tests and optimizer
+bring-up; learner work begins at the table and extension boundary.
 
-Queries outside the supported pattern retain the exact plan. In particular, the course does not claim that arbitrary
-`WHERE` predicates can be applied after an ANN top-k without changing the result. Refusing an unsafe rewrite is part of
-the SQL contract.
+## Choose the Learner Workspace
 
-For example, suppose the nearest point belongs to tenant B and the second-nearest point belongs to tenant A. For
-`WHERE tenant = 'A' ORDER BY distance LIMIT 1`, taking one ANN result and then applying the filter returns no rows. Applying
-the filter first returns tenant A's point. The adapter must keep the exact plan for this query.
+The Cargo workspace under `rust/` has paired crates:
+
+```text
+vector-core-starter          validated dataset TODOs and supplied exact helpers
+vector-datafusion-starter    Day 1 Arrow table and optimizer-rule TODOs
+
+vector-core                  completed core reference
+vector-datafusion            completed DataFusion reference
+```
+
+The starter keeps the same public APIs, tests, examples, and file layout as the reference. Implement the TODOs in chapter
+order. The reference crates are an answer key, not a prerequisite.
+
+From the repository root, check that the untouched starter compiles:
+
+```sh
+cd rust
+cargo check -p vector-core-starter
+cargo check -p vector-datafusion-starter
+```
+
+The focused tests initially stop at `todo!` calls. Each chapter names the exact tests that should pass before you move
+on.
+
+## One Query, Two Plans
+
+Before index matching, the query is exact:
+
+```text
+SortExec: TopK(fetch=10), ...
+  VectorScanExec: rows=..., fetch=None
+```
+
+`VectorScanExec` emits Arrow rows. DataFusion evaluates the distance function for every row and uses its own bounded sort
+to produce the nearest ten.
+
+On Day 1, you implement `ExecutionPlan::try_pushdown_sort`. It accepts only one compatible distance ordering over the
+`embedding` column with a literal query vector. `with_fetch` receives `LIMIT k`, and the matched scan asks the selected
+index for `k` candidate row offsets:
+
+```text
+SortExec: TopK(fetch=10), ...
+  VectorIndexScanExec: index=flat, metric=Cosine, query_dim=3, fetch=Some(10), ordered=false
+```
+
+The supplied flat index lets you verify this rule before an approximate index exists.
+
+The default plan retains DataFusion's bounded sort. The index selects candidates; `SortExec` owns SQL ordering. The
+optional `SET vector_search.ordered = true` promise allows sort elision when the executor guarantees ordered output.
+
+Filters, multiple sort keys, a non-literal query vector, the wrong distance function, the wrong direction, or a dimension
+mismatch keep the exact plan. In particular, taking ANN top-k before applying a filter can change the answer, so refusing
+that rewrite is a correctness requirement.
 
 ## Architecture
 
-The dependency direction is:
-
 ```text
-DataFusion SQL adapter --> collection API --> exact / IVF / graph index
-                               ^
-                               |
-                    tests, datasets, benchmark
+SQL + DataFusion optimizer --> VectorTable / VectorScanExec --> VectorIndex
+                                                                  |
+                                                        supplied FlatIndex
 ```
 
-The adapter owns Arrow conversion, SQL-pattern recognition, plan properties, and result batches. The collection owns IDs,
-dimensions, metrics, and index selection. The indexes know nothing about SQL, Arrow, or asynchronous execution.
+The DataFusion crate owns Arrow conversion, SQL-pattern matching, plan properties, limits, and output batches. The core
+crate owns dimensions, metrics, exact ground truth, candidate selection, and deterministic result order. Later index
+implementations will not import DataFusion.
 
-This separation keeps every algorithm testable with ordinary Rust values. It also makes the final integration diff small
-enough for students to explain line by line.
+This separation lets small Rust tests isolate the storage contract while SQLLogicTests verify the optimizer boundary.
 
-## System Contracts
+## Contracts Established on Day 1
 
-The course establishes these contracts before students implement an ANN index.
-
-1. A collection has one fixed dimension and one distance metric. A query or bulk-loaded point with another dimension is
-   rejected.
-2. Stored vectors use `f32`, while distance accumulation uses `f64`.
-3. Exact search defines the ground truth. ANN benchmarks always report recall together with latency.
-4. Results use deterministic tie-breaking so tests do not depend on heap or hash-map iteration order.
-5. The required lifecycle is bulk load, build, freeze, and query. Persistence and online mutation after a build are out of
-   scope.
-6. SQL uses an ANN scan only when the adapter can prove that the query matches the index contract. All other queries use
-   DataFusion's exact plan.
-
-These rules are visible in public types, tests, and `EXPLAIN` output rather than scattered across chapter prose.
+1. **Dimension:** a dataset has one nonzero dimension; every stored vector and query matches it.
+2. **Numeric domain:** stored values are finite `f32`, while metric accumulation uses `f64`. Cosine inputs have nonzero
+   norm.
+3. **Identity:** core row offset `r` maps to Arrow batch row `r`, which carries the corresponding external ID and payload.
+4. **Ordering:** lower internal distance is better. Ties use row offset. Dot product is negated at the metric boundary.
+5. **Oracle:** exact search defines ground truth. Approximate latency is never reported without recall from the same data,
+   queries, metric, and `k`.
+6. **SQL safety:** the optimizer selects an index only when expression, metric, direction, dimension, and limit match its
+   contract. Unsupported shapes remain exact.
 
 ## Course Progression
 
-The required path is sized for roughly one focused week, but it is not divided into artificial days. Learners may spread
-it across more sessions. The chapters follow conceptual density: IVFFlat and the graph indexes are longer than the
-baseline, evaluation, and adapter chapters.
+| Day | Estimate | Before | After |
+| --- | ---: | --- | --- |
+| [1 — DataFusion table and optimizer](./rust-02-datafusion.md) | 3–4 hours | Vectors are Rust structs and DataFusion has no table or vector access path. | Rows become an Arrow-backed `TableProvider`; exact top-k runs in DataFusion; a conservative sort-pushdown rule selects a compatible vector scan and preserves exact fallback. |
+The ordering mirrors the maintained structure of the C++ course: establish representation and scan execution, then
+implement safe index matching before an approximate index. The Rust course skips the C++ exact-executor chapter because
+DataFusion already supplies vector expressions, bounded sort, and limit execution.
 
-| Chapter | Prerequisite | Initial estimate | Before | After |
-| --- | --- | ---: | --- | --- |
-| Exact search and the SQL baseline | None | 2–3 hours | Vectors are ordinary arrays, and the target SQL query has no index. | Dimensions and metrics have explicit semantics, a bounded heap returns deterministic exact top-k results, and `EXPLAIN` records the exhaustive DataFusion plan. |
-| Benchmark and recall | Exact search and the SQL baseline | 2–3 hours | Correctness examples are small and qualitative. | A seeded harness records exact ground truth, recall, p50/p99 latency, build time, and workload metadata. |
-| IVFFlat | Benchmark and recall | 4–5 hours, likely two sessions | Exact search visits every vector. | Seeded k-means, inverted lists, and `probes` form a complete IVFFlat index with a measured recall/latency curve. |
-| NSW | Benchmark and recall | 3–4 hours | Only partition-based ANN is available. | Greedy and beam search, incremental insertion, and neighbor pruning form a searchable single-layer graph. |
-| HNSW | NSW | 3–4 hours | Every graph search begins in the same layer. | Random levels, entry points, cross-layer descent, and `ef_search` form a hierarchical graph index. |
-| Use the index from SQL | Exact search and one ANN chapter | 3–4 hours | DataFusion still evaluates every distance and performs a generic top-k. | The adapter accepts the compatible sort as `VectorIndexScanExec`, preserves exact fallback, and compares both plans on the same workload. |
+By the end, you should be able to explain:
 
-The ordering is intentional. Exact search becomes the first working implementation and the oracle for every approximate
-index. The benchmark comes before ANN so `probes`, beam width, and `ef_search` are evaluated rather than guessed. IVFFlat
-introduces the recall/latency tradeoff with a simple candidate-generation model. HNSW follows NSW so hierarchy is the only
-new graph idea in that chapter. SQL integration comes last so it wraps an already tested search contract.
+- how row identity survives conversion from Rust structs to core offsets and Arrow arrays;
+- which physical expression shapes are safe to lower to a vector index;
+- why DataFusion retains exact fallback for filtered or incompatible top-k queries;
+- why the optimizer rule must exist before an approximate index can be exercised from SQL.
 
-SQL appears in the opening and final chapters rather than consuming the middle of the course. Students know the target
-plan from the beginning, but the ANN algorithms remain ordinary library code. The final chapter demonstrates how little
-adapter code is needed and how much semantic care that small amount of code still requires.
+## Deliberate Boundaries
 
-Before finishing the course, students should be able to explain:
-
-- why deterministic top-k ordering matters;
-- why every ANN performance number needs a recall number from the same query set;
-- how `probes` and `ef_search` change the candidate budget in different index families;
-- which SQL expression shapes are safe to lower to an ANN scan; and
-- why a filtered or differently ordered query must fall back to exact execution.
-
-## What We Intentionally Leave Out
-
-The required implementation does not include:
-
-- online upserts and deletes after an index is built;
-- persistent point or index formats, write-ahead logging, crash recovery, background rebuilds, or compaction;
-- concurrent readers and writers or distributed execution;
-- filtered ANN search, hybrid lexical search, or joins pushed into the vector index;
-- quantization, GPU execution, or memory-mapped index layouts; or
-- an HTTP or production-compatible database protocol.
-
-These are follow-up projects, not hidden requirements. The final collection is useful for bulk-load-and-query workloads
-and for demonstrating SQL integration, but it is not a production database.
+Approximate indexes are later chapters. The Day 1 implementation also excludes online updates or deletes, index
+persistence, crash recovery, concurrent mutation, filtered ANN, quantization, GPU kernels, distributed execution, DDL,
+and a network service.
 
 {{#include copyright.md}}
