@@ -100,9 +100,9 @@ The starter narrows BusTub to the parts used by this course:
   reports 1-nearest-neighbor recall at ranks 1, 10, and 100.
 
 Some executor work overlaps with CMU's Database Systems assignments. **KEEP PRIVATE** applies only to files marked with
-that label: do not commit or publish your implementations of those paths. The vector-index and benchmark files are not
-part of that restriction. Because the starter already tracks placeholder versions of some private files, `.gitignore`
-alone will not hide changes to them; check the staged diff before publishing.
+that label: do not commit or publish your implementations of those paths. The IVFFlat, NSW, HNSW, and benchmark files are
+not part of that restriction and may be published. Because the starter already tracks placeholder versions of some
+private files, `.gitignore` alone will not hide changes to them; check the staged diff before publishing.
 
 ## How to Check Each Chapter
 
