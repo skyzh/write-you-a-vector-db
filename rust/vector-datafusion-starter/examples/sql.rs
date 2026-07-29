@@ -3,7 +3,7 @@ use std::sync::Arc;
 use datafusion::common::Result;
 use datafusion::execution::config::SessionConfig;
 use datafusion::execution::context::SessionContext;
-use vector_core::{IndexConfig, Metric};
+use vector_core::{IndexConfig, IvfFlatConfig, Metric};
 use vector_datafusion_starter::{VectorRow, VectorTable, with_vector_search_options};
 
 const QUERY: &str = "SELECT id, payload FROM points \
@@ -30,5 +30,19 @@ async fn main() -> Result<()> {
     println!("Vector-index plan and result:");
     exact.sql(&format!("EXPLAIN {QUERY}")).await?.show().await?;
     exact.sql(QUERY).await?.show().await?;
+
+    let ivf = SessionContext::new_with_config(with_vector_search_options(SessionConfig::new()));
+    ivf.register_table(
+        "points",
+        Arc::new(table(IndexConfig::IvfFlat(IvfFlatConfig {
+            partitions: 2,
+            probes: 2,
+            iterations: 8,
+            seed: 7,
+        }))?),
+    )?;
+    println!("\nIVFFlat-index plan and result:");
+    ivf.sql(&format!("EXPLAIN {QUERY}")).await?.show().await?;
+    ivf.sql(QUERY).await?.show().await?;
     Ok(())
 }

@@ -8,8 +8,8 @@ answer SQL top-k queries through DataFusion and make the tradeoff between recall
 
 <div class="warning">
 
-**Course status:** Day 1 is ready to implement: an in-memory Arrow table and DataFusion optimizer rule. The repository
-includes learner starter code, focused tests, and a separate completed reference.
+**Course status:** Days 1–2 are ready to implement: an in-memory Arrow table and DataFusion optimizer rule, followed by
+IVFFlat. The repository includes learner starter code, focused tests, and separate completed references.
 
 </div>
 
@@ -24,14 +24,15 @@ vector. Approximate nearest-neighbor (ANN) indexes avoid much of that work in ex
 set.
 
 This course builds vector search as a database feature rather than as an isolated ANN library. The goal is not only to
-understand IVFFlat as an algorithm, but also to see how vectors, distance expressions, query planning, execution,
-and indexes fit together behind one SQL top-k query.
+understand IVFFlat as an algorithm, but also to see how vectors, distance expressions, query planning, execution, and
+indexes fit together behind one SQL top-k query.
 
 ## What You Will Build
 
 The course has one cumulative Rust implementation:
 
 1. An Arrow-backed vector table and a conservative DataFusion optimizer rule that selects a vector-index scan.
+2. An IVFFlat index and recall harness that treat exact search as the correctness oracle.
 
 The core is an ordinary Rust library. The learner-built DataFusion adapter turns a safe SQL top-k pattern into a
 vector-index scan before the approximate index exists, while the collection and index remain independent of Arrow and
@@ -75,7 +76,8 @@ Each implementation day begins with an observable capability, the relevant invar
 It ends with focused verification and questions that require evidence from the implementation or benchmark rather than
 recall from the prose.
 
-Day 1 makes the table and optimizer rule runnable before later algorithms, with physical-plan and result evidence.
+Day 1 makes the table and optimizer rule runnable before Day 2's algorithm. IVFFlat is then compared with an exact oracle
+and exercised through the same collection API and SQL query, with physical-plan and result evidence.
 
 ## Community
 

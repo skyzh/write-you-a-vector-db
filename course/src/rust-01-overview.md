@@ -2,14 +2,14 @@
 
 <div class="warning">
 
-**Course status:** Day 1 is ready to learn from and implement. The repository includes learner starter code, focused
-tests, and a separate reference solution.
+**Course status:** Days 1–2 are ready to learn from and implement. The repository includes learner starter code, focused
+tests, and separate reference solutions.
 
 </div>
 
-In Day 1, you will connect an in-memory vector table to DataFusion and implement the optimizer rule that selects a safe
-vector-index scan. This integration comes before ANN algorithms so later index implementations can be tested through SQL
-as soon as they work.
+In two days, you will connect an in-memory vector table to DataFusion, implement the optimizer rule that selects a safe
+vector-index scan, and build IVFFlat behind that rule. The integration day comes first so the algorithm can be tested
+through SQL as soon as it works.
 
 ```sql
 SELECT id, payload
@@ -27,7 +27,7 @@ bring-up; learner work begins at the table and extension boundary.
 The Cargo workspace under `rust/` has paired crates:
 
 ```text
-vector-core-starter          validated dataset TODOs and supplied exact helpers
+vector-core-starter          validated dataset TODOs, supplied exact helpers, and IVFFlat TODOs
 vector-datafusion-starter    Day 1 Arrow table and optimizer-rule TODOs
 
 vector-core                  completed core reference
@@ -69,7 +69,12 @@ SortExec: TopK(fetch=10), ...
   VectorIndexScanExec: index=flat, metric=Cosine, query_dim=3, fetch=Some(10), ordered=false
 ```
 
-The supplied flat index lets you verify this rule before an approximate index exists.
+The supplied flat index lets you verify this rule before IVFFlat exists. On Day 2, the plan changes only at the index:
+
+```text
+SortExec: TopK(fetch=10), ...
+  VectorIndexScanExec: index=ivf_flat, metric=Cosine, query_dim=3, fetch=Some(10), ordered=false
+```
 
 The default plan retains DataFusion's bounded sort. The index selects candidates; `SortExec` owns SQL ordering. The
 optional `SET vector_search.ordered = true` promise allows sort elision when the executor guarantees ordered output.
@@ -84,15 +89,18 @@ that rewrite is a correctness requirement.
 SQL + DataFusion optimizer --> VectorTable / VectorScanExec --> VectorIndex
                                                                   |
                                                         supplied FlatIndex
+                                                                  |
+                                                       learner IvfFlatIndex
 ```
 
 The DataFusion crate owns Arrow conversion, SQL-pattern matching, plan properties, limits, and output batches. The core
 crate owns dimensions, metrics, exact ground truth, candidate selection, and deterministic result order. Later index
 implementations will not import DataFusion.
 
-This separation lets small Rust tests isolate the storage contract while SQLLogicTests verify the optimizer boundary.
+This separation gives Day 2 two useful views of the same checkpoint: small Rust tests isolate the algorithm, while an
+SQLLogicTest proves the Day 1 optimizer can reach it.
 
-## Contracts Established on Day 1
+## Contracts That Survive Both Days
 
 1. **Dimension:** a dataset has one nonzero dimension; every stored vector and query matches it.
 2. **Numeric domain:** stored values are finite `f32`, while metric accumulation uses `f64`. Cosine inputs have nonzero
@@ -109,8 +117,10 @@ This separation lets small Rust tests isolate the storage contract while SQLLogi
 | Day | Estimate | Before | After |
 | --- | ---: | --- | --- |
 | [1 — DataFusion table and optimizer](./rust-02-datafusion.md) | 3–4 hours | Vectors are Rust structs and DataFusion has no table or vector access path. | Rows become an Arrow-backed `TableProvider`; exact top-k runs in DataFusion; a conservative sort-pushdown rule selects a compatible vector scan and preserves exact fallback. |
+| [2 — IVFFlat](./rust-03-ivfflat.md) | 4–5 hours | The optimizer can select only the supplied flat test index. | Seeded k-means, inverted lists, and `probes` create a measured recall/work tradeoff behind the same SQL query. |
+
 The ordering mirrors the maintained structure of the C++ course: establish representation and scan execution, then
-implement safe index matching before an approximate index. The Rust course skips the C++ exact-executor chapter because
+implement safe index matching, then implement the index. The Rust course skips the C++ exact-executor chapter because
 DataFusion already supplies vector expressions, bounded sort, and limit execution.
 
 By the end, you should be able to explain:
@@ -118,12 +128,14 @@ By the end, you should be able to explain:
 - how row identity survives conversion from Rust structs to core offsets and Arrow arrays;
 - which physical expression shapes are safe to lower to a vector index;
 - why DataFusion retains exact fallback for filtered or incompatible top-k queries;
-- why the optimizer rule must exist before an approximate index can be exercised from SQL.
+- why the optimizer rule must exist before an approximate index can be exercised from SQL;
+- why IVFFlat must rebuild list membership after its final centroid update; and
+- how `probes` trades candidate work for recall without changing SQL.
 
 ## Deliberate Boundaries
 
-Approximate indexes are later chapters. The Day 1 implementation also excludes online updates or deletes, index
-persistence, crash recovery, concurrent mutation, filtered ANN, quantization, GPU kernels, distributed execution, DDL,
-and a network service.
+The published path stops after IVFFlat. Graph indexes are later work. The implementation also excludes online updates or
+deletes, index persistence, crash recovery, concurrent mutation, filtered ANN, quantization, GPU kernels, distributed
+execution, DDL, and a network service.
 
 {{#include copyright.md}}

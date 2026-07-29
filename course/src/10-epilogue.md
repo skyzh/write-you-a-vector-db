@@ -1,8 +1,7 @@
 # Where to Go Next
 
 This short course can make the central tradeoffs visible, but it cannot turn a teaching system into a production vector
-database. The published checkpoint stops after an immutable in-memory collection with exact fallback and SQL index
-matching.
+database. The course stops after an immutable in-memory collection with exact fallback, IVFFlat, and SQL query support.
 
 ## One SQL Query, Many Layers
 
@@ -69,7 +68,7 @@ course continues the same investigation with a small in-memory system whose laye
 
 ## Feedback
 
-The first Rust day includes learner starter code, an executable reference, focused tests, and SQL plan checks.
+The first two Rust days include learner starter code, executable references, focused tests, and SQL plan checks.
 Feedback about the scope, ordering, datasets, or architecture is welcome.
 
 [![Join skyzh's Discord Server](discord-badge.svg)](https://skyzh.dev/join/discord)

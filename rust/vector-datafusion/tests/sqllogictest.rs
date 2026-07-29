@@ -11,7 +11,7 @@ use datafusion::execution::config::SessionConfig;
 use datafusion::execution::context::SessionContext;
 use datafusion::physical_plan::collect;
 use sqllogictest::{AsyncDB, DBOutput, DefaultColumnType, Runner};
-use vector_core::{IndexConfig, Metric};
+use vector_core::{IndexConfig, IvfFlatConfig, Metric};
 use vector_datafusion::{VectorRow, VectorTable, with_vector_search_options};
 
 struct DataFusionDb {
@@ -156,4 +156,18 @@ async fn run_case(filename: &str, config: IndexConfig) {
 #[tokio::test]
 async fn day1_table_and_optimizer_sql() {
     run_case("vector.01-index-match.slt", IndexConfig::Flat).await;
+}
+
+#[tokio::test]
+async fn day2_ivfflat_sql() {
+    run_case(
+        "vector.02-ivfflat.slt",
+        IndexConfig::IvfFlat(IvfFlatConfig {
+            partitions: 3,
+            probes: 3,
+            iterations: 8,
+            seed: 7,
+        }),
+    )
+    .await;
 }
