@@ -2,9 +2,9 @@
 
 {{#include cpp-deprecation.md}}
 
-The starter has fields for multiple NSW layers. In this chapter, you will use them to add hierarchy to the graph and make
-search more efficient, much like a skip list or mipmap. Sparse upper layers make long jumps; layer 0 still contains every
-vertex and produces the final candidates.
+The previous chapter stored its one-layer NSW graph in `layers_[0]`. In this chapter, you will add sparse NSW layers above
+it and use them during insertion and lookup. This hierarchy makes graph search more efficient, much like a skip list or
+mipmap: upper layers make long jumps, while layer 0 still contains every vertex and produces the final candidates.
 
 Files you will likely modify:
 
