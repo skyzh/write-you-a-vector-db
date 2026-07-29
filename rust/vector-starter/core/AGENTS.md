@@ -3,9 +3,9 @@
 Implement the exercises only in this directory unless the course chapter says
 otherwise.
 
-- Do not inspect `../vector-core`, `../vector-datafusion`, Git history, remote
-  branches, or published solutions.
-- You may read the Rust course chapters and edit `../vector-datafusion-starter`
+- Do not inspect `../../vector/core`, `../../vector/datafusion`, Git history,
+  remote branches, or published solutions.
+- You may read the Rust course chapters and edit `../datafusion`
   during Day 1.
 - Do not change public APIs or tests to make an implementation pass.
 - Preserve deterministic tie-breaking and the validation behavior described by

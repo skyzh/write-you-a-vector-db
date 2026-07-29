@@ -1,9 +1,9 @@
 [workspace]
 members = [
-    "vector-core",
-    "vector-core-starter",
-    "vector-datafusion",
-    "vector-datafusion-starter",
+    "vector/core",
+    "vector/datafusion",
+    "vector-starter/core",
+    "vector-starter/datafusion",
 ]
 resolver = "2"
 

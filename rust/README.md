@@ -1,16 +1,18 @@
 # Rust Vector Search Course
 
-This Cargo workspace contains learner and reference code for two chapters:
+This Cargo workspace separates learner code from completed references:
 
-| Crate | Role |
-| --- | --- |
-| `vector-core-starter` | Day 1 dataset validation and Day 2 IVFFlat/recall TODOs; exact helpers are supplied |
-| `vector-datafusion-starter` | Day 1 Arrow table, scan extension, and optimizer-rule TODOs |
-| `vector-core` | Completed core reference |
-| `vector-datafusion` | Completed DataFusion reference |
+```text
+vector-starter/
+  core/          package: vector-core-starter
+  datafusion/    package: vector-datafusion-starter
+vector/
+  core/          package: vector-core
+  datafusion/    package: vector-datafusion
+```
 
-Day 1 makes vector-index selection observable from SQL before Day 2 implements
-IVFFlat.
+Day 1 makes vector-index selection observable from SQL. Day 2 implements
+IVFFlat behind that unchanged optimizer boundary.
 
 Check the untouched starter without executing TODOs:
 
