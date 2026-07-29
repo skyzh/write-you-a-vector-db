@@ -2,18 +2,11 @@
 
 {{#include cpp-deprecation.md}}
 
-<div class="warning">
+The starter has fields for multiple NSW layers. In this chapter, you will use them to add hierarchy to the graph and make
+search more efficient, much like a skip list or mipmap. Sparse upper layers make long jumps; layer 0 still contains every
+vertex and produces the final candidates.
 
-**Optional design sketch:** The pinned starter has fields for multiple NSW layers, but this page is not a complete learner
-checkpoint. Its SQLLogicTest reuses the NSW queries and cannot prove that hierarchy was built or used. The previous NSW
-chapter is the last fully specified and testable C++ assignment.
-
-</div>
-
-HNSW stacks multiple NSW layers to make graph search more efficient, much like a skip list or mipmap. Sparse upper layers
-make long jumps; layer 0 still contains every vertex and produces the final candidates.
-
-Files an extension would modify:
+Files you will likely modify:
 
 ```text
 src/include/storage/index/hnsw_index.h
@@ -40,7 +33,7 @@ around the query.
 
 ## Layer Invariants
 
-A complete extension should preserve these rules:
+Your implementation should preserve these rules:
 
 - layer 0 contains every vertex;
 - membership is nested: a vertex in layer `L` also appears in every lower layer;
@@ -49,7 +42,7 @@ A complete extension should preserve these rules:
 - edges remain symmetric within each layer; and
 - the top entry point belongs to the current highest nonempty layer.
 
-The pinned header has no dedicated top-entry-point field. You may add one, or derive it consistently from the highest
+The starter header has no dedicated top-entry-point field. You may add one, or derive it consistently from the highest
 layer. That representation is your choice; the invariants are not.
 
 ## Lookup
@@ -117,12 +110,12 @@ if target_level is above current_highest:
     make the new vertex the top entry point
 ```
 
-This outline still leaves engineering choices such as random seeding and helper layout to the implementer. It does not
-replace the paper's full algorithm or define a released course checkpoint.
+This outline still leaves engineering choices such as random seeding and helper layout to the implementer. Refer to the
+paper for the complete algorithm.
 
-## Available Regression Check
+## Verify the Checkpoint
 
-From `bustub-vectordb/build`, the existing SQL regression is:
+From `bustub-vectordb/build`, run the same SQLLogicTest used in the NSW chapter:
 
 ```shell
 make -j8 sqllogictest
@@ -139,11 +132,7 @@ make -j8 sqllogictest
 
 </details>
 
-Passing this file proves only that the public SQL behavior still works. A real HNSW test must also inspect internal
-structure: create enough vertices with a deterministic generator, assert that more than one layer exists, verify nested
-membership and degree caps, and demonstrate that lookup visits an upper layer before layer 0.
-
-Until those checks and a completed learner write-up exist, treat HNSW as an optional experiment rather than a completed
-course outcome.
+Confirm that the nearest-neighbor queries use a vector index scan and return rows in distance order. Random layer
+selection can make your output differ from the reference.
 
 {{#include copyright.md}}

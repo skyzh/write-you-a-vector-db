@@ -20,7 +20,8 @@ src/include/execution/expressions/vector_expression.h
 The simplified insert and sequential-scan executors overlap with CMU's Database Systems assignments. **KEEP PRIVATE**
 means that you must add those four paths to your solution repository's `.gitignore` and must not commit or publish them.
 The starter already tracks placeholder versions of these files, so adding them to `.gitignore` inside the starter clone is
-not enough to hide your changes. Keep the entire clone private.
+not enough to hide your changes. Check the staged diff before publishing; other course files are not part of this
+restriction.
 
 </div>
 
@@ -169,8 +170,8 @@ deletion followed by an insertion. You will also need to extend `VectorIndex` wi
 Add dimension validation before inserting into a `VECTOR(n)` column. For example, reject a vector of dimension 3 or 5
 when the column is declared as `VECTOR(4)`.
 
-These tasks overlap further with CMU's Database Systems projects. **KEEP PRIVATE** applies to every implementation in this
-section: add the affected files to your solution repository's `.gitignore`, do not commit or publish them, and keep the
-entire starter clone private because its placeholder files are already tracked.
+These tasks overlap further with CMU's Database Systems projects. **KEEP PRIVATE** applies to affected assignment files in
+this section: add those paths to your solution repository's `.gitignore`, do not commit or publish them, and remember that
+`.gitignore` does not hide changes to placeholder files already tracked by the starter.
 
 {{#include copyright.md}}

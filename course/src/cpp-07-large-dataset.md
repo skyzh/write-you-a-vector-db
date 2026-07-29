@@ -4,7 +4,7 @@
 
 <div class="warning">
 
-**Optional capstone:** Use this chapter after completing IVFFlat or a private HNSW implementation. The benchmark shows how
+**Optional capstone:** Use this chapter after completing IVFFlat or HNSW. The benchmark shows how
 index parameters affect query speed and recall on a larger data set; the earlier chapter checks remain the place to debug
 the algorithms themselves.
 
@@ -129,8 +129,8 @@ queries_per_second = 10000 / query_seconds
 ## Run an IVFFlat Benchmark
 
 The provided harness creates its HNSW index before loading rows, so each insert incrementally updates the graph. IVFFlat
-has a different build path: it learns centroids from data already in the table. To benchmark IVFFlat in your private
-working copy:
+has a different build path: it learns centroids from data already in the table. To benchmark IVFFlat in your working
+copy:
 
 1. keep the base-vector insertion loop in `InsertIndexVectorData`;
 2. move index creation after that loop; and
@@ -155,7 +155,7 @@ Each benchmark query uses `LIMIT 100`, so `k = 100`. The lookup contract from th
 `max(k, ef_search)`. As a result, `ef_search = 50` and `ef_search = 100` both produce an effective width of 100; comparing
 100 with 200 actually changes the number of candidates the graph search may retain.
 
-Rebuild and rerun after changing the string. For a controlled comparison, use the same random seed in your private HNSW
+Rebuild and rerun after changing the string. For a controlled comparison, use the same random seed in your HNSW
 implementation; otherwise repeat each configuration and report the variation.
 
 ### IVFFlat
@@ -183,7 +183,5 @@ The benchmark is most useful as a comparison rather than a pass/fail exercise. K
 then add a short explanation of what changed when you increased `ef_search` or `probe_lists`. If `R@10` or `R@100` rises
 while `R@1` stays flat, the exact neighbor is appearing in the candidate set without consistently ranking first. If the
 numbers do not change at all, trace the parameter from the SQL option into the index lookup before drawing a conclusion.
-
-Keep private HNSW implementation changes under the same academic-integrity rule as the previous chapters.
 
 {{#include copyright.md}}

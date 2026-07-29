@@ -2,22 +2,21 @@
 
 {{#include cpp-deprecation.md}}
 
-In this edition, you will add vector search to a modified version of BusTub, CMU's educational database system. The last
-fully specified implementation checkpoint is a one-layer NSW index. The HNSW page remains an optional design sketch. If
-you complete that extension in your private repository, the SIFT1M chapter is a runnable optional benchmark capstone.
+In this edition, you will add vector search to a modified version of BusTub, CMU's educational database system. The index
+chapters build from IVFFlat through one-layer NSW to hierarchical HNSW. The SIFT1M chapter is an optional benchmark
+capstone for comparing IVFFlat and HNSW.
 
 ## Course Order
 
-Follow the chapters in order. The first five are fully specified implementation checkpoints; the last two form an
-optional HNSW path in your private repository:
+Follow the chapters in order:
 
 1. implement vector distances, insertion, and sequential scan;
 2. implement exact k-nearest-neighbor queries with sort, limit, and Top-N;
 3. match a safe SQL top-k query to a compatible vector index;
 4. implement IVFFlat;
 5. implement a one-layer NSW graph;
-6. extend NSW into a hierarchical HNSW index using the optional design sketch; and
-7. benchmark the completed HNSW index on SIFT1M.
+6. extend NSW into a hierarchical HNSW index; and
+7. benchmark IVFFlat and HNSW on SIFT1M.
 
 The diagram shows the same algorithm dependencies through HNSW. It is useful as a map, but it does not make the chapters
 independent.
@@ -100,10 +99,10 @@ The starter narrows BusTub to the parts used by this course:
 - **SIFT1M benchmark harness.** An optional executable loads the standard 128-dimensional corpus, runs HNSW queries, and
   reports 1-nearest-neighbor recall at ranks 1, 10, and 100.
 
-Some executor work overlaps with CMU's Database Systems assignments. **KEEP PRIVATE** means that you must add those files
-to your solution repository's `.gitignore` and must not commit or publish them. The starter already tracks placeholder
-versions of these files, so adding them to `.gitignore` inside the starter clone is not enough to hide your changes. Keep
-the entire clone private and follow the academic-integrity notice in the starter repository.
+Some executor work overlaps with CMU's Database Systems assignments. **KEEP PRIVATE** applies only to files marked with
+that label: do not commit or publish your implementations of those paths. The vector-index and benchmark files are not
+part of that restriction. Because the starter already tracks placeholder versions of some private files, `.gitignore`
+alone will not hide changes to them; check the staged diff before publishing.
 
 ## How to Check Each Chapter
 

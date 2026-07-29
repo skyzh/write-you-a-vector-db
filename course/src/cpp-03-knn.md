@@ -22,7 +22,8 @@ src/optimizer/sort_limit_as_topn.cpp                 (KEEP PRIVATE)
 
 These files overlap with CMU's Database Systems assignments. **KEEP PRIVATE** means that you must add these paths to your
 solution repository's `.gitignore` and must not commit or publish them. The starter already tracks placeholder versions,
-so adding them to `.gitignore` inside the starter clone is not enough to hide your changes. Keep the entire clone private.
+so adding them to `.gitignore` inside the starter clone is not enough to hide your changes. Check the staged diff before
+publishing; other course files are not part of this restriction.
 
 </div>
 
