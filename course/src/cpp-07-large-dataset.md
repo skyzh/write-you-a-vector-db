@@ -1,12 +1,12 @@
-# Benchmarking HNSW on SIFT1M
+# Benchmarking IVFFlat and HNSW on SIFT1M
 
 {{#include cpp-deprecation.md}}
 
 <div class="warning">
 
-**Optional capstone:** This benchmark requires a completed HNSW implementation in your private repository. The harness
-measures observable query behavior, but it cannot prove that your index built multiple layers or used them during lookup.
-Complete the structural checks in the previous chapter before interpreting benchmark numbers.
+**Optional capstone:** Use this chapter after completing IVFFlat or a private HNSW implementation. The benchmark shows how
+index parameters affect query speed and recall on a larger data set; the earlier chapter checks remain the place to debug
+the algorithms themselves.
 
 </div>
 
@@ -21,13 +21,14 @@ Complete the structural checks in the previous chapter before interpreting bench
 Small SQL fixtures expose correctness bugs, but they do not show how an approximate index behaves at realistic scale.
 This capstone uses the standard SIFT1M corpus to connect three quantities:
 
-- the time spent loading rows and maintaining the HNSW graph;
+- the time spent loading data and preparing the index;
 - end-to-end query throughput; and
 - the probability that the exact nearest neighbor appears near the top of an approximate result.
 
-The benchmark harness is `tools/vectordb_bench/vectordb_bench.cpp`.
+The benchmark harness is `tools/vectordb_bench/vectordb_bench.cpp`. Its provided configuration uses HNSW; a later section
+shows the small control-flow change needed to benchmark IVFFlat.
 
-## Understand the Harness
+## What the Harness Measures
 
 On each run, `bustub-vectordb-bench`:
 
@@ -45,9 +46,8 @@ Queries also run one at a time through the full SQL path. Their elapsed time inc
 execution, tuple materialization, result conversion, and metric bookkeeping. Treat this as an end-to-end BusTub
 measurement, not as the latency of the HNSW search function by itself.
 
-The harness logs failed inserts, but it does not check the return status of each query. Very low recall can therefore mean
-either poor approximate search or a query-execution failure. Check the run for insert failures, crashes, or empty query
-results before interpreting recall.
+The harness logs failed inserts, but it does not check each query's `ExecuteSql` return value. If a run produces empty
+results, check query execution before tuning the index.
 
 ### What `R@R` Means
 
@@ -56,7 +56,7 @@ ID appears within the first 1, 10, or 100 approximate results. This is **1-neare
 the convention used by [Faiss's SIFT1M experiments](https://github.com/facebookresearch/faiss/wiki/Indexing-1M-vectors).
 It is not the fraction of the exact top 100 set that BusTub recovered.
 
-Every valid run must satisfy:
+The recall values should always follow:
 
 ```text
 0 <= R@1 <= R@10 <= R@100 <= 1
@@ -64,23 +64,9 @@ Every valid run must satisfy:
 
 A result can have low `R@1` and high `R@100`: the correct neighbor was found, but ranked behind other candidates.
 
-## Preflight the Storage Fix
-
-A 128-dimensional vector row occupies 1,036 serialized bytes in this starter. The benchmark snapshot fixes an unsigned
-offset underflow that previously wrote the fourth such tuple beyond its table page. Before spending time on SIFT1M, run
-the focused regression from the repository root:
-
-```shell
-cmake --build build --target table_page_test -j8
-./build/test/table_page_test
-```
-
-The test must pass under the Debug configuration from the course setup. That configuration enables AddressSanitizer.
-
 ## Build an Optimized Benchmark
 
-Debug sanitizers distort timings and consume additional memory. Keep the Debug build for correctness checks and create a
-separate Release build for the benchmark. On Ubuntu, from the repository root:
+Create a Release build for the benchmark. On Ubuntu, from the repository root:
 
 ```shell
 cmake -S . -B build-bench \
@@ -121,7 +107,7 @@ SIFT1M contains one million 128-dimensional base vectors and 10,000 queries. Bus
 table and the graph, keeps table pages in memory, and allocates a large buffer pool in the harness. Plan for several
 gigabytes of available memory. The million individual SQL inserts can also take substantial time.
 
-## Run and Interpret the Benchmark
+## Run the HNSW Benchmark
 
 Run from the directory that directly contains `sift1M`:
 
@@ -140,41 +126,64 @@ query_seconds = compute_recalls_timestamp - first_query_timestamp
 queries_per_second = 10000 / query_seconds
 ```
 
-Do not compare raw timings across machines without recording the CPU, available memory, compiler, build type, and commit.
-Do not use the contributor's example output as a correctness threshold; recall depends on your HNSW implementation,
-random graph construction, and search parameters.
+## Run an IVFFlat Benchmark
 
-## Measure One Tradeoff
+The provided harness creates its HNSW index before loading rows, so each insert incrementally updates the graph. IVFFlat
+has a different build path: it learns centroids from data already in the table. To benchmark IVFFlat in your private
+working copy:
+
+1. keep the base-vector insertion loop in `InsertIndexVectorData`;
+2. move index creation after that loop; and
+3. replace the HNSW statement with an IVFFlat statement such as:
+
+```sql
+CREATE INDEX t1v1ivfflat ON t1 USING ivfflat
+  (v1 vector_l2_ops) WITH (lists = 10, probe_lists = 3);
+```
+
+Add timestamps immediately before and after `CREATE INDEX` if you want to separate table loading from the offline
+IVFFlat build. The query reader, ground-truth reader, and recall calculation can stay unchanged.
+
+## Explore One Tradeoff
+
+### HNSW
 
 The index SQL is the `create_index` string in `vectordb_bench.cpp`. Keep `m = 16` and
-`ef_construction = 64` fixed, then compare at least `ef_search = 100` and `ef_search = 200`. Values below 100 may
-not change a correct implementation because every benchmark query requests 100 rows.
+`ef_construction = 64` fixed, then compare `ef_search = 100` and `ef_search = 200`.
+
+Each benchmark query uses `LIMIT 100`, so `k = 100`. The lookup contract from the HNSW chapter searches with width
+`max(k, ef_search)`. As a result, `ef_search = 50` and `ef_search = 100` both produce an effective width of 100; comparing
+100 with 200 actually changes the number of candidates the graph search may retain.
 
 Rebuild and rerun after changing the string. For a controlled comparison, use the same random seed in your private HNSW
 implementation; otherwise repeat each configuration and report the variation.
 
-Record enough context to reproduce the result:
+### IVFFlat
 
-| Commit | CPU / RAM | Build | `m` | `ef_construction` | `ef_search` | Load + build (s) | Query (s) | QPS | `R@1` | `R@10` | `R@100` |
-|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `...` | `...` | Release | 16 | 64 | 100 |  |  |  |  |  |  |
-| `...` | `...` | Release | 16 | 64 | 200 |  |  |  |  |  |  |
+Keep `lists` fixed and change `probe_lists`, for example from 1 to 3. The first run searches one centroid list per query;
+the second searches three. This directly exposes the IVFFlat tradeoff between scanning more candidates and finding more
+of the exact neighbors.
 
-Larger search beams usually exchange more work for better recall, but do not force the numbers to match that story. A
-flat or worse result is evidence to inspect candidate ordering, entry-point descent, layer membership, and whether
-`ef_search_` actually reaches `SearchLayer`.
+The following compact table is enough to compare the runs:
 
-## Completion Checkpoint
+| Index | Parameters | Preparation (s) | Query (s) | QPS | `R@1` | `R@10` | `R@100` |
+|---|---|---:|---:|---:|---:|---:|---:|
+| HNSW | `m=16, ef_construction=64, ef_search=100` |  |  |  |  |  |  |
+| HNSW | `m=16, ef_construction=64, ef_search=200` |  |  |  |  |  |  |
+| IVFFlat | `lists=10, probe_lists=1` |  |  |  |  |  |  |
+| IVFFlat | `lists=10, probe_lists=3` |  |  |  |  |  |  |
 
-You are done with this optional capstone when:
+For HNSW, preparation includes row insertion and incremental graph maintenance. For IVFFlat, it includes row insertion
+followed by the offline centroid build, so the preparation column represents the complete path to a queryable index in
+both cases.
 
-- the table-page regression passes;
-- the complete SIFT1M run finishes without failed inserts or crashes;
-- the three recall values are in range and nondecreasing;
-- your report identifies the exact code, build, machine, parameters, load/build time, query time, and QPS; and
-- you can explain why the load timer includes graph maintenance, why this metric is not top-100 set recall, and what
-  changed when you increased `ef_search`.
+## Reading the Results
 
-Keep HNSW implementation changes private under the same academic-integrity rule as the previous chapters.
+The benchmark is most useful as a comparison rather than a pass/fail exercise. Keep the command output and the table,
+then add a short explanation of what changed when you increased `ef_search` or `probe_lists`. If `R@10` or `R@100` rises
+while `R@1` stays flat, the exact neighbor is appearing in the candidate set without consistently ranking first. If the
+numbers do not change at all, trace the parameter from the SQL option into the index lookup before drawing a conclusion.
+
+Keep private HNSW implementation changes under the same academic-integrity rule as the previous chapters.
 
 {{#include copyright.md}}

@@ -15,4 +15,4 @@
   - [IVFFlat (Inverted File Flat) Index](./cpp-05-ivfflat.md)
   - [NSW (Navigable Small Worlds) Index](./cpp-06-01-nsw.md)
   - [HNSW (Hierarchical Navigable Small Worlds) Index (WIP)](./cpp-06-02-hnsw.md)
-  - [Benchmarking HNSW on SIFT1M](./cpp-07-large-dataset.md)
+  - [Benchmarking on Large Datasets (WIP)](./cpp-07-large-dataset.md)
