@@ -1,0 +1,42 @@
+# Assert physical operators, not only query results. The runner extracts the
+# sort and vector scan lines from DataFusion's multiline EXPLAIN result.
+query T
+EXPLAIN SELECT id, payload FROM points
+ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 3;
+----
+SortExec: TopK(fetch=3), expr=[array_distance(CAST(embedding@2 AS List(non-null Float64)), [1.0, 1.0, 1.0]) ASC NULLS LAST], preserve_partitioning=[false]
+VectorIndexScanExec: index=flat, metric=Euclidean, query_dim=3, fetch=Some(3), ordered=false
+
+query IT
+SELECT id, payload FROM points
+ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 3;
+----
+1 point-1
+0 point-0
+2 point-2
+
+# Filters deliberately use DataFusion's exact fallback.
+query T
+EXPLAIN SELECT id FROM points WHERE id >= 4
+ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 2;
+----
+SortExec: TopK(fetch=2), expr=[array_distance(CAST(embedding@1 AS List(non-null Float64)), [1.0, 1.0, 1.0]) ASC NULLS LAST], preserve_partitioning=[true]
+VectorScanExec: rows=8, fetch=None
+
+query I
+SELECT id FROM points WHERE id >= 4
+ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 2;
+----
+4
+5
+
+# Ordered mode is an explicit executor promise, so DataFusion may remove the
+# generic sort while preserving the same SQL result order.
+statement ok
+SET vector_search.ordered = true;
+
+query T
+EXPLAIN SELECT id, payload FROM points
+ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 3;
+----
+VectorIndexScanExec: index=flat, metric=Euclidean, query_dim=3, fetch=Some(3), ordered=true

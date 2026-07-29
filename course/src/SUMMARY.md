@@ -1,7 +1,8 @@
 # Summary
 
 - [Build Vector Search Inside a SQL Database](./00-introduction.md)
-- [Rust Course Design Proposal](./rust-01-overview.md)
+- [Build Vector Search in Rust](./rust-01-overview.md)
+  - [Build an In-Memory Vector Table and Match Its Index](./rust-02-datafusion.md)
 - [Where to Go Next](./10-epilogue.md)
 
 ---

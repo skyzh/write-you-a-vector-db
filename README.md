@@ -10,7 +10,7 @@ measure recall honestly, and connect the resulting indexes to SQL through DataFu
 The course focuses on the boundary where algorithms become database features:
 
 ```text
-exact search → recall-first evaluation → IVFFlat → NSW → HNSW → SQL through DataFusion
+in-memory table → DataFusion optimizer rule → vector-index scan
 ```
 
 Instead of hiding vector search behind an HTTP API or an ANN library, the course exposes the algorithms, evaluation
@@ -18,9 +18,17 @@ contracts, query planning, and execution boundary that make SQL vector search wo
 
 ## Course Status
 
-The [Rust course design proposal](https://skyzh.github.io/write-you-a-vector-db/rust-01-overview) defines the recommended
-direction: a standalone vector core with a thin DataFusion adapter. Runnable learner checkpoints have not been published
-yet, so the Rust edition remains a design proposal rather than an available assignment sequence.
+Day 1 of the [Rust course](https://skyzh.github.io/write-you-a-vector-db/rust-01-overview) builds an Arrow-backed in-memory
+table and a safe DataFusion optimizer rule. It includes learner starter code, focused tests, SQLLogicTests, and separate
+completed reference crates.
+
+Run the available implementation with:
+
+```shell
+cd rust
+cargo test --workspace
+cargo run -p vector-datafusion --example sql
+```
 
 The original [C++/BusTub edition](https://skyzh.github.io/write-you-a-vector-db/cpp-01-overview) is deprecated and
 unmaintained. It remains online for existing readers but is no longer recommended for new learners.
