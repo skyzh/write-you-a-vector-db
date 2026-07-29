@@ -1,16 +1,16 @@
 # Rust Vector Search Course
 
-This Cargo workspace contains learner and reference code for Day 1:
+This Cargo workspace contains learner and reference code for two chapters:
 
 | Crate | Role |
 | --- | --- |
-| `vector-core-starter` | Day 1 dataset-validation TODOs; exact helpers are supplied |
+| `vector-core-starter` | Day 1 dataset validation and Day 2 IVFFlat/recall TODOs; exact helpers are supplied |
 | `vector-datafusion-starter` | Day 1 Arrow table, scan extension, and optimizer-rule TODOs |
 | `vector-core` | Completed core reference |
 | `vector-datafusion` | Completed DataFusion reference |
 
-Day 1 makes vector-index selection observable from SQL before later
-approximate indexes are implemented.
+Day 1 makes vector-index selection observable from SQL before Day 2 implements
+IVFFlat.
 
 Check the untouched starter without executing TODOs:
 
@@ -24,7 +24,7 @@ Validate the completed reference:
 ```sh
 cargo test -p vector-core
 cargo test -p vector-datafusion
-cargo run -p vector-datafusion --example sql
+cargo run --release -p vector-core --example recall
 ```
 
 The workspace uses the stable Rust channel from `rust-toolchain.toml` and pins

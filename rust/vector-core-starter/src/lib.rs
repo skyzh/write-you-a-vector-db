@@ -2,6 +2,7 @@
 
 mod dataset;
 mod flat;
+mod ivf;
 mod metric;
 mod search;
 
@@ -9,8 +10,9 @@ use std::sync::Arc;
 
 pub use dataset::Dataset;
 pub use flat::FlatIndex;
+pub use ivf::{IvfFlatConfig, IvfFlatIndex};
 pub use metric::Metric;
-pub use search::Neighbor;
+pub use search::{Neighbor, recall_at_k};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VectorError {
@@ -56,12 +58,14 @@ pub trait VectorIndex: std::fmt::Debug + Send + Sync {
 #[derive(Debug, Clone)]
 pub enum IndexConfig {
     Flat,
+    IvfFlat(IvfFlatConfig),
 }
 
 impl IndexConfig {
     pub fn build(self, dataset: Dataset, metric: Metric) -> Result<Arc<dyn VectorIndex>> {
         match self {
             Self::Flat => Ok(Arc::new(FlatIndex::try_new(dataset, metric)?)),
+            Self::IvfFlat(config) => Ok(Arc::new(IvfFlatIndex::try_new(dataset, metric, config)?)),
         }
     }
 }

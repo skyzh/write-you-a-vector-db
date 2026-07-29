@@ -11,3 +11,4 @@ https://skyzh.github.io/write-you-a-vector-db/cpp-06-02-hnsw
 https://skyzh.github.io/write-you-a-vector-db/cpp-07-large-dataset
 https://skyzh.github.io/write-you-a-vector-db/rust-01-overview
 https://skyzh.github.io/write-you-a-vector-db/rust-02-datafusion
+https://skyzh.github.io/write-you-a-vector-db/rust-03-ivfflat
