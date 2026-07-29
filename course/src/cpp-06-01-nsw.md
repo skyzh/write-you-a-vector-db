@@ -2,8 +2,9 @@
 
 {{#include cpp-deprecation.md}}
 
-This chapter implements the last fully specified checkpoint in the C++ course: a one-layer navigable small-world graph.
-The starter represents that graph as `layers_[0]` inside `HNSWIndex` so the next, optional chapter can add hierarchy.
+NSW is the graph-based building block of HNSW: it starts from one or more entry points and greedily follows neighbors
+closer to the query vector. This chapter implements it as the last fully specified checkpoint in the C++ course. The
+starter represents the graph as `layers_[0]` inside `HNSWIndex` so the next, optional chapter can add hierarchy.
 
 Complete the previous chapters first. You will likely modify:
 

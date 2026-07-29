@@ -10,6 +10,14 @@ Complete the structural checks in the previous chapter before interpreting bench
 
 </div>
 
+<div class="info">
+
+**Benchmark credit:** The SIFT1M benchmark harness was contributed by
+[UnpureRationalist](https://github.com/UnpureRationalist) in
+[bustub-vectordb PR #2](https://github.com/skyzh/bustub-vectordb/pull/2).
+
+</div>
+
 Small SQL fixtures expose correctness bugs, but they do not show how an approximate index behaves at realistic scale.
 This capstone uses the standard SIFT1M corpus to connect three quantities:
 
@@ -38,8 +46,8 @@ execution, tuple materialization, result conversion, and metric bookkeeping. Tre
 measurement, not as the latency of the HNSW search function by itself.
 
 The harness logs failed inserts, but it does not check the return status of each query. Very low recall can therefore mean
-either poor approximate search or a query-execution failure. The smoke fixture and the earlier SQL regression are required
-preflights, not optional warm-ups.
+either poor approximate search or a query-execution failure. Check the run for insert failures, crashes, or empty query
+results before interpreting recall.
 
 ### What `R@R` Means
 
@@ -86,73 +94,27 @@ cmake --build build-bench --target vectordb-bench -j8
 On macOS, use the `llvm@14` compiler paths from the overview instead. The executable is
 `build-bench/bin/bustub-vectordb-bench`.
 
-## Run a Small Fixture First
-
-The executable resolves `sift1M/*` relative to its working directory. Generate a disposable eight-vector fixture under
-`build-bench/smoke`:
-
-```shell
-python3 - <<'PY'
-from pathlib import Path
-import struct
-
-root = Path("build-bench/smoke/sift1M")
-root.mkdir(parents=True, exist_ok=True)
-
-def write_fvecs(path, rows):
-    with path.open("wb") as file:
-        for row in rows:
-            file.write(struct.pack("<i", len(row)))
-            file.write(struct.pack(f"<{len(row)}f", *row))
-
-def write_ivecs(path, rows):
-    with path.open("wb") as file:
-        for row in rows:
-            file.write(struct.pack("<i", len(row)))
-            file.write(struct.pack(f"<{len(row)}i", *row))
-
-write_fvecs(root / "sift_base.fvecs", [[float(i)] * 128 for i in range(8)])
-write_fvecs(root / "sift_query.fvecs", [[0.0] * 128])
-write_ivecs(root / "sift_groundtruth.ivecs", [list(range(8)) + [0] * 92])
-PY
-
-cd build-bench/smoke
-../bin/bustub-vectordb-bench
-cd ../..
-```
-
-For this fixture, vector 0 is the exact match. A correct completed implementation should report:
-
-```text
-R@1 = 1.0000
-R@10 = 1.0000
-R@100 = 1.0000
-```
-
-If the program reports an insert failure, crashes, returns no rows, or misses vector 0, stop here. A million-row run will
-only make the same problem slower to diagnose.
-
 ## Prepare SIFT1M
 
 Download ANN_SIFT1M from the [TexMex corpus page](http://corpus-texmex.irisa.fr/), which is also the source named by the
 [Faiss benchmark documentation](https://github.com/facebookresearch/faiss/blob/main/INSTALL.md). The course does not
-redistribute the dataset. Extract or copy its files into this layout:
+redistribute the dataset. The benchmark's `FvecsRead` and `IvecsRead` functions read the corpus files directly; no
+conversion script or separate reader is required. Extract or copy the files into this layout:
 
 ```text
 build-bench/
-  full/
-    sift1M/
-      sift_base.fvecs
-      sift_query.fvecs
-      sift_groundtruth.ivecs
+  sift1M/
+    sift_base.fvecs
+    sift_query.fvecs
+    sift_groundtruth.ivecs
 ```
 
 The harness does not use `sift_learn.fvecs`. Check the required paths before starting:
 
 ```shell
-test -f build-bench/full/sift1M/sift_base.fvecs
-test -f build-bench/full/sift1M/sift_query.fvecs
-test -f build-bench/full/sift1M/sift_groundtruth.ivecs
+test -f build-bench/sift1M/sift_base.fvecs
+test -f build-bench/sift1M/sift_query.fvecs
+test -f build-bench/sift1M/sift_groundtruth.ivecs
 ```
 
 SIFT1M contains one million 128-dimensional base vectors and 10,000 queries. BusTub stores vectors as doubles in both the
@@ -164,9 +126,9 @@ gigabytes of available memory. The million individual SQL inserts can also take 
 Run from the directory that directly contains `sift1M`:
 
 ```shell
-cd build-bench/full
-../bin/bustub-vectordb-bench | tee run.txt
-cd ../..
+cd build-bench
+./bin/bustub-vectordb-bench | tee run.txt
+cd ..
 ```
 
 All timestamps are seconds since process start. Use the timestamp printed beside `Loading queries` as the end of the
@@ -206,7 +168,7 @@ flat or worse result is evidence to inspect candidate ordering, entry-point desc
 
 You are done with this optional capstone when:
 
-- the table-page regression and eight-vector smoke fixture pass;
+- the table-page regression passes;
 - the complete SIFT1M run finishes without failed inserts or crashes;
 - the three recall values are in range and nondecreasing;
 - your report identifies the exact code, build, machine, parameters, load/build time, query time, and QPS; and

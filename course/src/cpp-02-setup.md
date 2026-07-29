@@ -26,10 +26,6 @@ not enough to hide your changes. Keep the entire clone private.
 
 ## Checkpoint 1: Compute Distances
 
-Before coding, consider `a = [1, 0]` and `b = [0, 1]`. Their L2 distance is `sqrt(2)`, their cosine distance is `1`, and
-their negative inner-product distance is `0`. These examples make the sign and ordering contract visible: for all three
-operations in this course, a smaller value is a better match.
-
 Implement `ComputeDistance` in `src/include/execution/expressions/vector_expression.h`:
 
 **L2 distance (Euclidean distance)**
@@ -43,6 +39,10 @@ Implement `ComputeDistance` in `src/include/execution/expressions/vector_express
 **Negative inner-product distance**
 
 \\( - \mathbf{a} \cdot \mathbf{b} = - (a_1 b_1 + a_2 b_2 + \cdots + a_n b_n) \\)
+
+Apply these equations to the query `a = [1, 0]`. Comparing `a` with itself gives L2, cosine, and negative inner-product
+distances of `0`, `0`, and `-1`. Comparing it with the orthogonal vector `b = [0, 1]` gives `sqrt(2)`, `1`, and `0`.
+The exact match therefore has the smaller value for all three operations, including the negative inner product.
 
 **Course rule:** Inputs have equal dimensions. The starter asserts this invariant. Cosine-distance inputs in the required
 tests also have nonzero norms; if you extend the system to accept zero vectors, reject them or define their behavior
@@ -110,9 +110,6 @@ catalog returns every index on the table, so keep only indexes whose implementat
   `Value::GetVector`, and pass the vector and the inserted RID to `InsertVectorEntry`.
 - `Next` emits one tuple containing the number of inserted rows, then returns `false` on later calls.
 
-The verbose vector reference happens to show `0` for `INSERT` because its `statement ok` records do not assert the result.
-That output is not the executor contract. The focused `p3.02-insert.slt` test checks the row count.
-
 ### Sequential Scan Executor
 
 Initialize `plan_` and `table_heap_` from the table OID. In `Init`, create a `TableIterator` with `MakeIterator`. In each
@@ -145,13 +142,6 @@ Compare the distance and scan rows with the reference below:
 ```
 
 </details>
-
-Then run the stricter executor checks, which assert rows and insert counts:
-
-```shell
-./bin/bustub-sqllogictest ../test/sql/p3.01-seqscan.slt
-./bin/bustub-sqllogictest ../test/sql/p3.02-insert.slt
-```
 
 Predict before testing: what should `Next` do for an empty table, and what would break if an index received a different
 RID from the one returned by `InsertTuple`?

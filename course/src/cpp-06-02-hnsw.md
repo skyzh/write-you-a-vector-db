@@ -10,8 +10,8 @@ chapter is the last fully specified and testable C++ assignment.
 
 </div>
 
-HNSW adds sparse upper layers to the layer-0 NSW graph. Upper layers make long jumps; layer 0 still contains every vertex
-and produces the final candidates.
+HNSW stacks multiple NSW layers to make graph search more efficient, much like a skip list or mipmap. Sparse upper layers
+make long jumps; layer 0 still contains every vertex and produces the final candidates.
 
 Files an extension would modify:
 

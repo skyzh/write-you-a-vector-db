@@ -2,8 +2,8 @@
 
 {{#include cpp-deprecation.md}}
 
-IVFFlat groups nearby vectors into lists. A query probes only the nearest lists, reducing distance calculations at the
-cost of possibly missing a true neighbor.
+IVFFlat is a simple quantization-based vector index that splits data into buckets to accelerate vector similarity search.
+A query probes only the nearest buckets, reducing distance calculations at the cost of possibly missing a true neighbor.
 
 Complete the exact-search and optimizer chapters first. You will likely modify:
 

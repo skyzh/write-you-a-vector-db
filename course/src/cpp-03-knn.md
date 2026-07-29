@@ -59,9 +59,8 @@ stored entries. `Next` emits them one at a time. Keep the RID paired with its tu
 
 **Course rules:**
 
-- Compare order-by expressions from left to right. Continue to the next expression only when the current values tie.
-- `Default` has ascending behavior. Support both explicit ascending and descending order.
-- The required tests use non-null sort keys. If you add null support, define its placement consistently.
+- The required vector query has one non-null distance key in ascending or default order. Broader SQL sorting semantics are
+  outside this course's scope.
 - Preserve any order among complete ties; the vector reference allows tied rows to appear in either order.
 
 The limit executor initializes its child and forwards at most `limit` entries. It must handle `limit = 0` and a child with
@@ -71,12 +70,10 @@ From `bustub-vectordb/build`, run:
 
 ```shell
 make -j8 sqllogictest
-./bin/bustub-sqllogictest ../test/sql/p3.16-sort-limit.slt
 ./bin/bustub-sqllogictest ../test/sql/vector.02-naive-knn.slt --verbose
 ```
 
-The first file checks multi-column ascending and descending order. The vector file exercises all three distance functions;
-compare its exact-query rows with the first reference output.
+The vector file exercises all three distance functions. Compare its exact-query rows with the first reference output.
 
 <details>
 
@@ -104,8 +101,7 @@ Then implement `TopNExecutor`:
 4. emit the retained entries in final best-to-worst order.
 
 Popping a max-heap directly produces the worst retained row first. Reverse that sequence, or use another equivalent
-method, before `Next` begins emitting. `GetNumInHeap()` must report the bounded container's size because the focused test
-uses it to catch implementations that secretly store the whole input.
+method, before `Next` begins emitting. Keep the retained container bounded to `k` entries.
 
 **Prediction:** If the input distances are `4, 1, 3, 2` and `k = 2`, which values remain after each input? The final output
 must be `1, 2`, even though the heap's top is `2`.
@@ -113,7 +109,6 @@ must be `1, 2`, even though the heap's top is `2`.
 Run:
 
 ```shell
-./bin/bustub-sqllogictest ../test/sql/p3.17-topn.slt
 ./bin/bustub-sqllogictest ../test/sql/vector.02-naive-knn.slt --verbose
 ```
 

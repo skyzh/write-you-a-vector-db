@@ -8,27 +8,31 @@ you complete that extension in your private repository, the SIFT1M chapter is a 
 
 ## Course Order
 
-Follow the chapters in order. Each runnable checkpoint depends on the previous one:
+Follow the chapters in order. The first five are fully specified implementation checkpoints; the last two form an
+optional HNSW path in your private repository:
 
 1. implement vector distances, insertion, and sequential scan;
 2. implement exact k-nearest-neighbor queries with sort, limit, and Top-N;
 3. match a safe SQL top-k query to a compatible vector index;
-4. implement IVFFlat; and
-5. implement a one-layer NSW graph.
+4. implement IVFFlat;
+5. implement a one-layer NSW graph;
+6. extend NSW into a hierarchical HNSW index using the optional design sketch; and
+7. benchmark the completed HNSW index on SIFT1M.
 
-The diagram shows the same dependencies. It is useful as a map, but it does not make the chapters independent.
+The diagram shows the same algorithm dependencies through HNSW. It is useful as a map, but it does not make the chapters
+independent.
 
 ![Learning Path](./vector-db/01-learn-path.svg)
 
 ## Environment Setup
 
 Use the course's frozen BusTub snapshot. These chapters and the SIFT1M benchmark were checked against commit
-`50a884ec89c7bc63d5ab779d6342bfecb34e0caa`.
+`b9799536dfb054cd616d781d8801616c7812fb2b`.
 
 ```shell
 git clone https://github.com/skyzh/bustub-vectordb
 cd bustub-vectordb
-git checkout 50a884ec89c7bc63d5ab779d6342bfecb34e0caa
+git checkout b9799536dfb054cd616d781d8801616c7812fb2b
 ```
 
 The intended environments are Ubuntu 22.04 and macOS. Follow the starter repository's **Build** section to install its
