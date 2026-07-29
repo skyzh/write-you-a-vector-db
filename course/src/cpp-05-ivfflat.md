@@ -14,18 +14,33 @@ src/storage/index/ivfflat_index.cpp
 
 *Related reading:* [IVF visualization in Pinecone's Faiss guide](https://www.pinecone.io/learn/series/faiss/product-quantization/)
 
+## How IVFFlat Works
+
+IVFFlat builds `lists` clusters over vectors already stored in the table. Each cluster has a centroid and a list of the
+vectors closest to that centroid. At lookup time, the index compares the query with the centroids first, then searches
+only `probe_lists` nearby lists instead of every vector. Searching less data makes the query faster, but skipping lists
+can miss a true neighbor, so IVFFlat returns approximate nearest neighbors.
+
 ## Build the Lists
 
 The checkpoint creates an IVFFlat index after the table already contains data. `lists` is the number of centroids and
 `probe_lists` is the number of centroid lists searched per query.
 
+The first diagram shows the vectors before the index exists. They all belong to one unpartitioned data set, so an exact
+query would compare its target with every point.
+
 ![Before Building the Index](./vector-db/04-ivfflat-step1.svg)
 
-Choose `lists` initial vectors as centroids, then repeat K-means assignment and update steps.
+When the user creates the index, K-means chooses `lists` initial centroids and alternates between assigning vectors to
+their nearest centroid and moving each centroid to the mean of its assigned vectors. In the second diagram, each colored
+centroid represents one future list. A boundary in the Voronoi diagram marks positions equally distant from the two
+centroids on either side.
 
 ![Find the Centroids](./vector-db/04-ivfflat-step2.svg)
 
-Each vector belongs to the nearest centroid under `distance_fn_`.
+Once the centroids are fixed, visit every stored vector and place `(vector, RID)` in the list for its nearest centroid
+under `distance_fn_`. The third diagram shows the resulting buckets: vectors in the same region will be searched
+together.
 
 ![Cluster the vectors](./vector-db/04-ivfflat-step3.svg)
 
@@ -68,14 +83,21 @@ Insertion finds the nearest existing centroid and appends `(vector, RID)` to tha
 
 ![Insert a Vector](./vector-db/04-ivfflat-insertion.svg)
 
-This makes insertion cheap, but a changed data distribution can make the old centroids poor. Rebuilding is an operational
-choice, not part of this checkpoint.
+In the diagram, the red vector is closest to centroid A, so insertion adds it to list A. The centroid stays where it was;
+the index does not rerun K-means for each row. This makes insertion cheap, but a changed data distribution can make the
+old centroids poor. Rebuilding is an operational choice, not part of this checkpoint.
 
 ## Look Up Neighbors
 
-The nearest centroid is not always enough. A query near a list boundary can have true neighbors in the next list.
+The red vector in the next diagram is a query asking for its five nearest neighbors. If lookup searches only its nearest
+centroid's list A, it can return five candidates from A, but some points just across the boundary in list B are actually
+closer to the query.
 
 ![Lookup 1 Centroid](./vector-db/04-ivfflat-lookup.svg)
+
+Probing both A and B exposes those candidates. Lookup computes distances within both lists, combines their local
+candidates, and keeps the best five overall. Increasing `probe_lists` repeats this idea across more nearby buckets: it
+does more work, but it is less likely to miss a true neighbor.
 
 ![Lookup 2 Centroids](./vector-db/04-ivfflat-lookup-2.svg)
 

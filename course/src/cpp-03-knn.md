@@ -33,8 +33,11 @@ CREATE TABLE t1(v1 VECTOR(3), v2 integer);
 SELECT v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 3;
 ```
 
-The query scans every row, computes its distance from `[1, 1, 1]`, and returns the three smallest distances. Before the
-Top-N rewrite, run the following statement in `bustub-shell`:
+This is an exact k-nearest-neighbor query with `k = 3`. `[1.0, 1.0, 1.0]` is the query vector, `<->` computes its L2
+distance to each stored `v1`, `ORDER BY` ranks rows from smallest distance to largest, and `LIMIT 3` keeps the three
+nearest vectors. Because this chapter has not introduced an approximate index, the query computes every row's distance.
+
+Before the Top-N rewrite, run the following statement in `bustub-shell`:
 
 ```sql
 EXPLAIN (o) SELECT v1 FROM t1 ORDER BY ARRAY [1.0, 1.0, 1.0] <-> v1 LIMIT 3;

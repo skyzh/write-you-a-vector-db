@@ -25,9 +25,20 @@ src/storage/index/hnsw_index.cpp
 - [Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs](https://arxiv.org/abs/1603.09320)
 - [HNSW in Pinecone's Faiss guide](https://www.pinecone.io/learn/series/faiss/hnsw/)
 
-## Layer Invariants
+## How Hierarchy Works
+
+Layer 0 contains every vector. Each higher layer contains a progressively smaller random subset, much like the sparse
+levels of a skip list or the lower-resolution levels of a mipmap. Search starts in the sparsest top layer, where one edge
+can cross a large part of the data set, then carries the nearest vertex found there down as the entry point to the next
+layer. Layer 0 performs the final k-nearest-neighbor search.
 
 ![HNSW architecture](./vector-db/06-hnsw-architecture.svg)
+
+The diagram shows the same vector IDs repeated across nested layers. A vertex that appears in an upper layer must also
+appear in every layer below it. Sparse upper-layer edges provide long jumps; denser lower-layer edges refine the search
+around the query.
+
+## Layer Invariants
 
 A complete extension should preserve these rules:
 
@@ -45,8 +56,10 @@ layer. That representation is your choice; the invariants are not.
 
 ![HNSW lookup](./vector-db/06-hnsw-explore.svg)
 
-Starting at the highest layer, use a width-1 greedy search to find the entry point for the next layer. At layer 0, use
-`max(k, ef_search_)` candidates and return the nearest `k` RIDs in distance order.
+In the lookup diagram, search begins at the entry point in the highest layer. A width-1 greedy search finds that layer's
+nearest vertex to the query; that vertex becomes the entry point for the layer below. Repeat this descent through each
+upper layer. At layer 0, widen the search to `max(k, ef_search_)` candidates and return the nearest `k` RIDs in distance
+order. The upper layers navigate quickly; layer 0 produces the result.
 
 ```text
 entry_points = [top_entry_point]
@@ -69,10 +82,15 @@ Draw a random `U` strictly greater than zero and compute
 \\( \text{level} = \lfloor -\ln(U) \times m_L \rfloor \\). The starter sets
 \\( m_L = 1 / \ln(m) \\), which requires `m > 1`.
 
+Suppose the random level is 1, as in the first diagram. The new vector belongs to layers 1 and 0, but not to layer 2.
+This random promotion is what makes higher layers progressively sparser.
+
 ![Choose an insertion level](./vector-db/06-hnsw-insert-1.svg)
 
-Search width 1 above the new vertex's target level. At the levels where the new vertex belongs, search
-`ef_construction_` candidates, select the nearest `m_`, connect them, and prune both sides of rejected edges.
+Start at the current top layer and use width-1 searches until reaching the new vector's highest target layer. At that
+layer and every layer below it, search `ef_construction_` candidates, select the nearest `m_`, connect the new vertex, and
+prune both sides of rejected edges. The second diagram follows those connections down through the layers that contain the
+new vector.
 
 ![Connect at each included layer](./vector-db/06-hnsw-insert-2.svg)
 
