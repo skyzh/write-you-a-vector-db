@@ -2,136 +2,156 @@
 
 {{#include cpp-deprecation.md}}
 
-IVFFlat (InVerted File Flat) Index is a simple vector index that splits data into buckets (aka. quantization-based index) so as to accelerate vector similarities search.
+IVFFlat is a simple quantization-based vector index that splits data into buckets to accelerate vector similarity search.
+A query probes only the nearest buckets, reducing distance calculations at the cost of possibly missing a true neighbor.
 
-The list of files that you will likely need to modify:
+Complete the exact-search and optimizer chapters first. You will likely modify:
 
-```
+```text
 src/include/storage/index/ivfflat_index.h
 src/storage/index/ivfflat_index.cpp
 ```
 
-*Related Readings*
+*Related reading:* [IVF visualization in Pinecone's Faiss guide](https://www.pinecone.io/learn/series/faiss/product-quantization/)
 
-* [Product Quantization from Pinecone's Faiss Manual](https://www.pinecone.io/learn/series/faiss/product-quantization/). You may skip the product quantization part and take a look at the IVF visualization.
+## How IVFFlat Works
 
-## Overview
+IVFFlat builds `lists` clusters over vectors already stored in the table. Each cluster has a centroid and a list of the
+vectors closest to that centroid. At lookup time, the index compares the query with the centroids first, then searches
+only `probe_lists` nearby lists instead of every vector. Searching less data makes the query faster, but skipping lists
+can miss a true neighbor, so IVFFlat returns approximate nearest neighbors.
 
-The core of IVFFlat index is to build some buckets for vector data based on distances. By splitting buckets, the index can narrow down the range of data to be searched for each query, so as to accelerate vector similarity searches.
+## Build the Lists
 
-IVFFlat index search yields approximate nearest neighbors, which means that the result of the index lookup might not be 100% the same as the naive kNN implementation.
+The checkpoint creates an IVFFlat index after the table already contains data. `lists` is the number of centroids and
+`probe_lists` is the number of centroid lists searched per query.
 
-## Index Building
-
-A naive implementation of IVFFlat index should be built upon a large amount of existing data. The user should populate the vector table and then request building an IVFFlat index. During the process, the algorithm finds `lists` number of centroids using the K-means algorithm. Then, vectors are stored within the bucket corresponding to the nearest centroid.
-
-Assume that we have vectors in a 2-dimension space as below:
+The first diagram shows the vectors before the index exists. They all belong to one unpartitioned data set, so an exact
+query would compare its target with every point.
 
 ![Before Building the Index](./vector-db/04-ivfflat-step1.svg)
 
-When the user requests to build an index on existing data, the algorithm first finds the centroids using the [K-means algorithm](https://en.wikipedia.org/wiki/K-means_clustering). Each centroid corresponds to a bucket, which will store a cluster of vectors. Each vertex on edge in the below [Voronoi diagram](https://en.wikipedia.org/wiki/Voronoi_diagram) has the same euclidean distance to the two nearest centroids, which implies the edge of the split buckets.
+When the user creates the index, K-means chooses `lists` initial centroids and alternates between assigning vectors to
+their nearest centroid and moving each centroid to the mean of its assigned vectors. In the second diagram, each colored
+centroid represents one future list. A boundary in the Voronoi diagram marks positions equally distant from the two
+centroids on either side.
 
 ![Find the Centroids](./vector-db/04-ivfflat-step2.svg)
 
-Now that we have the centroids, the algorithm can go through all vectors and put them into the corresponding bucket based on the nearest centroid to the vector.
+Once the centroids are fixed, visit every stored vector and place `(vector, RID)` in the list for its nearest centroid
+under `distance_fn_`. The third diagram shows the resulting buckets: vectors in the same region will be searched
+together.
 
-![Cluster the vertices](./vector-db/04-ivfflat-step3.svg)
+![Cluster the vectors](./vector-db/04-ivfflat-step3.svg)
 
-<small>Credit: the graph is generated with [https://websvg.github.io/voronoi/](https://websvg.github.io/voronoi/) and edited with OmniGraffle.</small>
+<small>Diagram generated with [websvg.github.io/voronoi](https://websvg.github.io/voronoi/) and edited with OmniGraffle.</small>
 
-Going through the process, you will find that, in a naive implementation of IVFFlat index,
+**Course rules:**
 
-* It can only be built upon existing data. You cannot start an IVFFlat index from empty set.
-* The centroids are decided at the index build time, and if the data inserted later have different distribution from the initial data, the index will become inefficient.
+- Require `1 <= lists <= initial_data.size()` and `1 <= probe_lists <= lists` for a usable index.
+- Build data stores each vector together with its RID.
+- Every distance comparison uses the index's `distance_fn_`.
+- If a K-means cluster is empty, retain its previous centroid for that iteration. Never divide by zero or silently remove
+  a list.
+- The required IVFFlat checkpoint is not usable when built on an empty table. `BuildIndex` may return for empty input, but
+  later insertion into that untrained index is outside the supported path.
 
-## Insertion
+A fixed number of iterations, such as 500, is acceptable. Stopping after convergence is also valid. A fixed random seed
+makes debugging repeatable; a nondeterministic seed is allowed, so exact approximate results may differ.
 
-The insertion process simply finds the nearest centroid to the vector and puts the vector into that bucket.
+```text
+centroids = sample_distinct(initial_data, lists)
+repeat up to 500 times:
+    buckets = one empty bucket per centroid
+    for (vector, rid) in initial_data:
+        bucket_id = nearest_centroid(vector, centroids, distance_fn)
+        buckets[bucket_id].append((vector, rid))
+
+    for each bucket_id:
+        if buckets[bucket_id] is not empty:
+            centroids[bucket_id] = component_wise_mean(buckets[bucket_id].vectors)
+
+rebuild buckets once using the final centroids
+```
+
+The final rebuild matters: otherwise the stored memberships describe the previous centroids rather than the centroids you
+return.
+
+## Insert a New Vector
+
+Insertion finds the nearest existing centroid and appends `(vector, RID)` to that list. It does not retrain K-means.
 
 ![Insert a Vector](./vector-db/04-ivfflat-insertion.svg)
 
-In the above example, the red vertex will be added to the A bucket.
+In the diagram, the red vector is closest to centroid A, so insertion adds it to list A. The centroid stays where it was;
+the index does not rerun K-means for each row. This makes insertion cheap, but a changed data distribution can make the
+old centroids poor. Rebuilding is an operational choice, not part of this checkpoint.
 
-## Lookup
+## Look Up Neighbors
 
-The lookup process will find the nearest `probe_lists` centroids and iterate all vectors in these buckets to find the approximate nearest k neighbors. To explain why this is necessary, let us take a look at the below example.
+The red vector in the next diagram is a query asking for its five nearest neighbors. If lookup searches only its nearest
+centroid's list A, it can return five candidates from A, but some points just across the boundary in list B are actually
+closer to the query.
 
 ![Lookup 1 Centroid](./vector-db/04-ivfflat-lookup.svg)
 
-The red vertex is the base vector that the user wants to find, for example, its 5 nearest neighbors. If we only search the A bucket (which the red vertex should be in), we will find all 5 vertices in the A bucket. However, there might be some vertices in a nearby B bucket that has shorter distance to the base probe vector. Therefore, to increase the accuracy of the search, it would be better to probe more than one bucket for a base vector, in order to get more accurate nearest neighbors.
+Probing both A and B exposes those candidates. Lookup computes distances within both lists, combines their local
+candidates, and keeps the best five overall. Increasing `probe_lists` repeats this idea across more nearby buckets: it
+does more work, but it is less likely to miss a true neighbor.
 
 ![Lookup 2 Centroids](./vector-db/04-ivfflat-lookup-2.svg)
 
-In the index lookup implementation, you will need to probe `probe_lists` number of centroid buckets, retrieving k nearest neighbors from each of them (we call them local result), and do a top-n sort to get the k nearest neighbors (global result) from the local result.
+Implement `ScanVectorKey(base_vector, limit)` as follows:
 
-## Implementation
+1. return an empty result for `limit = 0`;
+2. find the `probe_lists_` nearest centroids;
+3. evaluate the vectors in those lists;
+4. retain the best `limit` candidates across all probed lists; and
+5. return their RIDs sorted from smallest to largest distance.
 
-You may implement the IVFFlat index in `ivfflat_index.cpp`. Some notes:
+The vector-index scan executor trusts this order and does not sort again. Returning the right RIDs in heap order is
+therefore incorrect.
 
-* You may implement the K-means algorithm to run for a fixed amount of iterators (i.e., 500) instead of waiting for converging.
-* You may need to store the indexed vectors along with RIDs of the data because the database system will need the RIDs to retrieve the corresponding row.
-* Remember that you can use `ComputeDistance` from `vector_expressions.h` to compute the distance between two points.
+You may keep a local top-k result per list and merge those results, or feed all probed candidates into one bounded heap.
+Both choices preserve the contract.
 
-And the pseudo code for a naive K-means implementation:
+**Prediction:** If the query is just across the boundary from its nearest centroid, what happens to recall when
+`probe_lists` changes from `1` to `2`? Which part of the lookup code should change, and which parts should not?
 
-```
-def FindCentroid(vert, centroids):
-    return centroids.min(|centroid| distance(centroid, vert))
+## Verify the Checkpoint
 
-def FindCentroids(data, current_centroids):
-    buckets = {}
-    for vert in data:
-        centroid = FindCentroid(vert, current_centroids)
-        buckets[centroid].push(vert)
-    new_centroids = []
-    for bucket in buckets:
-        new_centroids = avg(buckets[centroid])
-    return new_centroids
+From `bustub-vectordb/build`, run:
 
-centroids = random_sample(initial_data, num_lists)
-for iter in 0..500:
-    centroids = FindCentroids(initial_data, centroids)
-return centroids
-```
-
-## Testing
-
-At this point, you can run the test cases using SQLLogicTest.
-
-```
+```shell
 make -j8 sqllogictest
 ./bin/bustub-sqllogictest ../test/sql/vector.04-ivfflat.slt --verbose
 ```
 
-The test cases do not do any correctness checks and you will need to compare with the below output by yourself. Your result could be different from the reference solution because of random stuff (i.e., random seed is different). You will need to ensure all nearest neighbor queries have been converted to a vector index scan.
+Confirm that `EXPLAIN` contains `VectorIndexScan`, inserts after index construction are searchable, the result has at most
+`LIMIT` rows, and distances are nondecreasing. Random initialization can change which approximate rows appear.
 
 <details>
 
 <summary>Reference Test Result</summary>
 
-```
+```text
 {{#include vector.04-ivfflat.slt.ref}}
 ```
 
 </details>
 
+For an adversarial check, run the same query once with `SET vector_index_method=none` and once with
+`SET vector_index_method=ivfflat`. Treat exact Top-N as the oracle: every returned IVFFlat RID must exist, while overlap
+with the exact top-k measures recall.
 
-## Bonus Tasks
+You are done when you can explain why the final bucket rebuild is necessary, how `(vector, RID)` flows from index build to
+table lookup, and how increasing `probe_lists` trades work for recall.
 
-**Implement the Elkan's Accelerated K-means algorithm**
+## Optional Extensions
 
-pgvector uses [Elkan's Accelerated K-means](https://cdn.aaai.org/ICML/2003/ICML03-022.pdf) algorithm to make the index building process faster.
-
-**Persist Data to Disk**
-
-You may implement the buffer pool manager and think of ways to persist the index data to the disk.
-
-**Rebuilding the Index**
-
-If the later inserted data have a different distribution compared with the data during index building, you might need to rebuild the index in order to make the approximate nearest neighbor result accurate.
-
-**Deletion and Updates**
-
-The current implementation (and vector index interfaces) only supports insertions. You may add new interfaces to the vector index and implement updates and deletions.
+- Implement Elkan's accelerated K-means algorithm.
+- Add an explicit index-rebuild operation.
+- Add deletion and update interfaces.
+- Design a persistent layout after restoring the full buffer-pool path.
 
 {{#include copyright.md}}

@@ -3,3 +3,26 @@
     margin-right: auto;
     display: block;
 }
+
+.info {
+    margin: 20px;
+    padding: 0 20px;
+    border-inline-start: 2px solid var(--links);
+}
+
+.info:before {
+    position: absolute;
+    width: 3rem;
+    height: 3rem;
+    margin-inline-start: calc(-1.5rem - 21px);
+    content: "ⓘ";
+    text-align: center;
+    background-color: var(--bg);
+    color: var(--links);
+    font-weight: bold;
+    font-size: 2rem;
+}
+
+blockquote .info:before {
+    background-color: var(--quote-bg);
+}

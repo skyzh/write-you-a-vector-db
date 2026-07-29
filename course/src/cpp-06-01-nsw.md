@@ -2,156 +2,197 @@
 
 {{#include cpp-deprecation.md}}
 
-Before building the so-called HNSW (Hierarchical Navigable Small Worlds) index, we will start with the basic component of the HNSW index -- NSW (Navigable Small Worlds). In this chapter, we will build a graph-based index structure for vectors.
+NSW is the graph-based building block of HNSW: it starts from one or more entry points and greedily follows neighbors
+closer to the query vector. This chapter implements it as the last fully specified checkpoint in the C++ course. The
+starter represents the graph as `layers_[0]` inside `HNSWIndex` so the next, optional chapter can add hierarchy.
 
-The list of files that you will likely need to modify:
+Complete the previous chapters first. You will likely modify:
 
-```
+```text
 src/include/storage/index/hnsw_index.h
 src/storage/index/hnsw_index.cpp
 ```
 
-*Related Readings*
+*Related readings:*
 
-* [Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs](https://arxiv.org/abs/1603.09320)
-* [Hierarchical Navigable Small Worlds (HNSW) from Pinecone's Faiss Manual](https://www.pinecone.io/learn/series/faiss/hnsw/)
+- [Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs](https://arxiv.org/abs/1603.09320)
+- [HNSW in Pinecone's Faiss guide](https://www.pinecone.io/learn/series/faiss/hnsw/)
 
-## Overview
+## Search One Layer
 
-In NSW, you start from one or more entry points, and greedily visit the neighbors to find a point closer to the search vector. At some point, when there are no nearer point to explore, the search can be stopped and the approximate nearest neighbors are returned.
+### One Entry Point and One Neighbor
 
-## Layer Search
+The first diagram shows an NSW graph in two dimensions. The highlighted red vertex is the entry point, and the query
+vector is elsewhere in the space. Search begins at the entry point because the graph does not provide a global ordering
+or a centroid that points directly to the answer.
 
-**One Entry Point, 1-Nearest Neighbor**
+![One entry point](./vector-db/05-nsw-explore-1.svg)
 
-Let us start with searching exactly one nearest neighbor within an NSW graph of one entry point. Assume we have already built an NSW index over the below vectors in a 2-dimension space. The layer has one entry point as indicated in the figure in red color.
+Compare the query with every neighbor of the current vertex and move to a neighbor that is closer. Repeating this greedy
+step walks through the graph toward the query.
 
-![](./vector-db/05-nsw-explore-1.svg)
+![Greedy movement](./vector-db/05-nsw-explore-2.svg)
 
-An intuitive way to find the nearest neighbor is to find a closer point to the search vector in all the neighbors as below.
+The walk stops when none of the current vertex's neighbors is closer. Because it explores only graph edges, it can stop at
+a local minimum instead of the globally nearest vector; NSW is therefore an approximate index.
 
-![](./vector-db/05-nsw-explore-2.svg)
+### Multiple Entry Points and k Neighbors
 
-By greedily move to a vector closer to the search target, we will likely find the nearest neighbor.
+Now ask for three neighbors while starting from two entry points. Searching multiple regions reduces the chance that one
+poorly placed entry point traps the walk in the wrong part of the graph. For k-nearest-neighbor search, maintain:
 
-**Multiple Entry Points, k-Nearest Neighbors**
+- `C`, a min-heap of candidates to explore, with the nearest candidate on top;
+- `W`, a max-heap of the best visited candidates, with the worst retained result on top; and
+- `visited`, a set that prevents repeated graph expansion.
 
-Now let us move forward and find 3 nearest neighbors with 2 entry points in the following NSW index. The full NSW algorithm maintains 2 data structures: an explore candidate priority queue and a result binary heap. The explore candidate priority queue maintains the candidate vectors to visit. The top element in the queue is the current to-be-explored nearest node. The result set is a binary heap as in the top-k executor. It is a max-heap and maintains the k-nearest neighbors across all vectors that we have visited.
+Seed all three structures from both entry points. The next diagram shows the initial state before any vertex is expanded.
 
-Before exploring, we add the entry points to both the explore candidate priority queue `C` and the result set `W`.
+![Seed the queues](./vector-db/05-nsw-explore-3.svg)
 
-![](./vector-db/05-nsw-explore-3.svg)
+The nearest item in `C` is entry point 1. Pop it, mark its unseen neighbors as visited, add promising neighbors to `C` and
+`W`, and keep only the three best visited candidates in `W`.
 
-Then, we pop the nearest vector (which is entry point #1) to explore from `C` queue, and add all its neighbors to the `C` queue and the `W` set. The `W` set only maintains the k-nearest neighbors and therefore it will not have more then 3 elements.
+![Explore neighbors](./vector-db/05-nsw-explore-4.svg)
 
-![](./vector-db/05-nsw-explore-4.svg)
+The next candidate is the highlighted vertex below. Its neighbors have already been visited, so expanding it does not add
+anything to either queue.
 
-In the next iteration, we pop the nearest vector (which is the red point as below) from the `C` queue. All its neighbors have been visited, so we do not add more elements to the candidate explore queue.
+![Skip visited neighbors](./vector-db/05-nsw-explore-5.svg)
 
-![](./vector-db/05-nsw-explore-5.svg)
+Entry point 2 is now the nearest unexplored candidate. Expanding it adds candidates from a different part of the graph,
+which is the benefit of seeding the search from more than one location.
 
-Then, we pop the next vector from the `C` queue, which is entry point #2. We add all its neighbors to `C` and update `W`.
+![Explore the second entry point](./vector-db/05-nsw-explore-6.svg)
 
-![](./vector-db/05-nsw-explore-6.svg)
+Continue popping the nearest candidate and updating `W`. Even when many vertices have been visited, `W` retains only the
+three closest ones found so far.
 
-After that, we continue to explore the vector as indicated below.
+![Continue the search](./vector-db/05-nsw-explore-7.svg)
 
-![](./vector-db/05-nsw-explore-7.svg)
+Eventually the nearest candidate left in `C` is farther from the query than the worst result in the full `W`. No queued
+candidate can improve the result, so the search stops.
 
-When we reach the vector as below, all vectors in the candidate explore queue have larger distance to the search vector than the vectors in the result set. Therefore, we can stop searching at this point.
+![Stop condition](./vector-db/05-nsw-explore-8.svg)
 
-![](./vector-db/05-nsw-explore-8.svg)
+```text
+C = entry_points as a min-heap by distance
+W = unique entry_points as a max-heap by distance
+visited = unique entry_points
 
-**Why we need multiple entry points**
-
-Still consider the above example, if we want to find the 2-nearest neighbors and only have 1 entry point, the search algorithm will stop at the below status.
-
-![](./vector-db/05-nsw-explore-5-stop.svg)
-
-At this point, all candidates in the `C` queue have larger distance than all vectors in the result set. It reaches the search end condition and will not be able to explore the actual nearest neighbors.
-
-**Pseudo Code**
-
-```
-C <- entry_points as min heap on distance
-W <- entry_points as max heap on distance
-visited <- entry_points as unordered set
-while not C.empty():
-    node <- pop C (nearest element in C)
-    if dist(node) > dist(top W): # top W is the furthest element in W
+while C is not empty:
+    candidate = C.pop_nearest()
+    if W is full and distance(candidate) > distance(W.worst):
         break
-    for neighbor in neighbors of node:
-        if not visited neighbor:
-            visited += neighbor
-            C += neighbor
-            W += neighbor
-            retain k-nearest elements in W
-return W
+
+    for neighbor in candidate.neighbors:
+        if neighbor is already visited:
+            continue
+        mark neighbor visited
+        if W is not full or distance(neighbor) < distance(W.worst):
+            C.push(neighbor)
+            W.push(neighbor)
+            trim W to the search width
+
+return W sorted from nearest to farthest
 ```
 
-The pseudo code is the same as in the HNSW paper. The input parameters for this algorithm are:
+### Why Multiple Entry Points Matter
 
-* limit: number of neighbors to search. Keep at most this number of elements in the result set.
-* base_vector: the search target.
-* entry_points: the entry points.
+If the same graph asks for two neighbors but starts only from entry point 1, the search can reach the state below and
+stop: every remaining candidate in `C` is worse than both results in `W`, even though the graph contains closer vertices
+in another region. A second entry point seeds that region directly; it does not guarantee exact search, but it reduces
+this failure mode.
 
-You may implement the search layer functionality in `NSW::SearchLayer`. By default, the starter code uses the first vertex inserted into a layer as the entry point. You may also implement the algorithm to randomly sample multiple entry points.
+![One entry point stops early](./vector-db/05-nsw-explore-5-stop.svg)
 
-## Insertion
+**Course rules for `NSW::SearchLayer`:**
 
-Insertion follows the same process as layer search. We simply find the k-nearest neighbors of the to-be-inserted vector in a layer, and add edges from the inserting vector to the neighbors. For example, we want to establish 3 connections, where the number 3 is the `m` parameter of the index, and therefore we find 3 nearest neighbors to the blue vector as below.
+- return an empty vector for `limit = 0`, no entry points, or an empty layer;
+- ignore duplicate entry-point IDs and never visit a vertex more than once;
+- use `dist_fn_` for every comparison; and
+- return at most `limit` vertex IDs, sorted from nearest to farthest.
 
-![](./vector-db/05-nsw-insert-1.svg)
+## Insert into the Graph
 
-Now we add edges between the vector and the neighbors. However, the two yellow points now have too many connections, controlled by the `max_m` parameter. This may make the search layer process slower. Therefore, we need to cut down number of connections after adding more edges.
+To insert the highlighted new vector, search the existing graph with width `ef_construction`, then select its nearest `m`
+candidates as neighbors. The first diagram shows those selected connections.
 
-![](./vector-db/05-nsw-insert-2.svg)
+![Choose neighbors](./vector-db/05-nsw-insert-1.svg)
 
-To cut down the conections, we simply re-compute the k-nearest neighbors of the two yellow nodes, where `k = max_m`.
+`NSW::Connect` creates an undirected edge between the new vertex and each selected neighbor. Those new edges can put an
+existing vertex over the layer's `m_max_` degree cap, as in the second diagram.
 
-![](./vector-db/05-nsw-insert-3.svg)
+![Too many edges](./vector-db/05-nsw-insert-2.svg)
 
-And we only keep the k-nearest neighbor connections after inserting the new vector.
+For every overfull vertex, re-select its nearest `m_max_` neighbors. The third diagram marks the edges that survive this
+pruning decision.
 
-![](./vector-db/05-nsw-insert-4.svg)
+![Select retained edges](./vector-db/05-nsw-insert-3.svg)
 
-## Implementation
+Finally, remove every rejected edge from both endpoints. The last diagram is the resulting graph; updating only the
+overfull vertex would leave one-sided edges and break the undirected-graph invariant.
 
-You may implement the NSW index in `hnsw_index.cpp` at this point. The starter code implements the HNSW index class as a one-layer index, which is equivalent to the NSW index. You will need to use the following parameters in your implementation:
+![Pruned graph](./vector-db/05-nsw-insert-4.svg)
 
-## Testing
+**Course rules for insertion:**
 
-At this point, you can run the test cases using SQLLogicTest.
+- The first vertex is added without searching or connecting.
+- Do not create self-edges or duplicate edges.
+- Keep `edges_[a]` and `edges_[b]` symmetric after both connection and pruning.
+- `SelectNeighbors` returns at most `m` unique IDs ordered by `dist_fn_`.
+- Add the new vertex to the layer exactly once.
 
-```
+The starter parameters mean:
+
+- `m_`: how many neighbors a new vertex selects;
+- `ef_construction_`: the insertion-search width;
+- `ef_search_`: the query-search width;
+- `m_max_`: the upper-layer degree cap reserved for HNSW; and
+- `m_max_0_`: the layer-0 degree cap. The starter derives it as `m_ * m_` and assigns it to `layers_[0].m_max_`.
+
+Require `m > 1`, `ef_construction >= m`, and `ef_search >= 1`. The first condition also keeps the starter's
+`m_l_ = 1 / log(m)` finite for the optional HNSW extension.
+
+For a SQL `LIMIT k`, search layer 0 with width `max(k, ef_search_)`, then select and return the nearest `k` RIDs. This
+ensures that a request for more than `ef_search_` rows can still return `k` rows, while a larger `ef_search_` can improve
+recall.
+
+## Verify the Checkpoint
+
+From `bustub-vectordb/build`, run:
+
+```shell
 make -j8 sqllogictest
 ./bin/bustub-sqllogictest ../test/sql/vector.05-hnsw.slt --verbose
 ```
 
-The test cases do not do any correctness checks and you will need to compare with the below output by yourself. Your result could be different from the reference solution because of random stuff (i.e., random seed is different). You will need to ensure all nearest neighbor queries have been converted to a vector index scan.
+Confirm that results are sorted by distance, inserts after index construction are searchable, and the `LIMIT 5` query can
+return five rows even though the test index uses `ef_search = 3`. Random build order can change tie ordering.
 
 <details>
 
-<summary>Reference Test Result</summary>
+<summary>One-Layer NSW Reference</summary>
 
-```
+```text
 {{#include vector.05-hnsw.slt.1.ref}}
 ```
 
 </details>
 
-## Bonus Tasks
+Also compare an NSW query with `SET vector_index_method=none`. Exact Top-N is the oracle for recall, not a requirement that
+every approximate result match.
 
-**Implement Better Neighbor-Selection Algorithm**
+**Prediction:** If the graph has two disconnected components and every entry point is in the first component, can
+`SearchLayer` return a vertex from the second? Explain why the `visited` and stop-condition code cannot repair missing
+connectivity.
 
-The paper [Efficient and robust approximate nearest neighbor search using Hierarchical Navigable Small World graphs](https://arxiv.org/abs/1603.09320) describes two ways of selection a neighbor: simply based on distance (as in this chapter), or a better way with heuristics.
+You are done when you can trace one vertex ID through `vertices_`, `layers_[0].edges_`, `rids_`, and the table lookup, and
+explain what would break if pruning removed only one side of an undirected edge.
 
-**Persist Data to Disk**
+## Optional Extensions
 
-You may implement the buffer pool manager and think of ways to persist the index data to the disk.
-
-**Deletion and Updates**
-
-The current implementation (and vector index interfaces) only supports insertions. You may add new interfaces to the vector index and implement updates and deletions.
+- Implement the paper's heuristic neighbor-selection rule.
+- Add deletion and update support.
+- Persist the graph after defining a stable on-disk layout.
 
 {{#include copyright.md}}
