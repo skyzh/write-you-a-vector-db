@@ -30,8 +30,8 @@ ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 2;
 4
 5
 
-# Ordered mode is an explicit executor promise, so DataFusion may remove the
-# generic sort while preserving the same SQL result order.
+# Ordered mode tells DataFusion that the vector scan already returns rows in the
+# requested order, so it may remove the generic sort.
 statement ok
 SET vector_search.ordered = true;
 

@@ -1,17 +1,15 @@
 # Restrict Search with IVFFlat
 
-> **Day 2**
+> **Chapter 2**
 >
 > Complete [Build an In-Memory Vector Table and Match Its Index](./rust-02-datafusion.md) first. Finish with a seeded
 > IVFFlat index, an honest recall measurement, and the same SQL top-k running through `index=ivf_flat`.
 
-Day 1 made the optimizer boundary work before an approximate index existed. DataFusion could evaluate exact distance and
-top-k itself, and the supplied flat oracle acted as the index-selection test double. Today you replace that test double
-with the first learner-built candidate selector.
+Chapter 1 left you with an exact SQL path and a `FlatIndex` baseline. Now you will build IVFFlat to choose a smaller
+candidate set for the same query.
 
 IVFFlat spends build time dividing rows into lists, then searches only the lists whose centroids are close to the query.
-Skipping rows saves work and can also miss a true neighbor, so the index is not complete until you compare it with the
-supplied exact oracle.
+Skipping rows saves work and can also miss a true neighbor, so compare the result with exact `FlatIndex` search.
 
 You will modify:
 
@@ -20,7 +18,7 @@ rust/vector-starter/core/src/ivf.rs
 rust/vector-starter/core/src/search.rs        recall_at_k only
 ```
 
-Do not change the Day 1 DataFusion rule. The workload, public APIs, tests, and Arrow execution path are already supplied.
+Keep the Chapter 1 DataFusion rule, public APIs, and tests unchanged. Your work stays in the two files above.
 
 ## How IVFFlat Changes the Search
 
@@ -43,7 +41,7 @@ partition boundary:
 
 ![Probing one centroid can miss a nearby point in another list](./vector-db/04-ivfflat-lookup.svg)
 
-Increasing `probes` expands the candidate set without changing the metric, top-k rule, or Day 1 SQL matcher:
+Increasing `probes` expands the candidate set without changing the metric, top-k rule, or Chapter 1 SQL matcher:
 
 ![Probing two centroids expands the candidate set](./vector-db/04-ivfflat-lookup-2.svg)
 
@@ -80,7 +78,7 @@ denominator be 2 or 10? Relate your answer to what the approximate index could p
 
 ## Checkpoint 2: Validate and Seed the Build
 
-Implement `IvfFlatIndex::try_new` in `ivf.rs`. Start by validating the Day 2 configuration and calling
+Implement `IvfFlatIndex::try_new` in `ivf.rs`. Start by validating the Chapter 2 configuration and calling
 `dataset.validate_for_metric(metric)`.
 
 The starter supplies `DeterministicRng`. Use it to shuffle row offsets, then copy the first `partitions` dataset rows as
@@ -127,7 +125,7 @@ An empty cluster has no mean. Re-seed it from the row farthest from its nearest 
 silently remove a partition.
 
 Cosine adds another boundary: nonzero assigned vectors can average to the zero vector. Normalize every nonzero cosine
-centroid after the mean. If its norm is zero, replace it with an assigned dataset row, which has already passed Day 1's
+centroid after the mean. If its norm is zero, replace it with an assigned dataset row, which has already passed Chapter 1's
 nonzero-norm validation.
 
 **Prediction:** The mean of `[1, 0]` and `[-1, 0]` is `[0, 0]`. What would cosine distance do with that centroid if you
@@ -156,8 +154,8 @@ Suppose ranked list IDs are `[2, 0, 1]` and their sizes are `[10, 40, 5]`. With 
 in list 2. With `probes = 2`, it reads those five plus the ten rows in list 0. `k` controls retained output; `probes`
 controls which candidates can enter it.
 
-The strongest break test is to probe every partition. IVFFlat then visits every dataset row and must equal the exact
-oracle, including tie order:
+A useful boundary test is to probe every partition. IVFFlat then visits every dataset row and must match exact search,
+including tie order:
 
 ```sh
 cargo test -p vector-core-starter --test indexes ivf_scanning_every_partition_matches_exact_search
@@ -168,8 +166,8 @@ longer an explanation.
 
 ## Checkpoint 5: Draw a Recall/Work Curve
 
-The supplied example creates one deterministic dataset and query set, computes ground truth once with `FlatIndex`, and
-reports IVFFlat recall and latency:
+The included example creates one deterministic dataset and query set, computes the exact results once with `FlatIndex`,
+and reports IVFFlat recall and latency:
 
 ```sh
 cargo run --release -p vector-core-starter --example recall
@@ -184,34 +182,35 @@ deterministic workload.
 
 ## Checkpoint 6: Use IVFFlat from SQL
 
-Run the Day 2 SQLLogicTest:
+Run the Chapter 2 SQLLogicTest:
 
 ```sh
 cargo test -p vector-datafusion-starter --test sqllogictest day2_ivfflat_sql
 ```
 
-The SQL text and the matcher you implemented on Day 1 are unchanged. Only `IndexConfig` changes:
+The SQL text and the matcher you implemented in Chapter 1 are unchanged. Only `IndexConfig` changes:
 
 ```text
 SortExec: TopK(fetch=5), ...
   VectorIndexScanExec: index=ivf_flat, metric=Euclidean, query_dim=3, fetch=Some(5), ordered=false
 ```
 
-DataFusion passes `LIMIT 5` through Day 1's `with_fetch`. `VectorIndexScanExec` calls `IvfFlatIndex::search`, which uses
+DataFusion passes `LIMIT 5` through Chapter 1's `with_fetch`. `VectorIndexScanExec` calls `IvfFlatIndex::search`, which uses
 the configured `probes`. The generic bounded sort remains responsible for final SQL ordering. Unsupported query shapes
-still use the exact `VectorScanExec` path established before this algorithm existed.
+still use the exact `VectorScanExec` path.
 
-## Done When
+## Review Your Chapter 2 Result
 
-You are finished when the four Day 2 core tests, recall example, and Day 2 SQLLogicTest pass. Explain back, with one
-concrete build and query:
+After the four Chapter 2 core tests, recall example, and Chapter 2 SQLLogicTest pass, choose one concrete build and query
+and explain:
 
 - why list membership must be rebuilt after the final centroid update;
 - how a dataset row flows from assignment to a probed list to `TopK`;
 - why empty and zero-mean cosine clusters need different recovery logic;
 - why probing every list is an exactness test; and
-- how Day 1's optimizer rule reaches a new index without changing its safety contract.
+- how Chapter 1's optimizer rule reaches a new index without changing its safety contract.
 
-Do not add persistent postings, online centroid retraining, product quantization, or a latency target in this chapter.
+Keep this checkpoint focused on in-memory IVFFlat. Persistent postings, online centroid retraining, product quantization,
+and reproducible latency targets remain outside this chapter.
 
 {{#include copyright.md}}

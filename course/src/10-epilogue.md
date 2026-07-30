@@ -1,7 +1,8 @@
 # Where to Go Next
 
-This short course can make the central tradeoffs visible, but it cannot turn a teaching system into a production vector
-database. The course stops after an immutable in-memory collection with exact fallback, IVFFlat, and SQL query support.
+The Rust course begins with an immutable in-memory collection, exact fallback, IVFFlat, and SQL query support. Later
+chapters build graph-based search on that foundation. A teaching system still leaves plenty of room to explore the storage,
+query-processing, and serving concerns of a production vector database.
 
 ## One SQL Query, Many Layers
 
@@ -51,8 +52,8 @@ Once that system works, several extensions make good independent projects.
 - Compare CPU and GPU search only after including transfer, queueing, and batching costs.
 - Profile real embedding dimensions and datasets instead of relying on tiny synthetic vectors.
 
-For any extension, keep the exact implementation as an oracle, state the workload, and report correctness together with
-performance. A vector index is useful only when its speedup is attached to a result-quality and lifecycle contract.
+For any extension, use exact search as the baseline, state the workload, and report correctness together with performance.
+A vector index is useful only when its speedup is attached to a result-quality and lifecycle contract.
 
 ## Why This Course Exists
 
@@ -68,7 +69,7 @@ course continues the same investigation with a small in-memory system whose laye
 
 ## Feedback
 
-The first two Rust days include learner starter code, executable references, focused tests, and SQL plan checks.
+The first two Rust chapters include learner starter code, executable references, focused tests, and SQL plan checks.
 Feedback about the scope, ordering, datasets, or architecture is welcome.
 
 [![Join skyzh's Discord Server](discord-badge.svg)](https://skyzh.dev/join/discord)

@@ -3,12 +3,12 @@
 ![Write You a Vector Database — Build vector search, then use it from SQL](vectordb-social.png)
 
 Write You a Vector Database is a short hands-on course for systems and backend engineers. You will build a small in-memory
-vector database in Rust, first with exact nearest-neighbor search and then with approximate indexes. The final system will
+vector database in Rust, start by running exact nearest-neighbor queries, and then add approximate indexes. The system will
 answer SQL top-k queries through DataFusion and make the tradeoff between recall, latency, and memory visible.
 
 <div class="warning">
 
-**Course status:** Days 1–2 are ready to implement: an in-memory Arrow table and DataFusion optimizer rule, followed by
+**Course status:** Chapters 1–2 are ready to implement: an in-memory Arrow table and DataFusion optimizer rule, followed by
 IVFFlat. The repository includes learner starter code, focused tests, and separate completed references.
 
 </div>
@@ -29,24 +29,23 @@ indexes fit together behind one SQL top-k query.
 
 ## What You Will Build
 
-The course has one cumulative Rust implementation:
+The first two Rust chapters build:
 
 1. An Arrow-backed vector table and a conservative DataFusion optimizer rule that selects a vector-index scan.
-2. An IVFFlat index and recall harness that treat exact search as the correctness oracle.
+2. An IVFFlat index and recall harness that compare approximate results with exact search.
 
-The core is an ordinary Rust library. The learner-built DataFusion adapter turns a safe SQL top-k pattern into a
-vector-index scan before the approximate index exists, while the collection and index remain independent of Arrow and
-the query engine. DataFusion supplies exact distance, sort, and limit execution, so the Rust path does not duplicate an
-exact k-nearest-neighbor executor chapter.
+At its core, this is a regular Rust library. You will build a DataFusion adapter that recognizes a safe SQL top-k query and
+routes it to a vector index. The collection and indexes stay independent of Arrow and the query engine, so you can explore
+each layer on its own and then see them work together.
 
 ## Learning Goals
 
 After completing the course, you should be able to:
 
 - define the semantics and edge cases of Euclidean, cosine, and inner-product search;
-- map stable vector rows into Arrow arrays and a DataFusion `TableProvider`;
+- preserve each row's identity when converting vectors into Arrow arrays and a DataFusion `TableProvider`;
 - explain how IVFFlat trades build cost, memory, latency, and recall;
-- design benchmarks that compare ANN results with exact ground truth;
+- design benchmarks that compare ANN results with exact-search results;
 - recognize when a SQL top-k query can safely use an approximate index; and
 - separate a storage and search engine from its SQL interface.
 
@@ -64,20 +63,20 @@ measure, and explain.
 You should be comfortable with Rust ownership, traits, error handling, iterators, and Cargo. You should also know basic
 database concepts such as records, indexes, SQL ordering, and query plans.
 
-Prior knowledge of nearest-neighbor algorithms, Apache Arrow, or DataFusion is not required. Day 1 introduces the small
+Prior knowledge of nearest-neighbor algorithms, Apache Arrow, or DataFusion is not required. Chapter 1 introduces the small
 subset of DataFusion's extension interface used by the course.
 
 ## How to Use This Book
 
-Start with the [Rust course](./rust-01-overview.md). It defines the architecture, system contracts, learner workspace,
-progression, and scope. Both days pair the book with starter code, focused tests, and a separate reference solution.
+Start with the [Rust course](./rust-01-overview.md). It defines the architecture, system contract, starter workspace,
+progression, and scope. Each available chapter pairs the book with starter code, focused tests, and a separate reference
+solution.
 
-Each implementation day begins with an observable capability, the relevant invariants, and a small prediction exercise.
-It ends with focused verification and questions that require evidence from the implementation or benchmark rather than
-recall from the prose.
+Each implementation chapter begins with a concrete goal, the relevant invariants, and a small prediction exercise. It ends
+with focused tests and a short reflection on what you observed.
 
-Day 1 makes the table and optimizer rule runnable before Day 2's algorithm. IVFFlat is then compared with an exact oracle
-and exercised through the same collection API and SQL query, with physical-plan and result evidence.
+Chapter 1 makes the table and optimizer rule runnable. Chapter 2 compares IVFFlat with exact search through the same
+collection API and SQL query, so you can inspect both the physical plan and the results.
 
 ## Community
 

@@ -88,7 +88,7 @@ impl VectorTable {
         _metric: Metric,
         _index: IndexConfig,
     ) -> DataFusionResult<Self> {
-        todo!("Day 1: validate rows, build the core dataset/index, and create the Arrow batch")
+        todo!("Chapter 1: validate rows, build the core dataset/index, and create the Arrow batch")
     }
 
     pub fn index_kind(&self) -> &'static str {
@@ -117,7 +117,7 @@ impl TableProvider for VectorTable {
         _filters: &[Expr],
         _limit: Option<usize>,
     ) -> DataFusionResult<Arc<dyn ExecutionPlan>> {
-        todo!("Day 1: create the initial full VectorScanExec for DataFusion")
+        todo!("Chapter 1: create the initial full VectorScanExec for DataFusion")
     }
 }
 
@@ -292,7 +292,7 @@ impl ExecutionPlan for VectorScanExec {
 
     fn with_fetch(&self, fetch: Option<usize>) -> Option<Arc<dyn ExecutionPlan>> {
         let _ = fetch;
-        todo!("Day 1: push LIMIT into the scan while preserving SQL ordering")
+        todo!("Chapter 1: push LIMIT into the scan while preserving SQL ordering")
     }
 
     fn fetch(&self) -> Option<usize> {
@@ -303,7 +303,7 @@ impl ExecutionPlan for VectorScanExec {
         &self,
         _order: &[PhysicalSortExpr],
     ) -> DataFusionResult<SortOrderPushdownResult<Arc<dyn ExecutionPlan>>> {
-        todo!("Day 1: accept only a safely matched vector-distance ordering")
+        todo!("Chapter 1: accept only a safely matched vector-distance ordering")
     }
 }
 
@@ -327,7 +327,7 @@ fn match_vector_order(
     _schema: &Schema,
     _index: &dyn VectorIndex,
 ) -> Option<Vec<f32>> {
-    todo!("Day 1: match function, direction, embedding column, literal, metric, and dimension")
+    todo!("Chapter 1: match function, direction, embedding column, literal, metric, and dimension")
 }
 
 fn metric_for_function(name: &str) -> Option<Metric> {

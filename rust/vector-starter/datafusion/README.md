@@ -1,8 +1,8 @@
 # Vector DataFusion Starter
 
-This is the Day 1 learner workspace for Arrow table construction, a custom
+This is the Chapter 1 learner workspace for Arrow table construction, a custom
 physical scan, and safe vector sort pushdown. Its SQLLogicTests establish the
-optimizer boundary that Day 2's IVFFlat implementation uses unchanged.
+optimizer boundary that Chapter 2's IVFFlat implementation uses unchanged.
 
-The remaining execution helpers are supplied infrastructure. Follow the Day 1
-guide and implement only the explicit TODOs.
+The crate includes the execution helpers you need, so you can focus on the
+explicit Chapter 1 TODOs in the guide.

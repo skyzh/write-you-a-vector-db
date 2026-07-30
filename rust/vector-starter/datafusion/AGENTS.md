@@ -1,6 +1,6 @@
 # Learner Workspace Rules
 
-Implement the Day 1 TODOs in this directory without changing public APIs or
+Implement the Chapter 1 TODOs in this directory without changing public APIs or
 tests.
 
 - Do not inspect `../../vector/datafusion`, `../../vector/core`, Git history,

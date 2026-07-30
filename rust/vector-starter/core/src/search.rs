@@ -61,7 +61,7 @@ impl TopK {
 }
 
 pub fn recall_at_k(_expected: &[Neighbor], _actual: &[Neighbor], _k: usize) -> f64 {
-    todo!("Day 2: compute top-k row-id overlap")
+    todo!("Chapter 2: compute top-k row-id overlap")
 }
 
 #[derive(Debug, Clone)]

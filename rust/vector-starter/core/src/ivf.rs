@@ -30,7 +30,7 @@ pub struct IvfFlatIndex {
 
 impl IvfFlatIndex {
     pub fn try_new(_dataset: Dataset, _metric: Metric, _config: IvfFlatConfig) -> Result<Self> {
-        todo!("Day 2: train centroids and assign every row to an inverted list")
+        todo!("Chapter 2: train centroids and assign every row to an inverted list")
     }
 
     pub fn centroids(&self) -> &[Vec<f32>] {
@@ -47,7 +47,7 @@ impl IvfFlatIndex {
         _k: usize,
         _probes: usize,
     ) -> Result<Vec<Neighbor>> {
-        todo!("Day 2: rank centroids, scan the selected lists, and keep top-k")
+        todo!("Chapter 2: rank centroids, scan the selected lists, and keep top-k")
     }
 }
 

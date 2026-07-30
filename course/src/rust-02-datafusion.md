@@ -1,13 +1,13 @@
 # Build an In-Memory Vector Table and Match Its Index
 
-> **Day 1**
+> **Chapter 1**
 >
 > Start from the two `*-starter` crates. Finish with an exact SQL top-k query, an Arrow-backed table, and a safe
-> DataFusion optimizer rule that can select a vector index before Day 2 implements IVFFlat.
+> DataFusion optimizer rule that can select a vector index.
 
-DataFusion already implements vector distance expressions, sorting, and `LIMIT`. You will not reimplement exact
-k-nearest-neighbor execution. Instead, this chapter builds the storage and extension boundary that the approximate index
-needs: validated vectors, a `TableProvider`, a physical scan, and a rule that recognizes one safe top-k shape.
+Your first query will use DataFusion's vector distance expressions, sorting, and `LIMIT` to produce an exact result. You
+will build the storage and extension boundary around it: validated vectors, a `TableProvider`, a physical scan, and a rule
+that recognizes one safe top-k shape.
 
 You will modify:
 
@@ -16,8 +16,8 @@ rust/vector-starter/core/src/dataset.rs
 rust/vector-starter/datafusion/src/lib.rs
 ```
 
-The starter supplies metric math, a small `FlatIndex` used as an oracle and index-selection test double, Arrow result
-execution, and all tests. Do not modify public APIs or tests.
+Metric math, a `FlatIndex` that checks every vector, Arrow result execution, and all tests are ready for you to use. This
+lets you focus on the dataset, Arrow table, and query-planning boundary. Do not modify public APIs or tests.
 
 ## The Query
 
@@ -38,13 +38,13 @@ SortExec: TopK(fetch=3), ...
   VectorIndexScanExec: index=flat, metric=Cosine, query_dim=3, fetch=Some(3), ordered=false
 ```
 
-Day 1 uses the supplied flat implementation so the matching rule can be completed and tested before any ANN algorithm
-exists. On Day 2, `index=ivf_flat` will appear behind the same rule.
+With `FlatIndex`, you can confirm both the exact result and the matched physical plan. In Chapter 2, `index=ivf_flat` will
+appear behind the same rule.
 
 ## Invariants
 
 1. **I1 — Valid vectors:** a dataset is non-empty, has nonzero fixed dimension, and contains only finite `f32` values.
-2. **I2 — Stable identity:** each external `id` is unique, while a core row offset identifies the same row in the
+2. **I2 — Consistent row identity:** each external `id` is unique, while a core row offset identifies the same row in the
    dataset and Arrow batch.
 3. **I3 — Faithful Arrow shape:** the table schema is `id: UInt64`, `payload: Utf8`, and
    `embedding: FixedSizeList<Float32>` with the dataset dimension.
@@ -52,7 +52,7 @@ exists. On Day 2, `index=ivf_flat` will appear behind the same rule.
    query vector, a compatible metric and direction, and a valid dimension.
 5. **I5 — Exact fallback:** filters, multiple sort keys, non-literal vectors, wrong metrics, wrong directions, and invalid
    query vectors remain on `VectorScanExec` plus DataFusion's exact sort.
-6. **I6 — SQL owns ordering:** unless the executor explicitly promises ordered output, DataFusion retains its bounded
+6. **I6 — SQL owns ordering:** unless the vector scan returns rows in the requested order, DataFusion retains its bounded
    sort after the index selects candidates.
 
 ## Checkpoint 1: Validate the In-Memory Dataset
@@ -70,7 +70,7 @@ and the same cosine boundary for a query. Use the existing `VectorError` variant
 at the vector boundary; allowing a mismatched literal into an index scan would make the plan claim a contract the index
 cannot satisfy.
 
-The starter's supplied `FlatIndex` exercises these checks:
+Use the starter's `FlatIndex` to exercise these checks:
 
 ```sh
 cd rust
@@ -78,8 +78,8 @@ cargo test -p vector-core-starter --test indexes flat_search_is_deterministic_an
 cargo test -p vector-core-starter --test indexes cosine_rejects_zero_norm_vectors
 ```
 
-The tests also cover the supplied exact oracle. Your responsibility in this checkpoint is the validation boundary, not
-its top-k heap.
+The exact-search and top-k helpers are already in place, so you can keep this checkpoint focused on the validation
+boundary.
 
 ## Checkpoint 2: Turn Rows into an Arrow Table
 
@@ -91,7 +91,7 @@ First reject duplicate external IDs with a `HashSet`. Then build `Dataset` from 
 order. If Arrow batch row 4 and dataset row 4 refer to different inputs, an index will return the wrong payload even when
 its search result is otherwise correct.
 
-Build the selected `IndexConfig` over that dataset. Day 1 passes `IndexConfig::Flat`; Day 2 will pass
+Build the selected `IndexConfig` over that dataset. Chapter 1 passes `IndexConfig::Flat`; Chapter 2 will pass
 `IndexConfig::IvfFlat` without changing table construction.
 
 ### Define the Schema
@@ -127,7 +127,7 @@ cargo test -p vector-datafusion-starter --test sql table_rejects_duplicate_ids
 ## Checkpoint 3: Expose a TableProvider and Exact Scan
 
 DataFusion asks a `TableProvider` for a physical plan through `scan`. Implement the TODO in that method by creating the
-supplied `VectorScanExec` in `ScanMode::Full`.
+existing `VectorScanExec` in `ScanMode::Full`.
 
 Pass through:
 
@@ -136,17 +136,16 @@ Pass through:
 - the session's `vector_search.ordered` option; and
 - no ordering yet, because the initial scan has not accepted a sort.
 
-The supplied executor uses `project_schema` to preserve the requested column order, `take` to build result arrays from
+The executor uses `project_schema` to preserve the requested column order, `take` to build result arrays from
 row offsets, and `MemoryStream` to emit one batch. In full mode it returns ordinary table rows. DataFusion evaluates the
 distance function and exact `SortExec` above that scan.
 
-This is the Rust equivalent of the C++ course's insert/scan checkpoint, with Arrow arrays replacing serialized BusTub
-tuples and `TableProvider::scan` replacing `SeqScanExecutor`.
+At this point, DataFusion can read your table and return exact top-k results. Run the query once and inspect how the scan,
+distance expression, and bounded sort fit together.
 
 ## Checkpoint 4: Match One Safe Vector Ordering
 
-Implement `match_vector_order` and `try_pushdown_sort`. DataFusion calls the latter during physical sort pushdown, before
-Day 2's algorithm runs.
+Implement `match_vector_order` and `try_pushdown_sort`. DataFusion calls the latter while planning the physical query.
 
 The matcher accepts only all of the following:
 
@@ -160,8 +159,8 @@ The matcher accepts only all of the following:
 7. query dimension equal to the index dataset; and
 8. a nonzero cosine query.
 
-`uncast` and `scalar_vector` are supplied. They remove harmless cast wrappers and decode list literals backed by integer,
-`f32`, or `f64` Arrow arrays. The learning task is to compose those helpers into a conservative rule.
+`uncast` and `scalar_vector` are already implemented. They remove harmless cast wrappers and decode list literals backed
+by integer, `f32`, or `f64` Arrow arrays. The learning task is to compose those helpers into a conservative rule.
 
 When matching fails, return `SortOrderPushdownResult::Unsupported`; DataFusion keeps the exact scan and sort. When it
 succeeds, clone the scan into `ScanMode::Vector { query }`, retain the requested ordering, and return
@@ -183,9 +182,9 @@ cargo test -p vector-datafusion-starter --test sql dot_product_requires_descendi
 
 Implement `ExecutionPlan::with_fetch`. DataFusion calls it after sort pushdown and passes `LIMIT k`.
 
-Clone the scan and store the new fetch value. If the session option says `ordered=true`, the executor promises that its
-output already satisfies the accepted ordering, so return the scan directly. If no ordering or no fetch exists, also
-return the scan.
+Clone the scan and store the new fetch value. When the session option is `ordered=true`, return the scan directly; this mode
+is valid only when the selected index returns rows in the accepted order. If no ordering or no fetch exists, also return
+the scan.
 
 For the default `ordered=false` path, clear the scan's claimed ordering property and wrap it in DataFusion's
 `SortExec::new(ordering, scan).with_fetch(Some(k))`. The index chooses candidate row offsets; DataFusion still owns
@@ -204,18 +203,17 @@ cargo test -p vector-datafusion-starter --test sqllogictest day1_table_and_optim
 The SQLLogicTest asserts physical operators as well as rows. Its filtered case must remain exact; its explicit ordered
 session may remove the generic sort.
 
-## Done When
+## Review Your Chapter 1 Result
 
-Day 1 is complete when the two core tests, all `sql.rs` tests, and the Day 1 SQLLogicTest pass. Explain back, using one
-query:
+After the two core tests, all `sql.rs` tests, and the Chapter 1 SQLLogicTest pass, choose one query and explain:
 
 - how an input row becomes a dataset offset and three aligned Arrow arrays;
 - where DataFusion performs exact distance, top-k, and final ordering;
 - which comparison prevents a cosine query from using a Euclidean index;
 - why a column-to-column distance expression stays exact; and
-- why sort pushdown must be working before an ANN implementation can be tested from SQL.
+- how the same matching rule can later reach an approximate index without weakening exact fallback.
 
-Do not implement a custom exact executor, ANN algorithm, filtered pushdown, or DDL in this chapter. DataFusion already
-provides exact expression and top-k execution; Day 2 will supply the first approximate candidate selector.
+Keep your Chapter 1 changes in the two files named at the start. IVFFlat, filtered pushdown, DDL, and persistence remain
+outside this chapter.
 
 {{#include copyright.md}}

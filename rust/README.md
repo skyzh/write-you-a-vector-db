@@ -11,7 +11,7 @@ vector/
   datafusion/    package: vector-datafusion
 ```
 
-Day 1 makes vector-index selection observable from SQL. Day 2 implements
+Chapter 1 makes vector-index selection observable from SQL. Chapter 2 implements
 IVFFlat behind that unchanged optimizer boundary.
 
 Check the untouched starter without executing TODOs:
