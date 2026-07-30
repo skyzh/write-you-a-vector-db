@@ -1,4 +1,4 @@
-# Learner Workspace Rules
+# Your Workspace Rules
 
 Implement the exercises only in this directory unless the course chapter says
 otherwise.

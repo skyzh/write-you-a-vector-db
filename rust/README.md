@@ -1,6 +1,6 @@
 # Rust Vector Search Course
 
-This Cargo workspace separates learner code from completed references:
+This Cargo workspace separates starter and reference trees:
 
 ```text
 vector-starter/

@@ -3,7 +3,7 @@
 > **Chapter 2**
 >
 > Complete [Build an In-Memory Vector Table and Match Its Index](./rust-02-datafusion.md) first. Finish with a seeded
-> IVFFlat index, an honest recall measurement, and the same SQL top-k running through `index=ivf_flat`.
+> IVFFlat index, recall measured against exact search, and the same SQL top-k running through `index=ivf_flat`.
 
 Chapter 1 left you with an exact SQL path and a `FlatIndex` baseline. Now you will build IVFFlat to choose a smaller
 candidate set for the same query.
@@ -103,7 +103,7 @@ For up to `iterations` rounds:
 3. accumulate component-wise sums and counts for each partition; and
 4. replace each non-empty centroid with its component-wise mean.
 
-Keep sums in `f64`, as the supplied metric code does for distances. Every nearest-centroid decision uses
+Keep sums in `f64`, as the starter's metric code does for distances. Every nearest-centroid decision uses
 `Metric::distance`, including dot and cosine configurations.
 
 ```text
@@ -146,7 +146,7 @@ Implement `search_with_probes`:
 2. compute one `Neighbor` per centroid and sort centroids nearest-first;
 3. visit row offsets from the first `probes` lists;
 4. score those dataset rows with the original metric; and
-5. feed all candidates into the supplied `TopK` and return nearest-first.
+5. feed all candidates into the existing `TopK` and return nearest-first.
 
 Do not return a separate top-k from each list. The SQL query asks for the best `k` across the union of candidates.
 
@@ -174,8 +174,8 @@ cargo run --release -p vector-core-starter --example recall
 ```
 
 Change `probes` while keeping the seed, rows, queries, metric, and `k` fixed. Record at least a small-probe point and an
-all-partitions point. Timings vary by machine; the evidence is the curve relating candidate work to recall, not a fixed
-microsecond target.
+all-partitions point. Timings vary by machine, so compare how candidate work and recall change instead of aiming for a
+fixed microsecond target.
 
 As `probes` approaches `partitions`, candidate work approaches exact search and recall must reach `1.0` on the same
 deterministic workload.

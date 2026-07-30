@@ -1,4 +1,4 @@
-# Learner Workspace Rules
+# Your Workspace Rules
 
 Implement the Chapter 1 TODOs in this directory without changing public APIs or
 tests.

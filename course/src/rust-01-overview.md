@@ -2,8 +2,8 @@
 
 <div class="warning">
 
-**Course status:** Chapters 1–2 are ready to learn from and implement. The repository includes learner starter code, focused
-tests, and separate reference solutions.
+**Course status:** Chapters 1–2 are ready to implement. The repository includes starter code, focused tests, and separate
+reference solutions.
 
 </div>
 
@@ -22,7 +22,7 @@ Your first SQL query uses DataFusion's vector distance expressions, bounded sort
 The starter includes a `FlatIndex`, which checks every vector, while you connect the table to the query planner. You will
 then add IVFFlat as your own candidate selector behind the same query.
 
-## Choose the Learner Workspace
+## Choose Your Workspace
 
 The Cargo workspace under `rust/` separates starter and reference trees:
 
@@ -35,8 +35,8 @@ vector/
   datafusion/                completed DataFusion reference
 ```
 
-The starter keeps the same public APIs, tests, examples, and file layout as the reference. Implement the TODOs in chapter
-order. The reference crates are an answer key, not a prerequisite.
+Work in `vector-starter/` and implement its TODOs in chapter order. The `vector/` tree contains completed references; keep
+it closed while you work through the exercises, as required by the starter's `AGENTS.md` files.
 
 From the repository root, check that the untouched starter compiles:
 
@@ -77,9 +77,9 @@ SortExec: TopK(fetch=10), ...
   VectorIndexScanExec: index=ivf_flat, metric=Cosine, query_dim=3, fetch=Some(10), ordered=false
 ```
 
-The default plan retains DataFusion's bounded sort. The index selects candidates; `SortExec` owns SQL ordering. If the
-selected index is known to return rows in the requested order, `SET vector_search.ordered = true` tells DataFusion it can
-skip this final sort.
+The default plan retains DataFusion's bounded sort. The index selects candidates; `SortExec` owns SQL ordering. When the
+selected index returns rows in the requested order, `SET vector_search.ordered = true` tells DataFusion it can skip this
+final sort.
 
 Filters, multiple sort keys, a non-literal query vector, the wrong distance function, the wrong direction, or a dimension
 mismatch keep the exact plan. In particular, taking ANN top-k before applying a filter can change the answer, so refusing
@@ -109,7 +109,7 @@ SQLLogicTest shows that the Chapter 1 optimizer can reach it.
    norm.
 3. **Identity:** core row offset `r` maps to Arrow batch row `r`, which carries the corresponding external ID and payload.
 4. **Ordering:** lower internal distance is better. Ties use row offset. Dot product is negated at the metric boundary.
-5. **Exact baseline:** exact search defines the expected result. Approximate latency is never reported without recall from
+5. **Exact baseline:** exact search defines the expected result. When you report approximate latency, include recall from
    the same data, queries, metric, and `k`.
 6. **SQL safety:** the optimizer selects an index only when expression, metric, direction, dimension, and limit match its
    contract. Unsupported shapes remain exact.

@@ -9,7 +9,7 @@ answer SQL top-k queries through DataFusion and make the tradeoff between recall
 <div class="warning">
 
 **Course status:** Chapters 1–2 are ready to implement: an in-memory Arrow table and DataFusion optimizer rule, followed by
-IVFFlat. The repository includes learner starter code, focused tests, and separate completed references.
+IVFFlat. The repository includes starter code, focused tests, and separate completed references.
 
 </div>
 
@@ -23,9 +23,9 @@ retrieves the items closest to a query vector under a distance metric. Exact sea
 vector. Approximate nearest-neighbor (ANN) indexes avoid much of that work in exchange for returning an imperfect result
 set.
 
-This course builds vector search as a database feature rather than as an isolated ANN library. The goal is not only to
-understand IVFFlat as an algorithm, but also to see how vectors, distance expressions, query planning, execution, and
-indexes fit together behind one SQL top-k query.
+This course builds vector search as a database feature rather than as an isolated ANN library. You will explore IVFFlat
+and graph indexes while seeing how vectors, distance expressions, query planning, execution, and indexes fit together
+behind one SQL top-k query.
 
 ## What You Will Build
 
@@ -44,16 +44,16 @@ After completing the course, you should be able to:
 
 - define the semantics and edge cases of Euclidean, cosine, and inner-product search;
 - preserve each row's identity when converting vectors into Arrow arrays and a DataFusion `TableProvider`;
-- explain how IVFFlat trades build cost, memory, latency, and recall;
+- explain how IVFFlat and graph indexes trade build cost, memory, latency, and recall;
 - design benchmarks that compare ANN results with exact-search results;
 - recognize when a SQL top-k query can safely use an approximate index; and
 - separate a storage and search engine from its SQL interface.
 
 ## What This Course Will Not Cover
 
-The required path will not implement embedding models, persistent index files, online updates or deletes after an index is
-built, crash recovery, filtered ANN search, distributed execution, GPU kernels, or an HTTP service. It will also avoid
-calling an existing ANN library for the algorithms students are meant to learn.
+You will not implement embedding models, persistent index files, online updates or deletes after an index is built, crash
+recovery, filtered ANN search, distributed execution, GPU kernels, or an HTTP service. You will implement the course's
+indexes directly instead of calling an existing ANN library.
 
 Those boundaries keep the course focused on vector search. They also make every required component small enough to test,
 measure, and explain.

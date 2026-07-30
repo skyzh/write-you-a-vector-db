@@ -69,7 +69,7 @@ course continues the same investigation with a small in-memory system whose laye
 
 ## Feedback
 
-The first two Rust chapters include learner starter code, executable references, focused tests, and SQL plan checks.
+The first two Rust chapters include starter code, executable references, focused tests, and SQL plan checks.
 Feedback about the scope, ordering, datasets, or architecture is welcome.
 
 [![Join skyzh's Discord Server](discord-badge.svg)](https://skyzh.dev/join/discord)

@@ -160,7 +160,7 @@ The matcher accepts only all of the following:
 8. a nonzero cosine query.
 
 `uncast` and `scalar_vector` are already implemented. They remove harmless cast wrappers and decode list literals backed
-by integer, `f32`, or `f64` Arrow arrays. The learning task is to compose those helpers into a conservative rule.
+by integer, `f32`, or `f64` Arrow arrays. Use them to build a conservative matching rule.
 
 When matching fails, return `SortOrderPushdownResult::Unsupported`; DataFusion keeps the exact scan and sort. When it
 succeeds, clone the scan into `ScanMode::Vector { query }`, retain the requested ordering, and return
