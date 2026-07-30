@@ -1,0 +1,18 @@
+[package]
+name = "vector-datafusion-starter"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+async-trait.workspace = true
+datafusion.workspace = true
+tokio.workspace = true
+vector-core = { package = "vector-core-starter", path = "../core" }
+
+[dev-dependencies]
+sqllogictest.workspace = true
+
+[lints]
+workspace = true
