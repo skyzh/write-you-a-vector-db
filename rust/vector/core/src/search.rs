@@ -53,6 +53,14 @@ impl TopK {
         }
     }
 
+    pub(crate) fn worst(&self) -> Option<Neighbor> {
+        self.heap.peek().copied()
+    }
+
+    pub(crate) fn len(&self) -> usize {
+        self.heap.len()
+    }
+
     pub(crate) fn into_sorted(mut self) -> Vec<Neighbor> {
         let mut neighbors = self.heap.drain().collect::<Vec<_>>();
         neighbors.sort_unstable();
