@@ -14,3 +14,4 @@ https://skyzh.github.io/write-you-a-vector-db/rust-02-datafusion
 https://skyzh.github.io/write-you-a-vector-db/rust-03-ivfflat
 https://skyzh.github.io/write-you-a-vector-db/rust-04-nsw
 https://skyzh.github.io/write-you-a-vector-db/rust-05-hnsw
+https://skyzh.github.io/write-you-a-vector-db/rust-06-benchmark
