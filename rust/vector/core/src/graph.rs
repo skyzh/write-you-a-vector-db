@@ -55,6 +55,35 @@ pub(crate) fn search_layer(
     best.into_sorted()
 }
 
+pub(crate) fn greedy_search(
+    dataset: &Dataset,
+    metric: Metric,
+    query: &[f32],
+    adjacency: &[Vec<usize>],
+    entry: usize,
+    allowed_rows: usize,
+) -> usize {
+    let mut current = Neighbor {
+        row: entry,
+        distance: metric.distance(query, dataset.vector(entry)),
+    };
+    loop {
+        let next = adjacency[current.row]
+            .iter()
+            .copied()
+            .filter(|row| *row < allowed_rows)
+            .map(|row| Neighbor {
+                row,
+                distance: metric.distance(query, dataset.vector(row)),
+            })
+            .min();
+        match next {
+            Some(next) if next < current => current = next,
+            _ => return current.row,
+        }
+    }
+}
+
 pub(crate) fn prune_neighbors(
     dataset: &Dataset,
     metric: Metric,

@@ -11,7 +11,7 @@ use datafusion::execution::config::SessionConfig;
 use datafusion::execution::context::SessionContext;
 use datafusion::physical_plan::collect;
 use sqllogictest::{AsyncDB, DBOutput, DefaultColumnType, Runner};
-use vector_core::{IndexConfig, IvfFlatConfig, Metric, NswConfig};
+use vector_core::{HnswConfig, IndexConfig, IvfFlatConfig, Metric, NswConfig};
 use vector_datafusion_starter::{VectorRow, VectorTable, with_vector_search_options};
 
 struct DataFusionDb {
@@ -180,6 +180,21 @@ async fn day3_nsw_sql() {
             max_connections: 4,
             ef_construction: 8,
             ef_search: 8,
+        }),
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn day4_hnsw_sql() {
+    run_case(
+        "vector.04-hnsw.slt",
+        IndexConfig::Hnsw(HnswConfig {
+            max_connections: 4,
+            ef_construction: 8,
+            ef_search: 8,
+            max_level: 4,
+            seed: 7,
         }),
     )
     .await;

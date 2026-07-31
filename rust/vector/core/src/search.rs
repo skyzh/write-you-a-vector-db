@@ -106,4 +106,8 @@ impl DeterministicRng {
         debug_assert!(upper_bound > 0);
         (self.next_u64() % upper_bound as u64) as usize
     }
+
+    pub(crate) fn coin_flip(&mut self) -> bool {
+        self.next_u64() & 1 == 0
+    }
 }

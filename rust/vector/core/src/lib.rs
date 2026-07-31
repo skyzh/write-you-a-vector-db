@@ -1,6 +1,7 @@
 mod dataset;
 mod flat;
 mod graph;
+mod hnsw;
 mod ivf;
 mod metric;
 mod nsw;
@@ -10,6 +11,7 @@ use std::sync::Arc;
 
 pub use dataset::Dataset;
 pub use flat::FlatIndex;
+pub use hnsw::{HnswConfig, HnswIndex};
 pub use ivf::{IvfFlatConfig, IvfFlatIndex};
 pub use metric::Metric;
 pub use nsw::{NswConfig, NswIndex};
@@ -61,6 +63,7 @@ pub enum IndexConfig {
     Flat,
     IvfFlat(IvfFlatConfig),
     Nsw(NswConfig),
+    Hnsw(HnswConfig),
 }
 
 impl IndexConfig {
@@ -69,6 +72,7 @@ impl IndexConfig {
             Self::Flat => Ok(Arc::new(FlatIndex::try_new(dataset, metric)?)),
             Self::IvfFlat(config) => Ok(Arc::new(IvfFlatIndex::try_new(dataset, metric, config)?)),
             Self::Nsw(config) => Ok(Arc::new(NswIndex::try_new(dataset, metric, config)?)),
+            Self::Hnsw(config) => Ok(Arc::new(HnswIndex::try_new(dataset, metric, config)?)),
         }
     }
 }

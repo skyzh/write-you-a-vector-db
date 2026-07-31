@@ -13,7 +13,7 @@ vector/
 
 Chapter 1 makes vector-index selection observable from SQL. Chapter 2 implements
 IVFFlat behind that unchanged optimizer boundary, and Chapter 3 adds NSW graph
-search.
+search. Chapter 4 adds HNSW hierarchy.
 
 Check the untouched starter without executing TODOs:
 
