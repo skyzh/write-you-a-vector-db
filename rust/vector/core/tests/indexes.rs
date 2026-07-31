@@ -1,6 +1,8 @@
+use std::mem::size_of;
+
 use vector_core::{
-    Dataset, FlatIndex, HnswConfig, HnswIndex, IvfFlatConfig, IvfFlatIndex, Metric, Neighbor,
-    NswConfig, NswIndex, VectorIndex, recall_at_k,
+    Dataset, FlatIndex, HnswConfig, HnswIndex, IvfFlatConfig, IvfFlatIndex, IvfPqConfig,
+    IvfPqIndex, Metric, Neighbor, NswConfig, NswIndex, VectorIndex, recall_at_k,
 };
 
 fn line_dataset(size: usize) -> Dataset {
@@ -110,6 +112,80 @@ fn ivf_cosine_recovers_from_a_zero_mean_cluster() {
     .unwrap();
     assert!(index.centroids()[0].iter().all(|value| value.is_finite()));
     assert_eq!(index.search(&[1.0, 0.0], 4).unwrap().len(), 4);
+}
+
+#[test]
+fn ivf_pq_validates_its_euclidean_code_layout() {
+    let dataset = line_dataset(32);
+    let config = IvfPqConfig {
+        partitions: 4,
+        probes: 2,
+        iterations: 4,
+        subquantizers: 2,
+        codebook_size: 8,
+        rerank: 16,
+        seed: 7,
+    };
+    assert!(IvfPqIndex::try_new(dataset.clone(), Metric::Cosine, config).is_err());
+    assert!(
+        IvfPqIndex::try_new(
+            dataset,
+            Metric::Euclidean,
+            IvfPqConfig {
+                subquantizers: 3,
+                ..config
+            },
+        )
+        .is_err()
+    );
+}
+
+#[test]
+fn ivf_pq_build_is_seeded_and_codes_each_row() {
+    let config = IvfPqConfig {
+        partitions: 6,
+        probes: 2,
+        iterations: 8,
+        subquantizers: 2,
+        codebook_size: 8,
+        rerank: 20,
+        seed: 42,
+    };
+    let left = IvfPqIndex::try_new(line_dataset(60), Metric::Euclidean, config).unwrap();
+    let right = IvfPqIndex::try_new(line_dataset(60), Metric::Euclidean, config).unwrap();
+
+    assert_eq!(left.centroids(), right.centroids());
+    assert_eq!(left.codebooks(), right.codebooks());
+    assert_eq!(left.list_sizes(), right.list_sizes());
+    assert_eq!(left.list_sizes().iter().sum::<usize>(), 60);
+    assert_eq!(left.encoded_bytes(), 60 * config.subquantizers);
+    assert_eq!(left.full_precision_bytes(), 60 * 2 * size_of::<f32>());
+    assert!(left.encoded_bytes() + left.codebook_bytes() < left.full_precision_bytes());
+}
+
+#[test]
+fn ivf_pq_full_scan_and_rerank_matches_exact_search() {
+    let dataset = line_dataset(80);
+    let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();
+    let index = IvfPqIndex::try_new(
+        dataset,
+        Metric::Euclidean,
+        IvfPqConfig {
+            partitions: 8,
+            probes: 2,
+            iterations: 8,
+            subquantizers: 2,
+            codebook_size: 8,
+            rerank: 24,
+            seed: 7,
+        },
+    )
+    .unwrap();
+    let query = [31.2, 4.0];
+
+    let expected = exact.search(&query, 12).unwrap();
+    let actual = index.search_with_probes(&query, 12, 8, 80).unwrap();
+    assert_eq!(actual, expected);
 }
 
 #[test]

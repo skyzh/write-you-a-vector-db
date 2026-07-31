@@ -4,7 +4,7 @@ use datafusion::arrow::array::UInt64Array;
 use datafusion::arrow::util::pretty::pretty_format_batches;
 use datafusion::execution::config::SessionConfig;
 use datafusion::execution::context::SessionContext;
-use vector_core::{HnswConfig, IndexConfig, Metric};
+use vector_core::{HnswConfig, IndexConfig, IvfPqConfig, Metric};
 use vector_datafusion_starter::{VectorRow, VectorTable, with_vector_search_options};
 
 fn rows() -> Vec<VectorRow> {
@@ -115,6 +115,30 @@ async fn hnsw_is_visible_in_explain() {
     .await;
     assert!(plan.contains("VectorIndexScanExec"), "{plan}");
     assert!(plan.contains("index=hnsw"), "{plan}");
+    assert!(plan.contains("fetch=Some(2)"), "{plan}");
+}
+
+#[tokio::test]
+async fn ivf_pq_is_visible_in_explain() {
+    let context = context(
+        Metric::Euclidean,
+        IndexConfig::IvfPq(IvfPqConfig {
+            partitions: 2,
+            probes: 2,
+            iterations: 4,
+            subquantizers: 1,
+            codebook_size: 4,
+            rerank: 5,
+            seed: 7,
+        }),
+    );
+    let plan = explain(
+        &context,
+        "SELECT id FROM points ORDER BY array_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 2",
+    )
+    .await;
+    assert!(plan.contains("VectorIndexScanExec"), "{plan}");
+    assert!(plan.contains("index=ivf_pq"), "{plan}");
     assert!(plan.contains("fetch=Some(2)"), "{plan}");
 }
 

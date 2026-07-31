@@ -20,8 +20,9 @@ contracts, query planning, and execution boundary that make SQL vector search wo
 
 The [Rust course](https://skyzh.github.io/write-you-a-vector-db/rust-01-overview) has five chapters: an Arrow-backed
 in-memory table and safe DataFusion optimizer rule, followed by IVFFlat, NSW, HNSW, and a shared recall and latency
-benchmark. The implementation chapters include starter code, focused tests, SQLLogicTests, and separate completed
-reference crates.
+benchmark. An optional follow-up adds residual product quantization and exact reranking to IVFFlat. The implementation
+chapters include starter code, focused tests, and separate completed reference crates; the four SQL-facing chapters also
+include SQLLogicTests.
 
 Run the completed reference with:
 
@@ -29,6 +30,7 @@ Run the completed reference with:
 cd rust
 cargo test -p vector-core -p vector-datafusion
 cargo run --release -p vector-core --example recall
+cargo run --release -p vector-core --example quantization
 ```
 
 The original [C++/BusTub edition](https://skyzh.github.io/write-you-a-vector-db/cpp-01-overview) is deprecated and
