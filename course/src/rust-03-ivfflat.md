@@ -5,11 +5,44 @@
 > Complete [Build an In-Memory Vector Table and Match Its Index](./rust-02-datafusion.md) first. Finish with a seeded
 > IVFFlat index, recall measured against exact search, and the same SQL top-k running through `index=ivf_flat`.
 
-Chapter 1 left you with an exact SQL path and a `FlatIndex` baseline. Now you will build IVFFlat to choose a smaller
-candidate set for the same query.
+IVFFlat is a simple quantization-based vector index that splits data into buckets to accelerate vector similarity search.
+A query probes only the nearest buckets, reducing distance calculations at the cost of possibly missing a true neighbor.
 
-IVFFlat spends build time dividing rows into lists, then searches only the lists whose centroids are close to the query.
-Skipping rows saves work and can also miss a true neighbor, so compare the result with exact `FlatIndex` search.
+## How IVFFlat Works
+
+IVFFlat builds clusters over vectors already stored in the collection. Each cluster has a centroid and a list of the
+vectors closest to that centroid. At lookup time, the index compares the query with the centroids first, then searches
+only a configured number of nearby lists instead of every vector.
+
+Before the index exists, all points belong to one unpartitioned dataset, so an exact query compares its target with every
+point.
+
+![Vectors before IVFFlat clustering](./vector-db/04-ivfflat-step1.svg)
+
+At build time, k-means chooses centroids and alternates between assigning vectors to their nearest centroid and moving
+each centroid to the mean of its assigned vectors. Each colored region will become one inverted list.
+
+![K-means chooses centroids and their Voronoi regions](./vector-db/04-ivfflat-step2.svg)
+
+After the last centroid update, assign every vector once more using the final centroids. The result is one list per
+centroid, and vectors in the same region will be searched together.
+
+![Every vector is assigned to its nearest centroid](./vector-db/04-ivfflat-step3.svg)
+
+The red vector in the next diagram asks for its nearest neighbors. If lookup searches only its nearest centroid's list,
+it can miss a closer point just across the partition boundary:
+
+![Probing one centroid can miss a nearby point in another list](./vector-db/04-ivfflat-lookup.svg)
+
+Probing the next-nearest list exposes those candidates. Increasing the number of probes does more work, but it is less
+likely to miss a true neighbor:
+
+![Probing two centroids expands the candidate set](./vector-db/04-ivfflat-lookup-2.svg)
+
+## Build IVFFlat in Rust
+
+Chapter 1 left you with an exact SQL path and a `FlatIndex` that checks every vector. You will now build IVFFlat to choose
+a smaller candidate set for the same query, then compare its result with exact search.
 
 You will modify:
 
@@ -19,31 +52,6 @@ rust/vector-starter/core/src/search.rs        recall_at_k only
 ```
 
 Keep the Chapter 1 DataFusion rule, public APIs, and tests unchanged. Your work stays in the two files above.
-
-## How IVFFlat Changes the Search
-
-Before the index exists, all points are one unpartitioned dataset.
-
-![Vectors before IVFFlat clustering](./vector-db/04-ivfflat-step1.svg)
-
-At build time, k-means chooses centroids and alternates between assigning rows and recomputing means. Each colored region
-will become one inverted list.
-
-![K-means chooses centroids and their Voronoi regions](./vector-db/04-ivfflat-step2.svg)
-
-After the last centroid update, assign every row once more using the final centroids. The result is one list of row
-offsets per centroid.
-
-![Every vector is assigned to its nearest centroid](./vector-db/04-ivfflat-step3.svg)
-
-At query time, rank the centroids and open only the nearest `probes` lists. One probe can miss a close point across a
-partition boundary:
-
-![Probing one centroid can miss a nearby point in another list](./vector-db/04-ivfflat-lookup.svg)
-
-Increasing `probes` expands the candidate set without changing the metric, top-k rule, or Chapter 1 SQL matcher:
-
-![Probing two centroids expands the candidate set](./vector-db/04-ivfflat-lookup-2.svg)
 
 ## Invariants
 
