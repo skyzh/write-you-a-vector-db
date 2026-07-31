@@ -1,8 +1,8 @@
 # Where to Go Next
 
-The Rust course begins with an immutable in-memory collection, exact fallback, IVFFlat, NSW, and SQL query support. The
-next chapter adds hierarchy to graph search. A teaching system still leaves plenty of room to explore the storage,
-query-processing, and serving concerns of a production vector database.
+The Rust course builds an immutable in-memory collection, exact fallback, IVFFlat, NSW, HNSW, and SQL query support. A
+teaching system still leaves plenty of room to explore the storage, query-processing, and serving concerns of a production
+vector database.
 
 ## One SQL Query, Many Layers
 
@@ -69,7 +69,7 @@ course continues the same investigation with a small in-memory system whose laye
 
 ## Feedback
 
-The first three Rust chapters include starter code, executable references, focused tests, and SQL plan checks.
+The four Rust chapters include starter code, executable references, focused tests, and SQL plan checks.
 Feedback about the scope, ordering, datasets, or architecture is welcome.
 
 [![Join skyzh's Discord Server](discord-badge.svg)](https://skyzh.dev/join/discord)

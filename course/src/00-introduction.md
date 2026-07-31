@@ -8,8 +8,8 @@ answer SQL top-k queries through DataFusion and make the tradeoff between recall
 
 <div class="warning">
 
-**Course status:** Chapters 1–3 are ready to implement: an in-memory Arrow table and DataFusion optimizer rule, followed by
-IVFFlat and NSW. The repository includes starter code, focused tests, and separate completed references.
+**Course status:** All four chapters are ready to implement: an in-memory Arrow table and DataFusion optimizer rule,
+followed by IVFFlat, NSW, and HNSW. The repository includes starter code, focused tests, and separate completed references.
 
 </div>
 
@@ -29,11 +29,12 @@ behind one SQL top-k query.
 
 ## What You Will Build
 
-The first three Rust chapters build:
+The four Rust chapters build:
 
 1. An Arrow-backed vector table and a conservative DataFusion optimizer rule that selects a vector-index scan.
 2. An IVFFlat index and recall harness that compare approximate results with exact search.
 3. An NSW proximity graph with bounded reciprocal edges and adjustable search width.
+4. An HNSW hierarchy that routes through sparse upper layers before searching the complete graph.
 
 At its core, this is a regular Rust library. You will build a DataFusion adapter that recognizes a safe SQL top-k query and
 routes it to a vector index. The collection and indexes stay independent of Arrow and the query engine, so you can explore
@@ -76,9 +77,9 @@ solution.
 Each implementation chapter begins with a concrete goal, the relevant invariants, and a small prediction exercise. It ends
 with focused tests and a short reflection on what you observed.
 
-Chapter 1 makes the table and optimizer rule runnable. Chapter 2 compares IVFFlat with exact search, and Chapter 3 follows
-graph edges with NSW. Both approximate indexes use the same collection API and SQL query, so you can inspect the physical
-plan and results without changing the optimizer contract.
+Chapter 1 makes the table and optimizer rule runnable. Chapter 2 compares IVFFlat with exact search, Chapter 3 follows
+graph edges with NSW, and Chapter 4 adds sparse HNSW layers. Every approximate index uses the same collection API and SQL
+query, so you can inspect the physical plan and results without changing the optimizer contract.
 
 ## Community
 

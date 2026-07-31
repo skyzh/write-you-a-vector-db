@@ -5,6 +5,7 @@
   - [Build an In-Memory Vector Table and Match Its Index](./rust-02-datafusion.md)
   - [Restrict Search with IVFFlat](./rust-03-ivfflat.md)
   - [Navigate a Proximity Graph with NSW](./rust-04-nsw.md)
+  - [Add Hierarchy with HNSW](./rust-05-hnsw.md)
 - [Where to Go Next](./10-epilogue.md)
 
 ---
