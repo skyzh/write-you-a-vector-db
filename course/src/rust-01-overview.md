@@ -2,15 +2,15 @@
 
 <div class="warning">
 
-**Course status:** All four chapters are ready to implement. The repository includes starter code, focused tests, and separate
+**Course status:** All five chapters are ready to implement. The repository includes starter code, focused tests, and separate
 reference solutions.
 
 </div>
 
-Across four chapters, you will connect an in-memory vector table to DataFusion, implement the optimizer rule that selects
-a safe vector-index scan, build IVFFlat behind that rule, navigate a proximity graph with NSW, and add HNSW hierarchy.
-Every chapter ends with a runnable SQL query, so you can inspect how the physical plan changes as the index becomes more
-capable.
+Across five chapters, you will connect an in-memory vector table to DataFusion, implement the optimizer rule that selects
+a safe vector-index scan, build IVFFlat behind that rule, navigate a proximity graph with NSW, add HNSW hierarchy, and
+compare every index on one benchmark workload. The first four chapters end with a runnable SQL query, so you can inspect
+how the physical plan changes as the index becomes more capable. The final chapter measures recall and latency directly.
 
 ```sql
 SELECT id, payload
@@ -29,7 +29,7 @@ The Cargo workspace under `rust/` separates starter and reference trees:
 
 ```text
 vector-starter/
-  core/                      dataset, IVFFlat, NSW, and HNSW TODOs
+  core/                      dataset, IVFFlat, NSW, HNSW, and benchmark TODOs
   datafusion/                Chapter 1 Arrow table and optimizer-rule TODOs
 vector/
   core/                      completed core reference
@@ -137,11 +137,13 @@ while an SQLLogicTest shows that the Chapter 1 optimizer can reach it.
 | [2 — IVFFlat](./rust-03-ivfflat.md) | 4–5 hours | A flat index handles matched SQL top-k queries exactly. | Seeded k-means, inverted lists, and `probes` create a measured recall/work tradeoff behind the same SQL query. |
 | [3 — NSW](./rust-04-nsw.md) | 4–5 hours | Candidate selection comes from centroid partitions. | Best-first traversal and bounded reciprocal graph insertion expose `ef_search` as a second recall/work tradeoff behind the same SQL query. |
 | [4 — HNSW](./rust-05-hnsw.md) | 4–5 hours | Every graph query starts in one complete layer. | Seeded sparse layers route greedily into layer-zero beam search while preserving the same SQL and recall contracts. |
+| [5 — Benchmark](./rust-06-benchmark.md) | 1–2 hours | Each index has been exercised separately. | Exact, IVFFlat, NSW, and HNSW share one reproducible build, recall, and latency measurement contract. |
 
 Chapter 1 gives you an exact end-to-end query whose rows and physical plan you can inspect. Chapters 2–4 keep that SQL
-interface and safety rule in place while changing how candidate rows are selected.
+interface and safety rule in place while changing how candidate rows are selected. Chapter 5 compares those indexes
+without changing the data, queries, metric, or `k`.
 
-After Chapter 4, you should be able to explain:
+After Chapter 5, you should be able to explain:
 
 - how row identity survives conversion from Rust structs to core offsets and Arrow arrays;
 - which physical expression shapes are safe to lower to a vector index;
@@ -152,7 +154,8 @@ After Chapter 4, you should be able to explain:
 - why NSW needs separate candidate and result frontiers; and
 - how reciprocal pruning preserves a bounded graph;
 - why HNSW uses greedy upper layers and a layer-zero beam; and
-- how seeded promotion makes comparisons reproducible.
+- how seeded promotion makes comparisons reproducible; and
+- how exact ground truth, warm-up, and one shared workload make recall and latency comparisons fair.
 
 ## Scope
 

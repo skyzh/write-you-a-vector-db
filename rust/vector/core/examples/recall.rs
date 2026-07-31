@@ -1,7 +1,8 @@
 use std::time::{Duration, Instant};
 
 use vector_core::{
-    Dataset, FlatIndex, IvfFlatConfig, IvfFlatIndex, Metric, VectorIndex, recall_at_k,
+    Dataset, FlatIndex, HnswConfig, HnswIndex, IvfFlatConfig, IvfFlatIndex, Metric, NswConfig,
+    NswIndex, VectorIndex, recall_at_k,
 };
 
 const ROWS: usize = 2_000;
@@ -27,15 +28,18 @@ fn main() -> vector_core::Result<()> {
         })
         .collect::<Vec<_>>();
 
+    let started = Instant::now();
     let exact = FlatIndex::try_new(dataset.clone(), Metric::Cosine)?;
+    let exact_build = started.elapsed();
     let ground_truth = queries
         .iter()
         .map(|query| exact.search(query, K))
         .collect::<vector_core::Result<Vec<_>>>()?;
+    report("flat", &exact, exact_build, &queries, &ground_truth)?;
 
     let started = Instant::now();
     let ivf = IvfFlatIndex::try_new(
-        dataset,
+        dataset.clone(),
         Metric::Cosine,
         IvfFlatConfig {
             partitions: 32,
@@ -46,6 +50,34 @@ fn main() -> vector_core::Result<()> {
     )?;
     let ivf_build = started.elapsed();
     report("ivf_flat", &ivf, ivf_build, &queries, &ground_truth)?;
+
+    let started = Instant::now();
+    let nsw = NswIndex::try_new(
+        dataset.clone(),
+        Metric::Cosine,
+        NswConfig {
+            max_connections: 12,
+            ef_construction: 64,
+            ef_search: 40,
+        },
+    )?;
+    let nsw_build = started.elapsed();
+    report("nsw", &nsw, nsw_build, &queries, &ground_truth)?;
+
+    let started = Instant::now();
+    let hnsw = HnswIndex::try_new(
+        dataset,
+        Metric::Cosine,
+        HnswConfig {
+            max_connections: 12,
+            ef_construction: 64,
+            ef_search: 40,
+            max_level: 12,
+            seed: 7,
+        },
+    )?;
+    let hnsw_build = started.elapsed();
+    report("hnsw", &hnsw, hnsw_build, &queries, &ground_truth)?;
     Ok(())
 }
 
@@ -56,17 +88,19 @@ fn report(
     queries: &[Vec<f32>],
     ground_truth: &[Vec<vector_core::Neighbor>],
 ) -> vector_core::Result<()> {
+    warm_up(index, queries)?;
+
     let mut latencies = Vec::with_capacity(queries.len());
     let mut recall = 0.0;
     for (query, expected) in queries.iter().zip(ground_truth) {
         let started = Instant::now();
-        let actual = index.search(query, K)?;
+        let actual = std::hint::black_box(index.search(query, K)?);
         latencies.push(started.elapsed());
         recall += recall_at_k(expected, &actual, K);
     }
     latencies.sort_unstable();
-    let p50 = latencies[latencies.len() / 2];
-    let p99 = latencies[(latencies.len() * 99 / 100).min(latencies.len() - 1)];
+    let p50 = percentile(&latencies, 50);
+    let p99 = percentile(&latencies, 99);
     println!(
         "{name}: rows={ROWS}, dimensions={DIMENSIONS}, queries={QUERIES}, k={K}, \
          build_ms={:.2}, recall={:.3}, p50_us={:.1}, p99_us={:.1}",
@@ -76,6 +110,20 @@ fn report(
         p99.as_secs_f64() * 1_000_000.0,
     );
     Ok(())
+}
+
+fn warm_up(index: &dyn VectorIndex, queries: &[Vec<f32>]) -> vector_core::Result<()> {
+    for query in queries {
+        std::hint::black_box(index.search(query, K)?);
+    }
+    Ok(())
+}
+
+fn percentile(sorted: &[Duration], percent: usize) -> Duration {
+    assert!(!sorted.is_empty());
+    assert!(percent <= 100);
+    let rank = (percent * sorted.len()).div_ceil(100).saturating_sub(1);
+    sorted[rank.min(sorted.len() - 1)]
 }
 
 fn sample(row: u64, dimension: u64) -> f32 {

@@ -1,7 +1,8 @@
 use std::time::{Duration, Instant};
 
 use vector_core_starter::{
-    Dataset, FlatIndex, IvfFlatConfig, IvfFlatIndex, Metric, VectorIndex, recall_at_k,
+    Dataset, FlatIndex, HnswIndex, IvfFlatConfig, IvfFlatIndex, Metric, NswIndex, VectorIndex,
+    recall_at_k,
 };
 
 const ROWS: usize = 2_000;
@@ -27,15 +28,18 @@ fn main() -> vector_core_starter::Result<()> {
         })
         .collect::<Vec<_>>();
 
+    let started = Instant::now();
     let exact = FlatIndex::try_new(dataset.clone(), Metric::Cosine)?;
+    let exact_build = started.elapsed();
     let ground_truth = queries
         .iter()
         .map(|query| exact.search(query, K))
         .collect::<vector_core_starter::Result<Vec<_>>>()?;
+    report("flat", &exact, exact_build, &queries, &ground_truth)?;
 
     let started = Instant::now();
     let ivf = IvfFlatIndex::try_new(
-        dataset,
+        dataset.clone(),
         Metric::Cosine,
         IvfFlatConfig {
             partitions: 32,
@@ -46,7 +50,25 @@ fn main() -> vector_core_starter::Result<()> {
     )?;
     let ivf_build = started.elapsed();
     report("ivf_flat", &ivf, ivf_build, &queries, &ground_truth)?;
+
+    let started = Instant::now();
+    let nsw = build_nsw(&dataset)?;
+    let nsw_build = started.elapsed();
+    report("nsw", &nsw, nsw_build, &queries, &ground_truth)?;
+
+    let started = Instant::now();
+    let hnsw = build_hnsw(&dataset)?;
+    let hnsw_build = started.elapsed();
+    report("hnsw", &hnsw, hnsw_build, &queries, &ground_truth)?;
     Ok(())
+}
+
+fn build_nsw(_dataset: &Dataset) -> vector_core_starter::Result<NswIndex> {
+    todo!("Chapter 5: build NSW with the benchmark configuration")
+}
+
+fn build_hnsw(_dataset: &Dataset) -> vector_core_starter::Result<HnswIndex> {
+    todo!("Chapter 5: build HNSW with the benchmark configuration")
 }
 
 fn report(
@@ -56,17 +78,19 @@ fn report(
     queries: &[Vec<f32>],
     ground_truth: &[Vec<vector_core_starter::Neighbor>],
 ) -> vector_core_starter::Result<()> {
+    warm_up(index, queries)?;
+
     let mut latencies = Vec::with_capacity(queries.len());
     let mut recall = 0.0;
     for (query, expected) in queries.iter().zip(ground_truth) {
         let started = Instant::now();
-        let actual = index.search(query, K)?;
+        let actual = std::hint::black_box(index.search(query, K)?);
         latencies.push(started.elapsed());
         recall += recall_at_k(expected, &actual, K);
     }
     latencies.sort_unstable();
-    let p50 = latencies[latencies.len() / 2];
-    let p99 = latencies[(latencies.len() * 99 / 100).min(latencies.len() - 1)];
+    let p50 = percentile(&latencies, 50);
+    let p99 = percentile(&latencies, 99);
     println!(
         "{name}: rows={ROWS}, dimensions={DIMENSIONS}, queries={QUERIES}, k={K}, \
          build_ms={:.2}, recall={:.3}, p50_us={:.1}, p99_us={:.1}",
@@ -76,6 +100,14 @@ fn report(
         p99.as_secs_f64() * 1_000_000.0,
     );
     Ok(())
+}
+
+fn warm_up(_index: &dyn VectorIndex, _queries: &[Vec<f32>]) -> vector_core_starter::Result<()> {
+    todo!("Chapter 5: run untimed warm-up queries")
+}
+
+fn percentile(_sorted: &[Duration], _percent: usize) -> Duration {
+    todo!("Chapter 5: select a nearest-rank latency percentile")
 }
 
 fn sample(row: u64, dimension: u64) -> f32 {
