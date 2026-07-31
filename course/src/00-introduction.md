@@ -9,8 +9,8 @@ answer SQL top-k queries through DataFusion and make the tradeoff between recall
 <div class="warning">
 
 **Course status:** All five chapters are ready to implement: an in-memory Arrow table and DataFusion optimizer rule,
-followed by IVFFlat, NSW, HNSW, and a shared recall and latency benchmark. The repository includes starter code, focused
-tests, and separate completed references.
+followed by IVFFlat, NSW, HNSW, and a shared recall and latency benchmark. An optional sixth chapter adds residual product
+quantization and exact reranking. The repository includes starter code, focused tests, and separate completed references.
 
 </div>
 
@@ -37,6 +37,9 @@ The five Rust chapters build:
 3. An NSW proximity graph with bounded reciprocal edges and adjustable search width.
 4. An HNSW hierarchy that routes through sparse upper layers before searching the complete graph.
 5. A benchmark that compares exact, IVFFlat, NSW, and HNSW search on the same deterministic workload.
+
+An optional follow-up compresses IVFFlat's candidate-scoring representation with product quantization, then measures the
+resulting storage, recall, and latency tradeoff.
 
 At its core, this is a regular Rust library. You will build a DataFusion adapter that recognizes a safe SQL top-k query and
 routes it to a vector index. The collection and indexes stay independent of Arrow and the query engine, so you can explore
@@ -81,8 +84,8 @@ with focused tests and a short reflection on what you observed.
 
 Chapter 1 makes the table and optimizer rule runnable. Chapter 2 compares IVFFlat with exact search, Chapter 3 follows
 graph edges with NSW, and Chapter 4 adds sparse HNSW layers. Chapter 5 compares all four indexes under one measurement
-contract. Every approximate index uses the same collection API and SQL query, so you can inspect the physical plan and
-results without changing the optimizer contract.
+contract. The optional Chapter 6 adds product quantization after you have a full-precision benchmark baseline. Every
+approximate index uses the same collection API, so you can compare algorithms without changing the core search contract.
 
 ## Community
 
