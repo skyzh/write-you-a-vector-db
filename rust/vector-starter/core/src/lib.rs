@@ -7,6 +7,7 @@ mod hnsw;
 mod ivf;
 mod metric;
 mod nsw;
+mod pq;
 mod search;
 
 use std::sync::Arc;
@@ -17,6 +18,7 @@ pub use hnsw::{HnswConfig, HnswIndex};
 pub use ivf::{IvfFlatConfig, IvfFlatIndex};
 pub use metric::Metric;
 pub use nsw::{NswConfig, NswIndex};
+pub use pq::{IvfPqConfig, IvfPqIndex};
 pub use search::{Neighbor, recall_at_k};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -64,6 +66,7 @@ pub trait VectorIndex: std::fmt::Debug + Send + Sync {
 pub enum IndexConfig {
     Flat,
     IvfFlat(IvfFlatConfig),
+    IvfPq(IvfPqConfig),
     Nsw(NswConfig),
     Hnsw(HnswConfig),
 }
@@ -73,6 +76,7 @@ impl IndexConfig {
         match self {
             Self::Flat => Ok(Arc::new(FlatIndex::try_new(dataset, metric)?)),
             Self::IvfFlat(config) => Ok(Arc::new(IvfFlatIndex::try_new(dataset, metric, config)?)),
+            Self::IvfPq(config) => Ok(Arc::new(IvfPqIndex::try_new(dataset, metric, config)?)),
             Self::Nsw(config) => Ok(Arc::new(NswIndex::try_new(dataset, metric, config)?)),
             Self::Hnsw(config) => Ok(Arc::new(HnswIndex::try_new(dataset, metric, config)?)),
         }

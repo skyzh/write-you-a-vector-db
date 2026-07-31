@@ -7,6 +7,7 @@
   - [Navigate a Proximity Graph with NSW](./rust-04-nsw.md)
   - [Add Hierarchy with HNSW](./rust-05-hnsw.md)
   - [Benchmark Recall and Latency](./rust-06-benchmark.md)
+  - [Optional: Compress IVFFlat with PQ](./rust-07-ivfpq.md)
 - [Where to Go Next](./10-epilogue.md)
 
 ---

@@ -12,6 +12,12 @@ index on one benchmark workload.
 | 4 | Seeded hierarchical layers, greedy upper-layer routing, and layer-zero beam search | Chapter 3 | `rust/vector-starter/core/src/{graph,hnsw}.rs` |
 | 5 | Fair recall and latency measurement across exact, IVFFlat, NSW, and HNSW search | Chapter 4 | `rust/vector-starter/core/examples/recall.rs` |
 
+Optional follow-up:
+
+| Chapter | Capability gained | Prerequisite | Files you will change |
+| --- | --- | --- | --- |
+| 6 | Residual product quantization, asymmetric lookup-table scoring, exact reranking, and compressed-representation accounting | Chapter 5 | `rust/vector-starter/core/src/pq.rs` |
+
 The matching `vector-core` and `vector-datafusion` crates contain the completed
 reference. Persistence, online mutation, filtered ANN, and an HTTP API remain
 outside these chapters.

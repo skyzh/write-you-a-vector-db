@@ -2,15 +2,16 @@
 
 <div class="warning">
 
-**Course status:** All five chapters are ready to implement. The repository includes starter code, focused tests, and separate
-reference solutions.
+**Course status:** All five core chapters and the optional product-quantization follow-up are ready to implement. The
+repository includes starter code, focused tests, and separate reference solutions.
 
 </div>
 
 Across five chapters, you will connect an in-memory vector table to DataFusion, implement the optimizer rule that selects
 a safe vector-index scan, build IVFFlat behind that rule, navigate a proximity graph with NSW, add HNSW hierarchy, and
 compare every index on one benchmark workload. The first four chapters end with a runnable SQL query, so you can inspect
-how the physical plan changes as the index becomes more capable. The final chapter measures recall and latency directly.
+how the physical plan changes as the index becomes more capable. The final core chapter measures recall and latency
+directly, and the optional follow-up adds residual product quantization after that baseline exists.
 
 ```sql
 SELECT id, payload
@@ -29,7 +30,7 @@ The Cargo workspace under `rust/` separates starter and reference trees:
 
 ```text
 vector-starter/
-  core/                      dataset, IVFFlat, NSW, HNSW, and benchmark TODOs
+  core/                      dataset, IVFFlat, NSW, HNSW, benchmark, and IVF-PQ TODOs
   datafusion/                Chapter 1 Arrow table and optimizer-rule TODOs
 vector/
   core/                      completed core reference
@@ -100,22 +101,20 @@ that rewrite is a correctness requirement.
 
 ```text
 SQL + DataFusion optimizer --> VectorTable / VectorScanExec --> VectorIndex
-                                                                  |
-                                                        exact FlatIndex
-                                                                  |
-                                                       your IvfFlatIndex
-                                                                  |
-                                                          your NswIndex
-                                                                  |
-                                                         your HnswIndex
+                                                                  |-- exact FlatIndex
+                                                                  |-- your IvfFlatIndex
+                                                                  |     `-- optional IvfPqIndex
+                                                                  |-- your NswIndex
+                                                                  `-- your HnswIndex
 ```
 
 The DataFusion crate owns Arrow conversion, SQL-pattern matching, plan properties, limits, and output batches. The core
 crate owns dimensions, metrics, exact-search results, candidate selection, and deterministic result order. Later index
 implementations will not import DataFusion.
 
-This separation gives each index chapter two useful views of the same checkpoint: small Rust tests isolate the algorithm,
-while an SQLLogicTest shows that the Chapter 1 optimizer can reach it.
+This separation gives each core index chapter two useful views of the same checkpoint: small Rust tests isolate the
+algorithm, while an SQLLogicTest shows that the Chapter 1 optimizer can reach it. The optional IVF-PQ follow-up reuses
+that optimizer boundary, then uses a dedicated benchmark to focus on compression and reranking.
 
 ## System Contract
 
@@ -138,10 +137,14 @@ while an SQLLogicTest shows that the Chapter 1 optimizer can reach it.
 | [3 — NSW](./rust-04-nsw.md) | 4–5 hours | Candidate selection comes from centroid partitions. | Best-first traversal and bounded reciprocal graph insertion expose `ef_search` as a second recall/work tradeoff behind the same SQL query. |
 | [4 — HNSW](./rust-05-hnsw.md) | 4–5 hours | Every graph query starts in one complete layer. | Seeded sparse layers route greedily into layer-zero beam search while preserving the same SQL and recall contracts. |
 | [5 — Benchmark](./rust-06-benchmark.md) | 1–2 hours | Each index has been exercised separately. | Exact, IVFFlat, NSW, and HNSW share one reproducible build, recall, and latency measurement contract. |
+| [Optional 6 — IVF-PQ](./rust-07-ivfpq.md) | 3–4 hours | Full-precision IVF has a measured baseline. | Residual PQ codes provide lookup-table candidate scoring, exact reranking, and explicit compressed-representation accounting. |
 
 Chapter 1 gives you an exact end-to-end query whose rows and physical plan you can inspect. Chapters 2–4 keep that SQL
 interface and safety rule in place while changing how candidate rows are selected. Chapter 5 compares those indexes
 without changing the data, queries, metric, or `k`.
+
+Optional Chapter 6 returns to IVFFlat after the benchmark establishes a full-precision baseline. It adds compression
+without changing the collection or `VectorIndex` boundary.
 
 After Chapter 5, you should be able to explain:
 
@@ -159,8 +162,8 @@ After Chapter 5, you should be able to explain:
 
 ## Scope
 
-These chapters use an immutable in-memory collection. Online updates or deletes, index persistence, crash recovery,
-concurrent mutation, filtered ANN, quantization, GPU kernels, distributed execution, DDL, and a network service remain
-outside this implementation.
+These chapters use an immutable in-memory collection. The optional follow-up covers readable Euclidean residual IVF-PQ,
+but not bit packing or optimized kernels. Online updates or deletes, index persistence, crash recovery, concurrent
+mutation, filtered ANN, GPU kernels, distributed execution, DDL, and a network service remain outside this implementation.
 
 {{#include copyright.md}}
