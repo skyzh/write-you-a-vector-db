@@ -40,3 +40,15 @@ EXPLAIN SELECT id, payload FROM points
 ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 3;
 ----
 VectorIndexScanExec: index=flat, metric=Euclidean, query_dim=3, fetch=Some(3), ordered=true
+
+# Session settings affect each newly generated plan. Resetting the option must
+# restore the safe plan with a generic top-k sort.
+statement ok
+SET vector_search.ordered = false;
+
+query T
+EXPLAIN SELECT id, payload FROM points
+ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 3;
+----
+SortExec: TopK(fetch=3), expr=[array_distance(CAST(embedding@2 AS List(non-null Float64)), [1.0, 1.0, 1.0]) ASC NULLS LAST], preserve_partitioning=[false]
+VectorIndexScanExec: index=flat, metric=Euclidean, query_dim=3, fetch=Some(3), ordered=false

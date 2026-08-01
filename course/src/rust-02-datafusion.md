@@ -191,6 +191,10 @@ cargo test -p vector-datafusion-starter --test sql dot_product_requires_descendi
 
 Implement `ExecutionPlan::with_fetch`. DataFusion calls it after sort pushdown and passes `LIMIT k`.
 
+DataFusion 54.1.0 does not expose supported SQL optimizer hints for choosing this plan. Register
+`vector_search.ordered` as a session option instead; DataFusion reads its value whenever it generates a new physical plan.
+This keeps the SQL query portable while making the executor's ordering guarantee explicit for the session.
+
 Clone the scan and store the new fetch value. When the session option is `ordered=true`, return the scan directly; this mode
 is valid only when the selected index returns rows in the accepted order. If no ordering or no fetch exists, also return
 the scan.
@@ -209,8 +213,8 @@ cargo test -p vector-datafusion-starter --test sql ordered_session_mode_allows_s
 cargo test -p vector-datafusion-starter --test sqllogictest day1_table_and_optimizer_sql
 ```
 
-The SQLLogicTest asserts physical operators as well as rows. Its filtered case must remain exact; its explicit ordered
-session may remove the generic sort.
+The SQLLogicTest asserts physical operators as well as rows. Its filtered case must remain exact; setting ordered mode may
+remove the generic sort, and setting it back to `false` must restore that sort in the next generated plan.
 
 ## Review Your Chapter 1 Result
 
