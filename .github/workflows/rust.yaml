@@ -1,0 +1,26 @@
+name: Rust style
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  style:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+      - name: setup rust toolchain
+        run: rustup show
+      - name: check formatting
+        run: cargo fmt --all -- --check
+      - name: run clippy
+        run: cargo clippy --workspace --all-targets --locked -- -D warnings
