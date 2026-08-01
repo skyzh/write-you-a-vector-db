@@ -1,5 +1,6 @@
 use vector_core_starter::{
-    Dataset, FlatIndex, IvfFlatConfig, IvfFlatIndex, Metric, Neighbor, VectorIndex, recall_at_k,
+    Dataset, FlatIndex, IvfFlatConfig, IvfFlatIndex, Metric, Neighbor, NswConfig, NswIndex,
+    VectorIndex, recall_at_k,
 };
 
 fn line_dataset(size: usize) -> Dataset {
@@ -109,4 +110,30 @@ fn ivf_cosine_recovers_from_a_zero_mean_cluster() {
     .unwrap();
     assert!(index.centroids()[0].iter().all(|value| value.is_finite()));
     assert_eq!(index.search(&[1.0, 0.0], 4).unwrap().len(), 4);
+}
+
+#[test]
+fn nsw_high_ef_matches_exact_search_on_connected_fixture() {
+    let dataset = line_dataset(64);
+    let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();
+    let nsw = NswIndex::try_new(
+        dataset,
+        Metric::Euclidean,
+        NswConfig {
+            max_connections: 8,
+            ef_construction: 32,
+            ef_search: 32,
+        },
+    )
+    .unwrap();
+    let query = [17.4, 4.0];
+    let expected = exact.search(&query, 10).unwrap();
+    let actual = nsw.search_with_ef(&query, 10, 64).unwrap();
+    assert_eq!(recall_at_k(&expected, &actual, 10), 1.0);
+    assert!(nsw.adjacency().iter().all(|neighbors| neighbors.len() <= 8));
+    for (row, neighbors) in nsw.adjacency().iter().enumerate() {
+        for neighbor in neighbors {
+            assert!(nsw.adjacency()[*neighbor].contains(&row));
+        }
+    }
 }

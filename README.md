@@ -10,7 +10,7 @@ compare approximate results with exact search, and connect the resulting indexes
 The course focuses on the boundary where algorithms become database features:
 
 ```text
-in-memory table → DataFusion optimizer rule → IVFFlat → graph indexes
+in-memory table → DataFusion optimizer rule → IVFFlat → NSW → HNSW
 ```
 
 Instead of hiding vector search behind an HTTP API or an ANN library, the course exposes the algorithms, evaluation
@@ -18,9 +18,9 @@ contracts, query planning, and execution boundary that make SQL vector search wo
 
 ## Course Status
 
-The [Rust course](https://skyzh.github.io/write-you-a-vector-db/rust-01-overview) is available through Chapter 2: an
-Arrow-backed in-memory table and safe DataFusion optimizer rule, followed by IVFFlat. Both chapters include starter code,
-focused tests, SQLLogicTests, and separate completed reference crates.
+The [Rust course](https://skyzh.github.io/write-you-a-vector-db/rust-01-overview) is available through Chapter 3: an
+Arrow-backed in-memory table and safe DataFusion optimizer rule, followed by IVFFlat and NSW. Each chapter includes
+starter code, focused tests, SQLLogicTests, and separate completed reference crates.
 
 Run the completed reference with:
 

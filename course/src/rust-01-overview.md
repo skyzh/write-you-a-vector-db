@@ -2,14 +2,14 @@
 
 <div class="warning">
 
-**Course status:** Chapters 1–2 are ready to implement. The repository includes starter code, focused tests, and separate
+**Course status:** Chapters 1–3 are ready to implement. The repository includes starter code, focused tests, and separate
 reference solutions.
 
 </div>
 
-In the first two chapters, you will connect an in-memory vector table to DataFusion, implement the optimizer rule that
-selects a safe vector-index scan, and build IVFFlat behind that rule. Both chapters end with a runnable SQL query, so you
-can inspect how the physical plan changes as the index becomes more capable.
+In the first three chapters, you will connect an in-memory vector table to DataFusion, implement the optimizer rule that
+selects a safe vector-index scan, build IVFFlat behind that rule, and then navigate a proximity graph with NSW. Every
+chapter ends with a runnable SQL query, so you can inspect how the physical plan changes as the index becomes more capable.
 
 ```sql
 SELECT id, payload
@@ -28,7 +28,7 @@ The Cargo workspace under `rust/` separates starter and reference trees:
 
 ```text
 vector-starter/
-  core/                      validated dataset and IVFFlat TODOs
+  core/                      dataset, IVFFlat, and NSW TODOs
   datafusion/                Chapter 1 Arrow table and optimizer-rule TODOs
 vector/
   core/                      completed core reference
@@ -70,11 +70,16 @@ SortExec: TopK(fetch=10), ...
   VectorIndexScanExec: index=flat, metric=Cosine, query_dim=3, fetch=Some(10), ordered=false
 ```
 
-The starter's exact `FlatIndex` lets you exercise this rule in Chapter 1. In Chapter 2, only the selected index changes:
+The starter's exact `FlatIndex` lets you exercise this rule in Chapter 1. Later chapters change only the selected index:
 
 ```text
 SortExec: TopK(fetch=10), ...
   VectorIndexScanExec: index=ivf_flat, metric=Cosine, query_dim=3, fetch=Some(10), ordered=false
+```
+
+```text
+SortExec: TopK(fetch=10), ...
+  VectorIndexScanExec: index=nsw, metric=Cosine, query_dim=3, fetch=Some(10), ordered=false
 ```
 
 The default plan retains DataFusion's bounded sort. The index selects candidates; `SortExec` owns SQL ordering. When the
@@ -93,14 +98,16 @@ SQL + DataFusion optimizer --> VectorTable / VectorScanExec --> VectorIndex
                                                         exact FlatIndex
                                                                   |
                                                        your IvfFlatIndex
+                                                                  |
+                                                          your NswIndex
 ```
 
 The DataFusion crate owns Arrow conversion, SQL-pattern matching, plan properties, limits, and output batches. The core
 crate owns dimensions, metrics, exact-search results, candidate selection, and deterministic result order. Later index
 implementations will not import DataFusion.
 
-This separation gives Chapter 2 two useful views of the same checkpoint: small Rust tests isolate the algorithm, while an
-SQLLogicTest shows that the Chapter 1 optimizer can reach it.
+This separation gives each index chapter two useful views of the same checkpoint: small Rust tests isolate the algorithm,
+while an SQLLogicTest shows that the Chapter 1 optimizer can reach it.
 
 ## System Contract
 
@@ -120,23 +127,26 @@ SQLLogicTest shows that the Chapter 1 optimizer can reach it.
 | --- | ---: | --- | --- |
 | [1 — DataFusion table and optimizer](./rust-02-datafusion.md) | 3–4 hours | Vectors are Rust structs and DataFusion has no table or vector access path. | Rows become an Arrow-backed `TableProvider`; exact top-k runs in DataFusion; a conservative sort-pushdown rule selects a compatible vector scan and preserves exact fallback. |
 | [2 — IVFFlat](./rust-03-ivfflat.md) | 4–5 hours | A flat index handles matched SQL top-k queries exactly. | Seeded k-means, inverted lists, and `probes` create a measured recall/work tradeoff behind the same SQL query. |
+| [3 — NSW](./rust-04-nsw.md) | 4–5 hours | Candidate selection comes from centroid partitions. | Best-first traversal and bounded reciprocal graph insertion expose `ef_search` as a second recall/work tradeoff behind the same SQL query. |
 
-Chapter 1 gives you an exact end-to-end query whose rows and physical plan you can inspect. Chapter 2 keeps that SQL
-interface and safety rule in place while changing how the candidate rows are selected.
+Chapter 1 gives you an exact end-to-end query whose rows and physical plan you can inspect. Chapters 2 and 3 keep that SQL
+interface and safety rule in place while changing how candidate rows are selected.
 
-After Chapter 2, you should be able to explain:
+After Chapter 3, you should be able to explain:
 
 - how row identity survives conversion from Rust structs to core offsets and Arrow arrays;
 - which physical expression shapes are safe to lower to a vector index;
 - why DataFusion retains exact fallback for filtered or incompatible top-k queries;
 - why the optimizer rule must exist before an approximate index can be exercised from SQL;
 - why IVFFlat must rebuild list membership after its final centroid update; and
-- how `probes` trades candidate work for recall without changing SQL.
+- how `probes` trades candidate work for recall without changing SQL;
+- why NSW needs separate candidate and result frontiers; and
+- how reciprocal pruning preserves a bounded graph.
 
 ## Scope
 
-These first two chapters use an immutable in-memory collection. Later chapters continue with graph indexes. Online updates
-or deletes, index persistence, crash recovery, concurrent mutation, filtered ANN, quantization, GPU kernels, distributed
-execution, DDL, and a network service remain outside this implementation.
+These chapters use an immutable in-memory collection. The next chapter adds hierarchy to NSW. Online updates or deletes,
+index persistence, crash recovery, concurrent mutation, filtered ANN, quantization, GPU kernels, distributed execution,
+DDL, and a network service remain outside this implementation.
 
 {{#include copyright.md}}
