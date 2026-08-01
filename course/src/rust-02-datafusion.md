@@ -5,21 +5,7 @@
 > Start from the two `*-starter` crates. Finish with an exact SQL top-k query, an Arrow-backed table, and a safe
 > DataFusion optimizer rule that can select a vector index.
 
-Your first query will use DataFusion's vector distance expressions, sorting, and `LIMIT` to produce an exact result. You
-will build the storage and extension boundary around it: validated vectors, a `TableProvider`, a physical scan, and a rule
-that recognizes one safe top-k shape.
-
-You will modify:
-
-```text
-rust/vector-starter/core/src/dataset.rs
-rust/vector-starter/datafusion/src/lib.rs
-```
-
-Metric math, a `FlatIndex` that checks every vector, Arrow result execution, and all tests are ready for you to use. This
-lets you focus on the dataset, Arrow table, and query-planning boundary. Do not modify public APIs or tests.
-
-## The Query
+Your first query asks for the three rows closest to one query vector:
 
 ```sql
 SELECT id, payload
@@ -28,8 +14,18 @@ ORDER BY cosine_distance(embedding, [1.0, 0.0, 0.0])
 LIMIT 3;
 ```
 
-Without index matching, DataFusion evaluates `cosine_distance` for every scanned row and applies its own bounded
-`SortExec: TopK`. That is the correct exact plan and remains the fallback throughout the course.
+Start from the exact plan. Scan every row, compute its distance to the query, and keep the nearest three with a bounded
+top-k sort:
+
+```text
+SortExec: TopK(fetch=3), ...
+  VectorScanExec: rows=..., fetch=None
+```
+
+This plan is correct for every valid query shape because it does not skip any rows. A vector index can avoid scanning the
+whole collection, but only when the query and the index describe the same ranking. The matcher must check the distance
+function, embedding column, literal query vector, sort direction, dimension, and `LIMIT`; a mismatch keeps the exact
+plan.
 
 After your rule recognizes a compatible index, the physical plan becomes:
 
@@ -40,6 +36,19 @@ SortExec: TopK(fetch=3), ...
 
 With `FlatIndex`, you can confirm both the exact result and the matched physical plan. In Chapter 2, `index=ivf_flat` will
 appear behind the same rule.
+
+## Build the Exact Path and Matcher in Rust
+
+You will modify:
+
+```text
+rust/vector-starter/core/src/dataset.rs
+rust/vector-starter/datafusion/src/lib.rs
+```
+
+Metric math, a `FlatIndex` that checks every vector, Arrow result execution, and all tests are ready for you to use. You
+will build the storage and extension boundary around them: validated vectors, an Arrow-backed table, a physical scan, and
+a rule that recognizes one safe top-k shape. Do not modify public APIs or tests.
 
 ## Invariants
 
