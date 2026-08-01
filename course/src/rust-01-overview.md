@@ -2,14 +2,15 @@
 
 <div class="warning">
 
-**Course status:** Chapters 1–3 are ready to implement. The repository includes starter code, focused tests, and separate
+**Course status:** All four chapters are ready to implement. The repository includes starter code, focused tests, and separate
 reference solutions.
 
 </div>
 
-In the first three chapters, you will connect an in-memory vector table to DataFusion, implement the optimizer rule that
-selects a safe vector-index scan, build IVFFlat behind that rule, and then navigate a proximity graph with NSW. Every
-chapter ends with a runnable SQL query, so you can inspect how the physical plan changes as the index becomes more capable.
+Across four chapters, you will connect an in-memory vector table to DataFusion, implement the optimizer rule that selects
+a safe vector-index scan, build IVFFlat behind that rule, navigate a proximity graph with NSW, and add HNSW hierarchy.
+Every chapter ends with a runnable SQL query, so you can inspect how the physical plan changes as the index becomes more
+capable.
 
 ```sql
 SELECT id, payload
@@ -28,7 +29,7 @@ The Cargo workspace under `rust/` separates starter and reference trees:
 
 ```text
 vector-starter/
-  core/                      dataset, IVFFlat, and NSW TODOs
+  core/                      dataset, IVFFlat, NSW, and HNSW TODOs
   datafusion/                Chapter 1 Arrow table and optimizer-rule TODOs
 vector/
   core/                      completed core reference
@@ -82,6 +83,11 @@ SortExec: TopK(fetch=10), ...
   VectorIndexScanExec: index=nsw, metric=Cosine, query_dim=3, fetch=Some(10), ordered=false
 ```
 
+```text
+SortExec: TopK(fetch=10), ...
+  VectorIndexScanExec: index=hnsw, metric=Cosine, query_dim=3, fetch=Some(10), ordered=false
+```
+
 The default plan retains DataFusion's bounded sort. The index selects candidates; `SortExec` owns SQL ordering. When the
 selected index returns rows in the requested order, `SET vector_search.ordered = true` tells DataFusion it can skip this
 final sort.
@@ -100,6 +106,8 @@ SQL + DataFusion optimizer --> VectorTable / VectorScanExec --> VectorIndex
                                                        your IvfFlatIndex
                                                                   |
                                                           your NswIndex
+                                                                  |
+                                                         your HnswIndex
 ```
 
 The DataFusion crate owns Arrow conversion, SQL-pattern matching, plan properties, limits, and output batches. The core
@@ -128,11 +136,12 @@ while an SQLLogicTest shows that the Chapter 1 optimizer can reach it.
 | [1 — DataFusion table and optimizer](./rust-02-datafusion.md) | 3–4 hours | Vectors are Rust structs and DataFusion has no table or vector access path. | Rows become an Arrow-backed `TableProvider`; exact top-k runs in DataFusion; a conservative sort-pushdown rule selects a compatible vector scan and preserves exact fallback. |
 | [2 — IVFFlat](./rust-03-ivfflat.md) | 4–5 hours | A flat index handles matched SQL top-k queries exactly. | Seeded k-means, inverted lists, and `probes` create a measured recall/work tradeoff behind the same SQL query. |
 | [3 — NSW](./rust-04-nsw.md) | 4–5 hours | Candidate selection comes from centroid partitions. | Best-first traversal and bounded reciprocal graph insertion expose `ef_search` as a second recall/work tradeoff behind the same SQL query. |
+| [4 — HNSW](./rust-05-hnsw.md) | 4–5 hours | Every graph query starts in one complete layer. | Seeded sparse layers route greedily into layer-zero beam search while preserving the same SQL and recall contracts. |
 
-Chapter 1 gives you an exact end-to-end query whose rows and physical plan you can inspect. Chapters 2 and 3 keep that SQL
+Chapter 1 gives you an exact end-to-end query whose rows and physical plan you can inspect. Chapters 2–4 keep that SQL
 interface and safety rule in place while changing how candidate rows are selected.
 
-After Chapter 3, you should be able to explain:
+After Chapter 4, you should be able to explain:
 
 - how row identity survives conversion from Rust structs to core offsets and Arrow arrays;
 - which physical expression shapes are safe to lower to a vector index;
@@ -141,12 +150,14 @@ After Chapter 3, you should be able to explain:
 - why IVFFlat must rebuild list membership after its final centroid update; and
 - how `probes` trades candidate work for recall without changing SQL;
 - why NSW needs separate candidate and result frontiers; and
-- how reciprocal pruning preserves a bounded graph.
+- how reciprocal pruning preserves a bounded graph;
+- why HNSW uses greedy upper layers and a layer-zero beam; and
+- how seeded promotion makes comparisons reproducible.
 
 ## Scope
 
-These chapters use an immutable in-memory collection. The next chapter adds hierarchy to NSW. Online updates or deletes,
-index persistence, crash recovery, concurrent mutation, filtered ANN, quantization, GPU kernels, distributed execution,
-DDL, and a network service remain outside this implementation.
+These chapters use an immutable in-memory collection. Online updates or deletes, index persistence, crash recovery,
+concurrent mutation, filtered ANN, quantization, GPU kernels, distributed execution, DDL, and a network service remain
+outside this implementation.
 
 {{#include copyright.md}}
