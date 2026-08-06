@@ -16,7 +16,7 @@ Optional follow-up:
 
 | Chapter | Capability gained | Prerequisite | Files you will change |
 | --- | --- | --- | --- |
-| 6 | Residual product quantization, asymmetric lookup-table scoring, exact reranking, and compressed-representation accounting | Chapter 5 | `rust/vector-starter/core/src/pq.rs` |
+| 6 | Residual product quantization, asymmetric lookup-table scoring, exact reranking, and compressed-representation accounting | Chapter 5 | `rust/vector-starter/core/src/pq.rs`; temporarily `rust/vector-starter/core/examples/quantization.rs` for the rerank sweep |
 
 The matching `vector-core` and `vector-datafusion` crates contain the completed
 reference. Persistence, online mutation, filtered ANN, and an HTTP API remain

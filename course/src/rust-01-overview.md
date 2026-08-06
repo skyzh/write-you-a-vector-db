@@ -11,7 +11,8 @@ Across five chapters, you will connect an in-memory vector table to DataFusion, 
 a safe vector-index scan, build IVFFlat behind that rule, navigate a proximity graph with NSW, add HNSW hierarchy, and
 compare every index on one benchmark workload. The first four chapters end with a runnable SQL query, so you can inspect
 how the physical plan changes as the index becomes more capable. The final core chapter measures recall and latency
-directly, and the optional follow-up adds residual product quantization after that baseline exists.
+directly and establishes the shared measurement method. The optional follow-up applies that method to residual product
+quantization on a separate Euclidean workload.
 
 ```sql
 SELECT id, payload
@@ -137,14 +138,16 @@ that optimizer boundary, then uses a dedicated benchmark to focus on compression
 | [3 — NSW](./rust-04-nsw.md) | 4–5 hours | Candidate selection comes from centroid partitions. | Best-first traversal and bounded reciprocal graph insertion expose `ef_search` as a second recall/work tradeoff behind the same SQL query. |
 | [4 — HNSW](./rust-05-hnsw.md) | 4–5 hours | Every graph query starts in one complete layer. | Seeded sparse layers route greedily into layer-zero beam search while preserving the same SQL and recall contracts. |
 | [5 — Benchmark](./rust-06-benchmark.md) | 1–2 hours | Each index has been exercised separately. | Exact, IVFFlat, NSW, and HNSW share one reproducible build, recall, and latency measurement contract. |
-| [Optional 6 — IVF-PQ](./rust-07-ivfpq.md) | 3–4 hours | Full-precision IVF has a measured baseline. | Residual PQ codes provide lookup-table candidate scoring, exact reranking, and explicit compressed-representation accounting. |
+| [Optional 6 — IVF-PQ](./rust-07-ivfpq.md) | 3–4 hours | Chapter 5 established the comparison method, but compression has not been measured on a Euclidean workload. | Residual PQ codes provide lookup-table candidate scoring, exact reranking, and explicit compressed-representation accounting. |
 
 Chapter 1 gives you an exact end-to-end query whose rows and physical plan you can inspect. Chapters 2–4 keep that SQL
 interface and safety rule in place while changing how candidate rows are selected. Chapter 5 compares those indexes
 without changing the data, queries, metric, or `k`.
 
-Optional Chapter 6 returns to IVFFlat after the benchmark establishes a full-precision baseline. It adds compression
-without changing the collection or `VectorIndex` boundary.
+Optional Chapter 6 returns to IVFFlat after Chapter 5 establishes the measurement method. It uses a separate 5,000-row,
+128-dimensional Euclidean workload and prints a fresh full-precision IVFFlat row; do not compare its numbers directly
+with Chapter 5's 2,000-row cosine results. The chapter adds compression without changing the collection or `VectorIndex`
+boundary.
 
 After Chapter 5, you should be able to explain:
 
