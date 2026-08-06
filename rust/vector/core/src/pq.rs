@@ -107,8 +107,12 @@ impl IvfPqIndex {
             .vectors()
             .iter()
             .zip(&assignments)
-            .map(|(vector, &partition)| residual(vector, &centroids[partition]))
-            .collect::<Vec<_>>();
+            .map(|(vector, &partition)| {
+                residual(vector, &centroids[partition]).ok_or(VectorError::InvalidConfig(
+                    "IVF-PQ training residuals must remain finite",
+                ))
+            })
+            .collect::<Result<Vec<_>>>()?;
 
         let subvector_dimension = dataset.dimension() / config.subquantizers;
         let codebooks = (0..config.subquantizers)
@@ -127,6 +131,16 @@ impl IvfPqIndex {
                 )
             })
             .collect::<Vec<_>>();
+        if codebooks
+            .iter()
+            .flatten()
+            .flatten()
+            .any(|value| !value.is_finite())
+        {
+            return Err(VectorError::InvalidConfig(
+                "IVF-PQ training codebooks must remain finite",
+            ));
+        }
 
         let mut lists = vec![Vec::new(); config.partitions];
         for (row, (&partition, residual)) in assignments.iter().zip(&residuals).enumerate() {
@@ -352,11 +366,18 @@ fn fill_lookup_tables(
     }
 }
 
-fn residual(vector: &[f32], centroid: &[f32]) -> Vec<f32> {
+fn residual(vector: &[f32], centroid: &[f32]) -> Option<Vec<f32>> {
     vector
         .iter()
         .zip(centroid)
-        .map(|(value, centroid)| value - centroid)
+        .map(|(value, centroid)| {
+            let delta = f64::from(*value) - f64::from(*centroid);
+            if delta < f64::from(f32::MIN) || delta > f64::from(f32::MAX) {
+                None
+            } else {
+                Some(delta as f32)
+            }
+        })
         .collect()
 }
 
