@@ -55,8 +55,8 @@ The benchmark follows this order:
 The timed region contains only `index.search(query, k)`. Dataset generation, index construction, result comparison, and
 printing stay outside it. `black_box` keeps each returned result observable during both warm-up and measurement.
 
-**Prediction:** Flat search should report recall `1.000`. If it does not, which part of the benchmark contract is broken:
-the approximate index, the ground truth, or the comparison code?
+**Prediction:** Flat search should report recall `1.000`. If it does not, is the saved ground truth wrong, or did the
+comparison and reporting path fail to compare the Flat result with that ground truth correctly?
 
 ## Understand the Report
 
@@ -89,6 +89,9 @@ rust/vector-starter/core/examples/recall.rs
 The example already generates the workload, builds Flat and IVFFlat, computes recall, records individual query
 durations, and prints the report. Complete the four Chapter 5 TODOs without changing index implementations or public APIs.
 
+All commands in this chapter exercise the cumulative starter workspace. Complete Chapters 1–4 first; an untouched
+starter will stop at an earlier chapter's `todo!` before it reaches the Chapter 5 code.
+
 ### Checkpoint 1: Add NSW and HNSW
 
 Implement `build_nsw` and `build_hnsw` with the fixed configurations in the table above. Clone the immutable `Dataset` for
@@ -112,6 +115,16 @@ above. The benchmark calls it for p50 and p99 after sorting all 100 samples.
 
 **Prediction:** With 100 sorted samples, which zero-based element supplies p99? Work through the one-based rank before
 writing the expression.
+
+After completing all four TODOs, run the focused example tests:
+
+```sh
+cargo test -p vector-core-starter --example recall
+```
+
+`nearest_rank_percentile_selects_expected_samples` checks p0, p50, p99, and p100 against independently chosen durations,
+so an off-by-one percentile implementation fails. `flat_measurement_satisfies_report_invariants` checks the report's
+stable correctness properties without treating machine-dependent latency as a threshold.
 
 ### Checkpoint 4: Run and Explain the Comparison
 
