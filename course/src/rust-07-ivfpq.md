@@ -111,6 +111,9 @@ rust/vector-starter/core/src/pq.rs
 The starter already exposes `IvfPqConfig`, `IvfPqIndex`, the `VectorIndex` implementation, byte-accounting methods, and a
 release benchmark. Keep public APIs, existing indexes, and tests unchanged.
 
+All commands in this chapter exercise the cumulative starter workspace. Complete Chapters 1–5 first; an untouched
+starter stops at an earlier chapter's `todo!()` implementation.
+
 The optional configuration is:
 
 | Field | Meaning | Supplied value |
@@ -164,8 +167,9 @@ Split every residual into `subquantizers` contiguous slices of equal length. For
 4. replace each non-empty codeword with the component-wise mean of its assignments; and
 5. stop after convergence or `iterations` rounds.
 
-Keep a codeword unchanged when its cluster is empty. Derive a different deterministic seed for each subquantizer so all
-codebooks do not begin with the same row sequence.
+Keep a codeword unchanged when its cluster is empty. Reuse the starter's `DeterministicRng` from `src/search.rs`, as in
+Chapter 2, to choose distinct seeded rows. Derive a different deterministic seed for each subquantizer so all codebooks
+do not begin with the same row sequence.
 
 After training, encode each row by choosing one codeword per residual slice. Store the resulting `u8` IDs with the row in
 its IVF list.
@@ -234,8 +238,10 @@ Build time and latency vary by machine. Recall is deterministic for the supplied
 universally faster: this implementation favors readable scalar loops, and lookup-table setup can dominate small
 workloads.
 
-Then try rerank budgets such as 20, 100, and 200 while leaving the data, query set, coarse IVF configuration, PQ layout,
-metric, and `k` unchanged. Explain how recall and query latency respond. The encoded-byte count should not change because
+Temporarily change the `rerank` field in the `IvfPqConfig` constructed by
+`rust/vector-starter/core/examples/quantization.rs` to 20, 100, and 200, rerunning the command after each change. Restore
+the supplied value of 100 before you finish, and leave the data, query set, coarse IVF configuration, PQ layout, metric,
+and `k` unchanged. Explain how recall and query latency respond. The encoded-byte count should not change because
 reranking changes query work, not stored codes.
 
 ## Review Your Optional Chapter Result

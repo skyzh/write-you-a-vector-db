@@ -84,8 +84,9 @@ with focused tests and a short reflection on what you observed.
 
 Chapter 1 makes the table and optimizer rule runnable. Chapter 2 compares IVFFlat with exact search, Chapter 3 follows
 graph edges with NSW, and Chapter 4 adds sparse HNSW layers. Chapter 5 compares all four indexes under one measurement
-contract. The optional Chapter 6 adds product quantization after you have a full-precision benchmark baseline. Every
-approximate index uses the same collection API, so you can compare algorithms without changing the core search contract.
+contract. The optional Chapter 6 reuses that measurement method on a separate Euclidean workload, where a fresh IVFFlat
+row provides the full-precision baseline for IVF-PQ. Every approximate index uses the same collection API, so you can
+compare algorithms without changing the core search contract.
 
 ## Community
 
