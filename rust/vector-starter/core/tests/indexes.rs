@@ -2,7 +2,7 @@ use std::mem::size_of;
 
 use vector_core_starter::{
     Dataset, FlatIndex, HnswConfig, HnswIndex, IvfFlatConfig, IvfFlatIndex, IvfPqConfig,
-    IvfPqIndex, Metric, Neighbor, NswConfig, NswIndex, VectorIndex, recall_at_k,
+    IvfPqIndex, Metric, Neighbor, NswConfig, NswIndex, VectorError, VectorIndex, recall_at_k,
 };
 
 fn line_dataset(size: usize) -> Dataset {
@@ -157,10 +157,39 @@ fn ivf_pq_build_is_seeded_and_codes_each_row() {
     assert_eq!(left.centroids(), right.centroids());
     assert_eq!(left.codebooks(), right.codebooks());
     assert_eq!(left.list_sizes(), right.list_sizes());
+    assert!(
+        left.codebooks()
+            .iter()
+            .flatten()
+            .flatten()
+            .all(|value| value.is_finite())
+    );
     assert_eq!(left.list_sizes().iter().sum::<usize>(), 60);
     assert_eq!(left.encoded_bytes(), 60 * config.subquantizers);
     assert_eq!(left.full_precision_bytes(), 60 * 2 * size_of::<f32>());
     assert!(left.encoded_bytes() + left.codebook_bytes() < left.full_precision_bytes());
+}
+
+#[test]
+fn ivf_pq_rejects_non_finite_training_residuals() {
+    let max = f32::MAX;
+    let dataset = Dataset::try_new(vec![vec![max], vec![max], vec![-max]]).unwrap();
+    let config = IvfPqConfig {
+        partitions: 1,
+        probes: 1,
+        iterations: 3,
+        subquantizers: 1,
+        codebook_size: 2,
+        rerank: 1,
+        seed: 1,
+    };
+
+    let error = IvfPqIndex::try_new(dataset, Metric::Euclidean, config).unwrap_err();
+
+    assert_eq!(
+        error,
+        VectorError::InvalidConfig("IVF-PQ training residuals must remain finite")
+    );
 }
 
 #[test]
