@@ -219,6 +219,67 @@ fn ivf_pq_query_scoring_preserves_large_finite_ordering() {
 }
 
 #[test]
+fn ivf_pq_coarse_selection_preserves_large_finite_ordering() {
+    let dataset = Dataset::try_new(vec![
+        vec![2e38, 2e38],
+        vec![2.5e38, 2.5e38],
+        vec![3e38, 3e38],
+        vec![3.3e38, 3.3e38],
+    ])
+    .unwrap();
+    let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();
+    let index = IvfPqIndex::try_new(
+        dataset,
+        Metric::Euclidean,
+        IvfPqConfig {
+            partitions: 2,
+            probes: 1,
+            iterations: 3,
+            subquantizers: 2,
+            codebook_size: 4,
+            rerank: 1,
+            seed: 0,
+        },
+    )
+    .unwrap();
+
+    let expected = exact.search(&[0.0, 0.0], 1).unwrap();
+    let actual = index.search(&[0.0, 0.0], 1).unwrap();
+
+    assert_eq!(expected[0].row, 0);
+    assert!(expected[0].distance.is_finite());
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn ivf_pq_rerank_rejects_unrepresentable_result_distances() {
+    let dataset = Dataset::try_new(vec![vec![3e38, 3e38], vec![2.5e38, 2.5e38]]).unwrap();
+    let index = IvfPqIndex::try_new(
+        dataset,
+        Metric::Euclidean,
+        IvfPqConfig {
+            partitions: 1,
+            probes: 1,
+            iterations: 3,
+            subquantizers: 2,
+            codebook_size: 2,
+            rerank: 2,
+            seed: 7,
+        },
+    )
+    .unwrap();
+
+    let error = index.search(&[0.0, 0.0], 1).unwrap_err();
+
+    assert_eq!(
+        error,
+        VectorError::InvalidConfig(
+            "IVF-PQ result distances must remain representable as finite f32"
+        )
+    );
+}
+
+#[test]
 fn ivf_pq_full_scan_and_rerank_matches_exact_search() {
     let dataset = line_dataset(80);
     let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();

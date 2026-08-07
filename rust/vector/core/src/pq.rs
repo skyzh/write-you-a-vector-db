@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, collections::BinaryHeap, mem::size_of};
 
-use crate::search::{DeterministicRng, TopK};
+use crate::search::DeterministicRng;
 use crate::{
     Dataset, IvfFlatConfig, IvfFlatIndex, Metric, Neighbor, Result, VectorError, VectorIndex,
 };
@@ -241,9 +241,9 @@ impl IvfPqIndex {
             .centroids
             .iter()
             .enumerate()
-            .map(|(row, centroid)| Neighbor {
+            .map(|(row, centroid)| ApproximateNeighbor {
                 row,
-                distance: Metric::Euclidean.distance(query, centroid),
+                distance: squared_l2(query, centroid),
             })
             .collect::<Vec<_>>();
         partitions.sort_unstable();
@@ -280,16 +280,36 @@ impl IvfPqIndex {
             }
         }
 
-        let mut result = TopK::new(k.min(self.dataset.len()));
+        let result_size = k.min(self.dataset.len());
+        let mut result = BinaryHeap::with_capacity(result_size.saturating_add(1));
         let mut shortlist = shortlist.into_vec();
         shortlist.sort_unstable();
         for candidate in shortlist {
-            result.push(Neighbor {
+            result.push(ApproximateNeighbor {
                 row: candidate.row,
-                distance: Metric::Euclidean.distance(query, self.dataset.vector(candidate.row)),
+                distance: squared_l2(query, self.dataset.vector(candidate.row)),
             });
+            if result.len() > result_size {
+                result.pop();
+            }
         }
-        Ok(result.into_sorted())
+        let mut result = result.into_vec();
+        result.sort_unstable();
+        result
+            .into_iter()
+            .map(|candidate| {
+                let distance = candidate.distance.sqrt();
+                if !distance.is_finite() || distance > f64::from(f32::MAX) {
+                    return Err(VectorError::InvalidConfig(
+                        "IVF-PQ result distances must remain representable as finite f32",
+                    ));
+                }
+                Ok(Neighbor {
+                    row: candidate.row,
+                    distance: distance as f32,
+                })
+            })
+            .collect()
     }
 }
 
@@ -428,12 +448,12 @@ fn nearest_vector(vector: &[f32], centroids: &[Vec<f32>]) -> usize {
         .0
 }
 
-fn squared_l2(left: &[f32], right: &[f32]) -> f32 {
+fn squared_l2(left: &[f32], right: &[f32]) -> f64 {
     left.iter()
         .zip(right)
         .map(|(left, right)| {
             let delta = f64::from(*left) - f64::from(*right);
             delta * delta
         })
-        .sum::<f64>() as f32
+        .sum()
 }
