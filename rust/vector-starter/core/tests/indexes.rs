@@ -193,6 +193,32 @@ fn ivf_pq_rejects_non_finite_training_residuals() {
 }
 
 #[test]
+fn ivf_pq_query_scoring_preserves_large_finite_ordering() {
+    let dataset = Dataset::try_new(vec![vec![3e20], vec![2e20], vec![1e20]]).unwrap();
+    let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();
+    let index = IvfPqIndex::try_new(
+        dataset,
+        Metric::Euclidean,
+        IvfPqConfig {
+            partitions: 1,
+            probes: 1,
+            iterations: 3,
+            subquantizers: 1,
+            codebook_size: 3,
+            rerank: 1,
+            seed: 1,
+        },
+    )
+    .unwrap();
+
+    let expected = exact.search(&[0.0], 1).unwrap();
+    let actual = index.search(&[0.0], 1).unwrap();
+
+    assert_eq!(expected[0].row, 2);
+    assert_eq!(actual, expected);
+}
+
+#[test]
 fn ivf_pq_full_scan_and_rerank_matches_exact_search() {
     let dataset = line_dataset(80);
     let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();
