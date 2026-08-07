@@ -1,6 +1,6 @@
 use std::{cmp::Ordering, collections::BinaryHeap, mem::size_of};
 
-use crate::search::DeterministicRng;
+use crate::search::{DeterministicRng, TopK};
 use crate::{
     Dataset, IvfFlatConfig, IvfFlatIndex, Metric, Neighbor, Result, VectorError, VectorIndex,
 };
@@ -281,35 +281,27 @@ impl IvfPqIndex {
         }
 
         let result_size = k.min(self.dataset.len());
-        let mut result = BinaryHeap::with_capacity(result_size.saturating_add(1));
+        let mut result = TopK::new(result_size);
+        let mut has_unrepresentable_candidate = false;
         let mut shortlist = shortlist.into_vec();
         shortlist.sort_unstable();
         for candidate in shortlist {
-            result.push(ApproximateNeighbor {
-                row: candidate.row,
-                distance: squared_l2(query, self.dataset.vector(candidate.row)),
-            });
-            if result.len() > result_size {
-                result.pop();
+            let distance = squared_l2(query, self.dataset.vector(candidate.row)).sqrt();
+            if !distance.is_finite() || distance > f64::from(f32::MAX) {
+                has_unrepresentable_candidate = true;
+                continue;
             }
+            result.push(Neighbor {
+                row: candidate.row,
+                distance: distance as f32,
+            });
         }
-        let mut result = result.into_vec();
-        result.sort_unstable();
-        result
-            .into_iter()
-            .map(|candidate| {
-                let distance = candidate.distance.sqrt();
-                if !distance.is_finite() || distance > f64::from(f32::MAX) {
-                    return Err(VectorError::InvalidConfig(
-                        "IVF-PQ result distances must remain representable as finite f32",
-                    ));
-                }
-                Ok(Neighbor {
-                    row: candidate.row,
-                    distance: distance as f32,
-                })
-            })
-            .collect()
+        if result.len() < result_size && has_unrepresentable_candidate {
+            return Err(VectorError::InvalidConfig(
+                "IVF-PQ result distances must remain representable as finite f32",
+            ));
+        }
+        Ok(result.into_sorted())
     }
 }
 

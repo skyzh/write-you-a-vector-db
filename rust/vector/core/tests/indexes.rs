@@ -280,6 +280,57 @@ fn ivf_pq_rerank_rejects_unrepresentable_result_distances() {
 }
 
 #[test]
+fn ivf_pq_rerank_uses_public_neighbor_ordering() {
+    let dataset = Dataset::try_new(vec![vec![1.0, f32::EPSILON], vec![1.0, 0.0]]).unwrap();
+    let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();
+    let index = IvfPqIndex::try_new(
+        dataset,
+        Metric::Euclidean,
+        IvfPqConfig {
+            partitions: 1,
+            probes: 1,
+            iterations: 3,
+            subquantizers: 2,
+            codebook_size: 2,
+            rerank: 2,
+            seed: 7,
+        },
+    )
+    .unwrap();
+
+    let expected = exact.search(&[0.0, 0.0], 1).unwrap();
+    let actual = index.search(&[0.0, 0.0], 1).unwrap();
+
+    assert_eq!(expected[0].row, 0);
+    assert_eq!(actual, expected);
+}
+
+#[test]
+fn ivf_pq_rerank_ignores_unrepresentable_unselected_candidates() {
+    let dataset = Dataset::try_new(vec![vec![1.0, 0.0], vec![3e38, 3e38]]).unwrap();
+    let index = IvfPqIndex::try_new(
+        dataset,
+        Metric::Euclidean,
+        IvfPqConfig {
+            partitions: 1,
+            probes: 1,
+            iterations: 3,
+            subquantizers: 2,
+            codebook_size: 2,
+            rerank: 2,
+            seed: 7,
+        },
+    )
+    .unwrap();
+
+    let actual = index.search(&[0.0, 0.0], 1).unwrap();
+
+    assert_eq!(actual.len(), 1);
+    assert_eq!(actual[0].row, 0);
+    assert_eq!(actual[0].distance, 1.0);
+}
+
+#[test]
 fn ivf_pq_full_scan_and_rerank_matches_exact_search() {
     let dataset = line_dataset(80);
     let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();
