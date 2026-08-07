@@ -1,4 +1,4 @@
-use std::mem::size_of;
+use std::{cmp::Ordering, collections::BinaryHeap, mem::size_of};
 
 use crate::search::{DeterministicRng, TopK};
 use crate::{
@@ -34,6 +34,34 @@ impl Default for IvfPqConfig {
 struct QuantizedRow {
     row: usize,
     codes: Vec<u8>,
+}
+
+#[derive(Debug, Clone, Copy)]
+struct ApproximateNeighbor {
+    row: usize,
+    distance: f64,
+}
+
+impl PartialEq for ApproximateNeighbor {
+    fn eq(&self, other: &Self) -> bool {
+        self.row == other.row && self.distance.total_cmp(&other.distance).is_eq()
+    }
+}
+
+impl Eq for ApproximateNeighbor {}
+
+impl PartialOrd for ApproximateNeighbor {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for ApproximateNeighbor {
+    fn cmp(&self, other: &Self) -> Ordering {
+        self.distance
+            .total_cmp(&other.distance)
+            .then_with(|| self.row.cmp(&other.row))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -221,9 +249,9 @@ impl IvfPqIndex {
         partitions.sort_unstable();
 
         let shortlist_size = rerank.max(k).min(self.dataset.len());
-        let mut shortlist = TopK::new(shortlist_size);
+        let mut shortlist = BinaryHeap::with_capacity(shortlist_size.saturating_add(1));
         let subvector_dimension = self.dataset.dimension() / self.config.subquantizers;
-        let mut tables = vec![0.0; self.config.subquantizers * self.config.codebook_size];
+        let mut tables = vec![0.0_f64; self.config.subquantizers * self.config.codebook_size];
         for partition in partitions.iter().take(probes) {
             fill_lookup_tables(
                 &mut tables,
@@ -241,16 +269,21 @@ impl IvfPqIndex {
                     .map(|(subquantizer, code)| {
                         tables[subquantizer * self.config.codebook_size + usize::from(*code)]
                     })
-                    .sum::<f32>();
-                shortlist.push(Neighbor {
+                    .sum::<f64>();
+                shortlist.push(ApproximateNeighbor {
                     row: encoded.row,
                     distance,
                 });
+                if shortlist.len() > shortlist_size {
+                    shortlist.pop();
+                }
             }
         }
 
         let mut result = TopK::new(k.min(self.dataset.len()));
-        for candidate in shortlist.into_sorted() {
+        let mut shortlist = shortlist.into_vec();
+        shortlist.sort_unstable();
+        for candidate in shortlist {
             result.push(Neighbor {
                 row: candidate.row,
                 distance: Metric::Euclidean.distance(query, self.dataset.vector(candidate.row)),
@@ -342,7 +375,7 @@ fn encode(residual: &[f32], codebooks: &[Vec<Vec<f32>>], subvector_dimension: us
 }
 
 fn fill_lookup_tables(
-    tables: &mut [f32],
+    tables: &mut [f64],
     query: &[f32],
     coarse_centroid: &[f32],
     codebooks: &[Vec<Vec<f32>>],
@@ -360,7 +393,7 @@ fn fill_lookup_tables(
                     let delta = f64::from(*query) - f64::from(*coarse) - f64::from(*codeword);
                     delta * delta
                 })
-                .sum::<f64>() as f32;
+                .sum::<f64>();
             tables[subquantizer * codebook_size + code] = distance;
         }
     }
