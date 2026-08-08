@@ -24,6 +24,9 @@ benchmark. An optional follow-up adds residual product quantization and exact re
 chapters include starter code, focused tests, and separate completed reference crates; the four SQL-facing chapters also
 include SQLLogicTests.
 
+The core benchmark compares recall and latency on one shared cosine workload. The optional IVF-PQ example uses a
+separate Euclidean workload, so its results are not directly comparable.
+
 Run the completed reference with:
 
 ```shell
