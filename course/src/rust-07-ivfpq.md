@@ -135,7 +135,8 @@ The optional configuration is:
 4. **Complete encoding:** every row appears in exactly one IVF list with exactly `subquantizers` codes.
 5. **Code validity:** each code is a valid index into its subquantizer's codebook.
 6. **Residual consistency:** training, encoding, and query tables subtract the matching coarse centroid.
-7. **Exact rerank:** returned distances are recomputed from original vectors and sorted with the course's row tie-break.
+7. **Exact rerank:** returned distances are recomputed from original vectors, remain representable as finite `f32`, and
+   follow the public `(distance, row)` ordering.
 8. **Honest accounting:** compressed bytes include codes and PQ codebooks but exclude row IDs, coarse centroids, allocator
    overhead, and the base dataset retained for reranking.
 
@@ -192,8 +193,11 @@ Implement `search_with_probes`:
 5. compute exact Euclidean distances for the shortlist row offsets; and
 6. return the exact top-k in deterministic order.
 
-Use `f64` accumulation while constructing squared distances, then store the result as `f32`, matching the course metric
-boundary. A row offset must stay attached to its code through both heaps.
+Keep coarse-centroid distances, lookup-table scores, and exact rerank distances in `f64`. At the public `Neighbor`
+boundary, discard exact distances that are non-finite or greater than `f32::MAX`, convert the remaining distances to
+`f32`, and select and sort results by `(distance, row)`. This public ordering also resolves two distinct `f64` distances
+that round to the same `f32`. If discarded candidates leave fewer than `min(k, rows)` results, return an error. A row
+offset must stay attached to its code through both heaps.
 
 Probe every list and rerank every row as an exactness boundary:
 
@@ -203,6 +207,13 @@ cargo test -p vector-core-starter --test indexes ivf_pq_full_scan_and_rerank_mat
 
 When both budgets cover the dataset, the PQ score changes only the order in which rows enter exact reranking. The final
 result must match `FlatIndex`.
+
+Run the complete IVF-PQ core group, including the large-finite ordering, public tie-break, and result-representability
+cases:
+
+```sh
+cargo test -p vector-core-starter --test indexes ivf_pq_
+```
 
 The supplied `IndexConfig::IvfPq` variant also lets the unchanged Chapter 1 adapter reach the completed index for a
 Euclidean SQL query:
@@ -246,7 +257,7 @@ reranking changes query work, not stored codes.
 
 ## Review Your Optional Chapter Result
 
-After all three core tests, the DataFusion plan check, and the release benchmark pass, explain:
+After all IVF-PQ core tests, the DataFusion plan check, and the release benchmark pass, explain:
 
 - why IVF centroids and PQ codewords solve different parts of the search;
 - why residuals use the selected row or query list's coarse centroid;
