@@ -124,6 +124,9 @@ Build the selected `IndexConfig` over that dataset. Chapter 1 passes `IndexConfi
 
 ### Define the Schema
 
+This course's engine uses a fixed three-column table schema. The index operates
+over the single `embedding` column; arbitrary schemas are out of scope.
+
 DataFusion executes over Arrow arrays. Construct this schema:
 
 ```text
