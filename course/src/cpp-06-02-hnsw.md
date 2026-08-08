@@ -33,17 +33,31 @@ around the query.
 
 ## Layer Invariants
 
-Your implementation should preserve these rules:
+Every row must appear in layer 0. If a row is missing from layer 0, it is
+unreachable from any search.
 
-- layer 0 contains every vertex;
-- membership is nested: a vertex in layer `L` also appears in every lower layer;
-- each layer stores global vertex IDs into `vertices_` and `rids_`;
-- upper layers use `m_max_`, while layer 0 uses `m_max_0_`;
-- edges remain symmetric within each layer; and
-- the top entry point belongs to the current highest nonempty layer.
+Membership is nested: a vertex in layer `L` must also appear in every
+lower layer. Adding a vertex to an upper layer without adding it to the
+layers below creates a search path that dead-ends.
 
-The starter header has no dedicated top-entry-point field. You may add one, or derive it consistently from the highest
-layer. That representation is your choice; the invariants are not.
+Each layer stores global vertex IDs into `vertices_` and `rids_`. A
+mismatch between these arrays makes the graph return the wrong vector
+for a vertex.
+
+Upper layers use `m_max_`; layer 0 uses `m_max_0_`. Confusing these
+constants silently changes the degree bound and pruning behavior at
+the most important layer.
+
+Edges must remain symmetric within each layer. A one-sided edge makes
+one node reachable but the other unreachable in reverse.
+
+The top entry point must belong to the current highest nonempty layer.
+Starting from a lower layer's entry point skips the upper layers
+entirely.
+
+The starter header has no dedicated top-entry-point field. You may add
+one, or derive it consistently from the highest layer. The invariants
+above describe what must hold; how you store it is your choice.
 
 ## Lookup
 

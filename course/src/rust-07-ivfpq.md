@@ -123,18 +123,40 @@ The optional configuration is:
 | `rerank` | Full-precision shortlist budget | 100 |
 | `seed` | Reproducible training seed | 7 |
 
-## Invariants
+## What Must Hold, and What Breaks If It Doesn't
 
-1. **Euclidean scope:** this implementation accepts only `Metric::Euclidean`.
-2. **Valid IVF budget:** `1 <= probes <= partitions <= rows`, and `iterations > 0`.
-3. **Valid code layout:** `subquantizers > 0`, dimension is divisible by `subquantizers`, and
-   `2 <= codebook_size <= min(256, rows)`.
-4. **Complete encoding:** every row appears in exactly one IVF list with exactly `subquantizers` codes.
-5. **Code validity:** each code is a valid index into its subquantizer's codebook.
-6. **Residual consistency:** training, encoding, and query tables subtract the matching coarse centroid.
-7. **Exact rerank:** returned distances are recomputed from original vectors and sorted with the course's row tie-break.
-8. **Honest accounting:** compressed bytes include codes and PQ codebooks but exclude row IDs, coarse centroids, allocator
-   overhead, and the base dataset retained for reranking.
+This implementation accepts only `Metric::Euclidean`. Passing a
+different metric will silently compute wrong distances using Euclidean
+formulas.
+
+Your IVF configuration must satisfy `1 <= probes <= partitions <= rows`
+and `iterations > 0`.
+
+The code layout must have `subquantizers > 0`, dimension divisible by
+`subquantizers`, and `2 <= codebook_size <= min(256, rows)`. A
+misaligned dimension leaves residual bytes that cannot be encoded; a
+codebook larger than the row count makes some codes unreachable.
+
+After encoding, every row must appear in exactly one IVF list with
+exactly `subquantizers` codes. A row in zero lists is invisible to
+queries; a row in two lists produces duplicate results.
+
+Each code must be a valid index into its subquantizer's codebook. An
+out-of-bounds code crashes the decoder or silently reads garbage
+bytes.
+
+Training, encoding, and query tables must all subtract the same coarse
+centroid. Subtracting different centroids produces residuals from
+different reference points, making codebook lookup meaningless.
+
+Returned distances must be recomputed from original vectors and sorted
+with the course's row tie-break. Reporting PQ-approximate distances as
+exact changes the result ordering relative to reranking.
+
+Compressed byte counts must include codes and PQ codebooks but exclude
+row IDs, coarse centroids, allocator overhead, and the dataset retained
+for reranking. Including or excluding the wrong components makes the
+compression ratio unreproducible across chapters.
 
 ## Checkpoint 1: Validate and Build the Coarse Lists
 

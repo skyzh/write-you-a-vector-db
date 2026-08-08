@@ -50,19 +50,38 @@ Metric math, a `FlatIndex` that checks every vector, Arrow result execution, and
 will build the storage and extension boundary around them: validated vectors, an Arrow-backed table, a physical scan, and
 a rule that recognizes one safe top-k shape. Do not modify public APIs or tests.
 
-## Invariants
+## What Must Hold, and What Breaks If It Doesn't
 
-1. **I1 — Valid vectors:** a dataset is non-empty, has nonzero fixed dimension, and contains only finite `f32` values.
-2. **I2 — Consistent row identity:** each external `id` is unique, while a core row offset identifies the same row in the
-   dataset and Arrow batch.
-3. **I3 — Faithful Arrow shape:** the table schema is `id: UInt64`, `payload: Utf8`, and
-   `embedding: FixedSizeList<Float32>` with the dataset dimension.
-4. **I4 — Safe match:** an index scan is selected only for one supported distance expression over `embedding`, a literal
-   query vector, a compatible metric and direction, and a valid dimension.
-5. **I5 — Exact fallback:** filters, multiple sort keys, non-literal vectors, wrong metrics, wrong directions, and invalid
-   query vectors remain on `VectorScanExec` plus DataFusion's exact sort.
-6. **I6 — SQL owns ordering:** unless the vector scan returns rows in the requested order, DataFusion retains its bounded
-   sort after the index selects candidates.
+A valid dataset must be non-empty, have a fixed dimension greater than
+zero, and contain only finite `f32` vectors. If you accept an empty or
+variable-dimension dataset, every downstream similarity check will
+silently compare mismatched shapes.
+
+Every row needs a unique external `id`. The same row offset must refer
+to the same row in both the in-memory dataset and the Arrow batch. If
+an `id` appears twice, the index will return the wrong payload for a
+matching row.
+
+The Arrow table schema must be `id: UInt64`, `payload: Utf8`,
+`embedding: FixedSizeList<Float32>` with the declared dimension. A
+mismatched schema silently breaks every reader that expects those types.
+
+An index scan is selected only for a supported distance expression over
+`embedding`, a literal query vector, a compatible metric and direction,
+and a valid dimension. If the rule fires on an unsupported expression,
+DataFusion will pass the wrong operator to the index and return
+incorrect results.
+
+Filters, multiple sort keys, non-literal vectors, wrong metrics, wrong
+directions, and invalid query vectors must stay on `VectorScanExec`
+with DataFusion's exact sort. If the optimizer tries to use the index
+for these, correctness depends on an operation the index does not
+perform.
+
+DataFusion owns ordering: the vector scan must return rows in the
+requested order, or DataFusion retains its bounded sort after the index
+selects candidates. If you return rows out of order, an upstream `LIMIT`
+will silently produce the wrong result set.
 
 ## Checkpoint 1: Validate the In-Memory Dataset
 
