@@ -29,6 +29,14 @@ plan.
 
 After your rule recognizes a compatible index, the physical plan becomes:
 
+```text
+SortExec: TopK(fetch=3), ...
+  VectorIndexScanExec: index=flat, metric=Cosine, query_dim=3, fetch=Some(3), ordered=false
+```
+
+With `FlatIndex`, you can confirm both the exact result and the matched physical plan. In Chapter 2, `index=ivf_flat` will
+appear behind the same rule.
+
 ## Data Model
 
 The learner checkpoint in this chapter uses a fixed in-memory convenience
@@ -62,14 +70,6 @@ resolver; without one, index hits would degrade into full scans to reconstruct
 rows. The in-memory limitation is deliberate — it keeps the teaching engine small
 while the data-model boundary (snapshot table, opaque RowIds, lookup) is the
 same shape a production adapter would implement.
-
-```text
-SortExec: TopK(fetch=3), ...
-  VectorIndexScanExec: index=flat, metric=Cosine, query_dim=3, fetch=Some(3), ordered=false
-```
-
-With `FlatIndex`, you can confirm both the exact result and the matched physical plan. In Chapter 2, `index=ivf_flat` will
-appear behind the same rule.
 
 ## Build the Exact Path and Matcher in Rust
 
