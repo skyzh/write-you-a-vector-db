@@ -78,6 +78,13 @@ pub struct VectorTable {
     snapshot: Arc<VectorTableSnapshot>,
 }
 
+/// Immutable table storage plus the vector index attached to it.
+///
+/// `batches` owns the table's `RecordBatch` values, but their schemas and
+/// column arrays remain shared through Arrow's `Arc`-backed handles. Converting
+/// `Vec<RecordBatch>` into `Arc<[RecordBatch]>` moves the lightweight batch
+/// metadata into a shared slice; it does not copy the underlying column
+/// buffers. The attached index separately materializes only `vector_column`.
 #[derive(Debug)]
 struct VectorTableSnapshot {
     schema: SchemaRef,
