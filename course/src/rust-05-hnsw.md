@@ -110,20 +110,25 @@ structure unreproducible across runs.
 Your budget must satisfy `max_connections > 0`,
 `ef_construction >= max_connections`, `ef_search > 0`, and `max_level > 0`.
 
-Greedy descent in upper layers must move only to a strictly closer
-neighbor and pass exactly one entry point downward. Moving to an
-equally-distant neighbor can loop; passing multiple entry points
-confuses the layer below's search frontier.
+Greedy descent in upper layers must strictly improve the public
+`(distance, row)` order and this course passes its single best entry point
+downward. Equal geometric distance may still move to a lower row offset, but
+the total order strictly decreases and therefore terminates. The shared
+`search_layer` also supports and deduplicates multiple entry points; the
+single-entry handoff is this course's descent schedule, not a frontier limit.
 
 The layer-zero beam search must use the Chapter 3 two-frontier
-traversal with width `ef_search.max(k)`. A different search strategy at
-layer zero produces results inconsistent with the upper-layer traversal.
+traversal with width `ef_search.max(k)`. Reusing it preserves the algorithm
+implemented and tested in this course; another valid layer-zero strategy is not
+inherently inconsistent with greedy upper-layer descent.
 
 Every layer must preserve the degree cap, contain no duplicate or
 self-edges, and store every remaining edge at both endpoints.
 
-Every layer stores the same core row offsets used by the dataset and
-Arrow batch. Offset drift makes the graph point at the wrong vectors.
+Every layer stores core dataset ordinals. The reference DataFusion adapter maps
+each returned ordinal through the snapshot's opaque `RowId` and then its checked
+batch/row location; a core ordinal is not an Arrow batch offset. Ordinal drift
+makes the graph score or return the wrong source row.
 
 ### Checkpoint 1: Descend One Layer
 

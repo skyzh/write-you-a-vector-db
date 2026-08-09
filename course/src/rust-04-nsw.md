@@ -126,12 +126,13 @@ public APIs, tests, metric behavior, and Chapter 1 DataFusion matcher unchanged.
 
 Your graph budget must satisfy `max_connections > 0`,
 `ef_construction >= max_connections`, and `ef_search > 0`. A zero
-`max_connections` produces isolated nodes; an `ef_search` smaller than
-`k` silently returns fewer results than requested.
+`max_connections` produces isolated nodes. Search widens an `ef_search`
+smaller than `k` to `ef_search.max(k)`; it can still return fewer than `k`
+only when the reachable graph contains too few rows.
 
 One layer search must compute each visited row's query distance at most
-once. Computing it again on revisit wastes work and can make pruning
-decisions inconsistent if floating-point rounding differs across calls.
+once. Recomputing the same immutable metric operands wastes work; repeated
+calls do not acquire different rounding merely because they are repeated.
 
 Two frontiers drive the search: `C` expands the nearest pending
 candidate while bounded `W` tracks the worst retained result. Confusing
@@ -139,7 +140,9 @@ these roles can discard a candidate that would have led to a better path.
 
 Traversal stops only when `W` is full and the nearest pending candidate
 is worse than `W`'s worst member. Stopping earlier can miss a closer
-neighbor; stopping later cannot improve the result.
+neighbor. This is the course's bounded approximate-search rule, not a proof
+that later exploration could never reach a closer row through a currently
+worse candidate.
 
 Adjacency lists must contain no duplicates or self-edges. Every edge
 must appear at both endpoints with degree at most `max_connections`.

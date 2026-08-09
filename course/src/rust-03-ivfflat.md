@@ -56,12 +56,14 @@ Keep the Chapter 1 DataFusion rule, public APIs, and tests unchanged. Your work 
 ## What Must Hold, and What Breaks If It Doesn't
 
 Your IVF configuration must satisfy `1 <= probes <= partitions <= rows`
-with `iterations > 0`. A zero probe count returns an empty result set;
-probing more partitions than exist silently wastes work on duplicate scans.
+with `iterations > 0`. Construction and search reject invalid values before
+scanning; excess probes do not duplicate a uniquely ranked partition scan.
 
 After training, every dataset row must belong to exactly one inverted
 list. An orphaned row is invisible to every query; a row in two lists
-appears twice with potentially different distances.
+can occupy the result heap twice and crowd out a distinct row. Both copies use
+the same immutable vector and metric, so they do not acquire different exact
+distances.
 
 Given identical data, metric, configuration, and seed, k-means training
 must produce identical centroids and list sizes. A non-deterministic
@@ -73,7 +75,9 @@ ordered by a criterion the probe loop never optimized.
 
 Searching all partitions must produce the same ordered top-k as the
 exact `FlatIndex`. If the exhaustive probe disagrees with the flat
-index, the distance computation or the heap is wrong.
+index, inspect list membership as well as metric scoring, heap retention, and
+final ordering: an orphaned, duplicated, or wrongly assigned row can also cause
+the mismatch.
 
 Approximate and exact runs for recall measurement must use identical
 data, queries, metric, and `k`. Changing any of these between runs

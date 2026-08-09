@@ -31,17 +31,29 @@ After your rule recognizes a compatible index, the physical plan becomes:
 
 ## Data Model
 
-This chapter and every Rust chapter that follows use an in-memory design. Tables
-are DataFusion `MemTable`s with an arbitrary Arrow schema — any column names and
-types, not only `id`/`payload`/`embedding`. One column is selected as the vector
-column during index creation; it must be `FixedSizeList<Float32>` with the
-dimension declared in the index configuration.
+The learner checkpoint in this chapter uses a fixed in-memory convenience
+surface: `VectorTable::try_new` builds one Arrow batch with `id`, `payload`, and
+`embedding` columns from `VectorRow` values. The starter does not expose the
+generalized snapshot APIs described below.
 
-The vector index is a separate structure built from that single column. Full table
-rows stay in the MemTable. At search time the index returns opaque `RowId`s —
-engine-owned batch-and-row identifiers — and a private snapshot table reconstructs
-only the projected output columns through a `lookup(RowIds, projection)` API.
-Vector execution never reads arbitrary `RecordBatch` tuples directly.
+The reference engine extends that checkpoint with a custom `VectorTable` and an
+immutable `SnapshotTable`; it does not use DataFusion's `MemTable`. The extension
+accepts arbitrary Arrow schemas and multiple batches, binds one selected
+`FixedSizeList<Float32>` field as the vector column, and takes the dimension from
+that field's width. It copies the selected vector values into the index-owned
+`Dataset`, while the snapshot retains the source batches for projected output.
+
+A core index returns a dataset ordinal. Execution resolves that value through
+the snapshot in four steps:
+
+```text
+dataset ordinal -> snapshot.row_ids[ordinal] -> opaque RowId
+                -> checked batch/row location -> projected lookup
+```
+
+`RowId` is opaque snapshot identity, not a batch-and-row pair, and arbitrary
+user columns are not row identity. Vector execution never reconstructs output
+by treating a core ordinal as a `RecordBatch` row offset.
 
 DataFusion's `TableProvider` contract defines scans but has no generic stable
 `RowId` point-lookup API. This course's adapter therefore works with in-memory
@@ -83,14 +95,15 @@ finite `f32` values. Rejecting invalid data at construction keeps the index from
 comparing incompatible coordinates or producing non-finite distances.
 
 Every index result must resolve to the source row that supplied its vector. The
-general path uses engine-owned `RowId`s; this course's fixed helper also rejects
-duplicate external `id` values and preserves insertion order. If the vector and
-row location drift apart, search can find the right vector but return another
-row's payload.
+reference extension maps each index dataset ordinal through the snapshot's
+`RowId` table before checked batch/row lookup; this course's fixed helper also
+rejects duplicate external `id` values and preserves insertion order. If the
+vector and row location drift apart, search can find the right vector but return
+another row's payload.
 
-The general engine accepts an arbitrary Arrow schema and binds its index to one
-selected `FixedSizeList<Float32>` column. The course exercises deliberately use
-the simpler `VectorTable::try_new` helper. It builds `UInt64` `id`, `Utf8`
+The reference extension accepts an arbitrary Arrow schema and binds its index to
+one selected `FixedSizeList<Float32>` column. The course exercises deliberately
+use the simpler `VectorTable::try_new` helper. It builds `UInt64` `id`, `Utf8`
 `payload`, and `FixedSizeList<Float32>` `embedding` columns, with the list width
 set to the dataset dimension. Construction rejects a selected-column type or
 width mismatch; without that check, search would interpret the wrong values or

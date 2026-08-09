@@ -128,15 +128,18 @@ The optional configuration is:
 
 ## What Must Hold, and What Breaks If It Doesn't
 
-This implementation accepts only `Metric::Euclidean`. Passing a
-different metric will silently compute wrong distances.
+This implementation accepts only `Metric::Euclidean` and rejects another metric
+before training. If that validation were removed, metric-specific coarse
+assignment would be mixed with squared-L2 PQ tables and the scores would no
+longer describe one ranking.
 
 Your IVF configuration must satisfy `1 <= probes <= partitions <= rows`
 and `iterations > 0`.
 
 The code layout must have `subquantizers > 0`, dimension divisible by
 `subquantizers`, and `2 <= codebook_size <= min(256, rows)`. A
-misaligned dimension leaves residual bytes that cannot be encoded.
+non-divisible dimension is rejected. If it were accepted, equal slices would
+omit residual components rather than leave residual bytes.
 
 After encoding, every row must appear in exactly one IVF list with
 exactly `subquantizers` codes.
