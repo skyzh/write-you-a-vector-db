@@ -76,8 +76,10 @@ ordered by a criterion the probe loop never optimized.
 Searching all partitions must produce the same ordered top-k as the
 exact `FlatIndex`. If the exhaustive probe disagrees with the flat
 index, inspect list membership as well as metric scoring, heap retention, and
-final ordering: an orphaned, duplicated, or wrongly assigned row can also cause
-the mismatch.
+final ordering: an orphaned or duplicated row can also cause the mismatch.
+Placing a row in the wrong list does not change exhaustive results when the row
+still appears exactly once, but it can reduce recall when a query probes only
+some lists.
 
 Approximate and exact runs for recall measurement must use identical
 data, queries, metric, and `k`. Changing any of these between runs
