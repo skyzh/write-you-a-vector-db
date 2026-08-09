@@ -96,17 +96,34 @@ The starter already contains the Chapter 3 layer search and pruning interfaces, 
 and the public HNSW configuration and inspection methods. Keep the NSW behavior, metric ordering, public APIs, and
 DataFusion matcher unchanged.
 
-### Invariants
+### What Must Hold, and What Breaks If It Doesn't
 
-1. **I1 — Nested membership:** row `r` appears in every layer from zero through `levels[r]` and in no higher layer.
-2. **I2 — Seeded levels:** equal data, configuration, and seed produce the same level sequence and top level.
-3. **I3 — Valid budget:** `max_connections > 0`, `ef_construction >= max_connections`, `ef_search > 0`, and
-   `max_level > 0`.
-4. **I4 — Greedy descent:** upper layers move only to a strictly closer neighbor and pass one entry point downward.
-5. **I5 — Layer-zero beam:** final search uses the Chapter 3 two-frontier traversal with width `ef_search.max(k)`.
-6. **I6 — Bounded reciprocal layers:** every layer preserves the degree cap, contains no duplicate or self-edges, and
-   stores every remaining edge at both endpoints.
-7. **I7 — Stable identity:** every layer stores the same core row offsets used by the dataset and Arrow batch.
+Row `r` must appear in every layer from zero through `levels[r]` and in
+no higher layer. A row missing from a lower layer is unreachable from
+below; a row in a higher layer than declared violates the level
+assignment the construction algorithm depends on.
+
+Given equal data, configuration, and seed, the level sequence and top
+layer must be identical. Non-deterministic levels make the graph
+structure unreproducible across runs.
+
+Your budget must satisfy `max_connections > 0`,
+`ef_construction >= max_connections`, `ef_search > 0`, and `max_level > 0`.
+
+Greedy descent in upper layers must move only to a strictly closer
+neighbor and pass exactly one entry point downward. Moving to an
+equally-distant neighbor can loop; passing multiple entry points
+confuses the layer below's search frontier.
+
+The layer-zero beam search must use the Chapter 3 two-frontier
+traversal with width `ef_search.max(k)`. A different search strategy at
+layer zero produces results inconsistent with the upper-layer traversal.
+
+Every layer must preserve the degree cap, contain no duplicate or
+self-edges, and store every remaining edge at both endpoints.
+
+Every layer stores the same core row offsets used by the dataset and
+Arrow batch. Offset drift makes the graph point at the wrong vectors.
 
 ### Checkpoint 1: Descend One Layer
 
