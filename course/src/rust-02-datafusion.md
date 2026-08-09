@@ -103,7 +103,9 @@ its search result is otherwise correct.
 Build the selected `IndexConfig` over that dataset. Chapter 1 passes `IndexConfig::Flat`; Chapter 2 will pass
 `IndexConfig::IvfFlat` without changing table construction.
 
-### Define the Schema
+### Build This Course's Arrow Table
+
+This course's engine uses a fixed three-column table schema. The index operatesnover the single `embedding` column; arbitrary schemas are out of scope.
 
 DataFusion executes over Arrow arrays. Construct this schema:
 

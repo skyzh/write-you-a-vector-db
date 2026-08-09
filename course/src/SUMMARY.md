@@ -3,7 +3,7 @@
 - [Build Vector Search Inside a SQL Database](./00-introduction.md)
 - [Build Vector Search in Rust](./rust-01-overview.md)
   - [Build an In-Memory Vector Table and Match Its Index](./rust-02-datafusion.md)
-  - [Restrict Search with IVFFlat](./rust-03-ivfflat.md)
+  - [Narrow the Search with IVFFlat](./rust-03-ivfflat.md)
   - [Navigate a Proximity Graph with NSW](./rust-04-nsw.md)
   - [Add Hierarchy with HNSW](./rust-05-hnsw.md)
   - [Benchmark Recall and Latency](./rust-06-benchmark.md)
