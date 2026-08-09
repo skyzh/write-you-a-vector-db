@@ -7,9 +7,9 @@ use datafusion::arrow::array::{
     Array, ArrayRef, FixedSizeListArray, Float32Array, Float64Array, Int32Array, Int64Array,
     StringArray, UInt64Array,
 };
-use datafusion::arrow::compute::take;
+use datafusion::arrow::compute::concat_batches;
 use datafusion::arrow::datatypes::{DataType, Field, Schema, SchemaRef};
-use datafusion::arrow::record_batch::RecordBatch;
+use datafusion::arrow::record_batch::{RecordBatch, RecordBatchOptions};
 use datafusion::catalog::Session;
 use datafusion::common::config::ConfigExtension;
 use datafusion::common::{
@@ -75,9 +75,22 @@ impl VectorRow {
 
 #[derive(Debug, Clone)]
 pub struct VectorTable {
+    snapshot: Arc<VectorTableSnapshot>,
+}
+
+#[derive(Debug)]
+struct VectorTableSnapshot {
     schema: SchemaRef,
-    batch: RecordBatch,
+    batches: Arc<[RecordBatch]>,
+    row_ids: Arc<[RowId]>,
+    vector_column: Arc<str>,
     index: Arc<dyn VectorIndex>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct RowId {
+    batch: usize,
+    row: usize,
 }
 
 impl VectorTable {
@@ -104,8 +117,6 @@ impl VectorTable {
         .map_err(core_error)?;
         let dimension = i32::try_from(dataset.dimension())
             .map_err(|_| DataFusionError::Plan("vector dimension exceeds i32::MAX".into()))?;
-        let index = index.build(dataset, metric).map_err(core_error)?;
-
         let item_field = Arc::new(Field::new("item", DataType::Float32, false));
         let schema = Arc::new(Schema::new(vec![
             Field::new("id", DataType::UInt64, false),
@@ -141,26 +152,146 @@ impl VectorTable {
             ],
         )?;
 
+        Self::try_new_batch(batch, EMBEDDING_COLUMN, metric, index)
+    }
+
+    /// Build an immutable vector table from one arbitrary-schema Arrow batch.
+    ///
+    /// Only `vector_column` is copied into the index. Every search result is
+    /// mapped back to the original batch through an engine-owned row locator.
+    pub fn try_new_batch(
+        batch: RecordBatch,
+        vector_column: impl Into<String>,
+        metric: Metric,
+        index: IndexConfig,
+    ) -> DataFusionResult<Self> {
+        Self::try_new_batches(vec![batch], vector_column, metric, index)
+    }
+
+    /// Build an immutable vector table from arbitrary-schema Arrow batches.
+    ///
+    /// All batches must have the same schema. The selected column must be a
+    /// non-null `FixedSizeList<Float32>` with a positive dimension. Validation
+    /// completes before index construction starts.
+    pub fn try_new_batches(
+        batches: Vec<RecordBatch>,
+        vector_column: impl Into<String>,
+        metric: Metric,
+        index: IndexConfig,
+    ) -> DataFusionResult<Self> {
+        let vector_column = vector_column.into();
+        let Some(first_batch) = batches.first() else {
+            return Err(DataFusionError::Plan(
+                "a vector table requires at least one record batch".into(),
+            ));
+        };
+        let schema = first_batch.schema();
+        for (batch_idx, batch) in batches.iter().enumerate().skip(1) {
+            if batch.schema_ref().as_ref() != schema.as_ref() {
+                return Err(DataFusionError::Plan(format!(
+                    "record batch {batch_idx} does not match the vector table schema"
+                )));
+            }
+        }
+
+        let column_idx = schema.index_of(&vector_column).map_err(|_| {
+            DataFusionError::Plan(format!(
+                "vector column '{vector_column}' does not exist or is ambiguous"
+            ))
+        })?;
+        let field = schema.field(column_idx);
+        let DataType::FixedSizeList(item_field, dimension) = field.data_type() else {
+            return Err(DataFusionError::Plan(format!(
+                "vector column '{vector_column}' must be FixedSizeList<Float32>, got {}",
+                field.data_type()
+            )));
+        };
+        if item_field.data_type() != &DataType::Float32 {
+            return Err(DataFusionError::Plan(format!(
+                "vector column '{vector_column}' must be FixedSizeList<Float32>, got {}",
+                field.data_type()
+            )));
+        }
+        if *dimension <= 0 {
+            return Err(DataFusionError::Plan(format!(
+                "vector column '{vector_column}' dimension must be greater than zero"
+            )));
+        }
+
+        let row_count = batches.iter().map(RecordBatch::num_rows).sum();
+        let mut vectors = Vec::with_capacity(row_count);
+        let mut row_ids = Vec::with_capacity(row_count);
+        let mut vector_ordinal = 0;
+        for (batch_idx, batch) in batches.iter().enumerate() {
+            let vectors_array = batch
+                .column(column_idx)
+                .as_any()
+                .downcast_ref::<FixedSizeListArray>()
+                .ok_or_else(|| {
+                    DataFusionError::Plan(format!(
+                        "vector column '{vector_column}' must be FixedSizeList<Float32>"
+                    ))
+                })?;
+            for row in 0..batch.num_rows() {
+                if vectors_array.is_null(row) {
+                    return Err(DataFusionError::Plan(format!(
+                        "vector column '{vector_column}' contains null at row {vector_ordinal}"
+                    )));
+                }
+                let values = vectors_array.value(row);
+                let values = values
+                    .as_any()
+                    .downcast_ref::<Float32Array>()
+                    .ok_or_else(|| {
+                        DataFusionError::Plan(format!(
+                            "vector column '{vector_column}' must be FixedSizeList<Float32>"
+                        ))
+                    })?;
+                if values.null_count() != 0 {
+                    return Err(DataFusionError::Plan(format!(
+                        "vector column '{vector_column}' contains a null element at row {vector_ordinal}"
+                    )));
+                }
+                vectors.push(values.values().to_vec());
+                row_ids.push(RowId {
+                    batch: batch_idx,
+                    row,
+                });
+                vector_ordinal += 1;
+            }
+        }
+
+        let dataset = Dataset::try_new(vectors).map_err(core_error)?;
+        let index = index.build(dataset, metric).map_err(core_error)?;
+
         Ok(Self {
-            schema,
-            batch,
-            index,
+            snapshot: Arc::new(VectorTableSnapshot {
+                schema,
+                batches: batches.into(),
+                row_ids: row_ids.into(),
+                vector_column: vector_column.into(),
+                index,
+            }),
         })
     }
 
     pub fn index_kind(&self) -> &'static str {
-        self.index.kind()
+        self.snapshot.index.kind()
     }
 
     pub fn metric(&self) -> Metric {
-        self.index.metric()
+        self.snapshot.index.metric()
+    }
+
+    pub fn vector_column(&self) -> &str {
+        &self.snapshot.vector_column
     }
 }
 
 #[async_trait]
 impl TableProvider for VectorTable {
     fn schema(&self) -> SchemaRef {
-        Arc::clone(&self.schema)
+        Arc::clone(&self.snapshot.schema)
     }
 
     fn table_type(&self) -> TableType {
@@ -175,8 +306,7 @@ impl TableProvider for VectorTable {
         limit: Option<usize>,
     ) -> DataFusionResult<Arc<dyn ExecutionPlan>> {
         Ok(Arc::new(VectorScanExec::try_new(
-            self.batch.clone(),
-            Arc::clone(&self.index),
+            Arc::clone(&self.snapshot),
             projection.cloned(),
             limit,
             ScanMode::Full,
@@ -198,8 +328,7 @@ enum ScanMode {
 
 #[derive(Debug, Clone)]
 struct VectorScanExec {
-    batch: RecordBatch,
-    index: Arc<dyn VectorIndex>,
+    snapshot: Arc<VectorTableSnapshot>,
     projection: Option<Vec<usize>>,
     projected_schema: SchemaRef,
     fetch: Option<usize>,
@@ -211,19 +340,17 @@ struct VectorScanExec {
 
 impl VectorScanExec {
     fn try_new(
-        batch: RecordBatch,
-        index: Arc<dyn VectorIndex>,
+        snapshot: Arc<VectorTableSnapshot>,
         projection: Option<Vec<usize>>,
         fetch: Option<usize>,
         mode: ScanMode,
         ordered: bool,
         ordering: Option<Vec<PhysicalSortExpr>>,
     ) -> DataFusionResult<Self> {
-        let projected_schema = project_schema(batch.schema_ref(), projection.as_ref())?;
+        let projected_schema = project_schema(&snapshot.schema, projection.as_ref())?;
         let properties = compute_properties(&projected_schema, ordering.as_deref());
         Ok(Self {
-            batch,
-            index,
+            snapshot,
             projection,
             projected_schema,
             fetch,
@@ -240,8 +367,7 @@ impl VectorScanExec {
         ordering: Vec<PhysicalSortExpr>,
     ) -> DataFusionResult<Self> {
         Self::try_new(
-            self.batch.clone(),
-            Arc::clone(&self.index),
+            Arc::clone(&self.snapshot),
             self.projection.clone(),
             self.fetch,
             mode,
@@ -250,39 +376,85 @@ impl VectorScanExec {
         )
     }
 
-    fn selected_rows(&self) -> DataFusionResult<Vec<usize>> {
-        let row_count = self.batch.num_rows();
+    fn selected_rows(&self) -> DataFusionResult<Vec<RowId>> {
+        let row_count = self.snapshot.row_ids.len();
         match &self.mode {
-            ScanMode::Full => Ok((0..self.fetch.unwrap_or(row_count).min(row_count)).collect()),
+            ScanMode::Full => Ok(self
+                .snapshot
+                .row_ids
+                .iter()
+                .copied()
+                .take(self.fetch.unwrap_or(row_count).min(row_count))
+                .collect()),
             ScanMode::Vector { query } => {
                 let k = self.fetch.unwrap_or(row_count).min(row_count);
                 let neighbors = if self.fetch.is_some() {
-                    self.index.search(query, k)
+                    self.snapshot.index.search(query, k)
                 } else {
-                    FlatIndex::try_new(self.index.dataset().clone(), self.index.metric())
-                        .map_err(core_error)?
-                        .search(query, k)
+                    FlatIndex::try_new(
+                        self.snapshot.index.dataset().clone(),
+                        self.snapshot.index.metric(),
+                    )
+                    .map_err(core_error)?
+                    .search(query, k)
                 }
                 .map_err(core_error)?;
-                Ok(neighbors.into_iter().map(|neighbor| neighbor.row).collect())
+                neighbors
+                    .into_iter()
+                    .map(|neighbor| {
+                        self.snapshot
+                            .row_ids
+                            .get(neighbor.row)
+                            .copied()
+                            .ok_or_else(|| {
+                                DataFusionError::Internal(format!(
+                                    "vector index returned unknown row {}",
+                                    neighbor.row
+                                ))
+                            })
+                    })
+                    .collect()
             }
         }
     }
 
-    fn output_batch(&self, rows: &[usize]) -> DataFusionResult<RecordBatch> {
-        let indices = UInt64Array::from(rows.iter().map(|row| *row as u64).collect::<Vec<_>>());
+    fn output_batch(&self, rows: &[RowId]) -> DataFusionResult<RecordBatch> {
         let projected_columns = self
             .projection
             .clone()
-            .unwrap_or_else(|| (0..self.batch.num_columns()).collect());
-        let columns = projected_columns
+            .unwrap_or_else(|| (0..self.snapshot.schema.fields().len()).collect());
+        let fragments = rows
             .iter()
-            .map(|column| take(self.batch.column(*column), &indices, None))
-            .collect::<Result<Vec<ArrayRef>, _>>()?;
-        Ok(RecordBatch::try_new(
-            Arc::clone(&self.projected_schema),
-            columns,
-        )?)
+            .map(|row_id| {
+                let batch = self.snapshot.batches.get(row_id.batch).ok_or_else(|| {
+                    DataFusionError::Internal(format!(
+                        "row locator references unknown batch {}",
+                        row_id.batch
+                    ))
+                })?;
+                if row_id.row >= batch.num_rows() {
+                    return Err(DataFusionError::Internal(format!(
+                        "row locator references row {} in a {}-row batch",
+                        row_id.row,
+                        batch.num_rows()
+                    )));
+                }
+                let columns = projected_columns
+                    .iter()
+                    .map(|column| batch.column(*column).slice(row_id.row, 1))
+                    .collect::<Vec<ArrayRef>>();
+                RecordBatch::try_new_with_options(
+                    Arc::clone(&self.projected_schema),
+                    columns,
+                    &RecordBatchOptions::new().with_row_count(Some(1)),
+                )
+                .map_err(DataFusionError::from)
+            })
+            .collect::<DataFusionResult<Vec<_>>>()?;
+        if fragments.is_empty() {
+            return Ok(RecordBatch::new_empty(Arc::clone(&self.projected_schema)));
+        }
+        concat_batches(&self.projected_schema, &fragments).map_err(DataFusionError::from)
     }
 }
 
@@ -293,14 +465,21 @@ impl DisplayAs for VectorScanExec {
                 ScanMode::Full => write!(
                     f,
                     "VectorScanExec: rows={}, fetch={:?}",
-                    self.batch.num_rows(),
+                    self.snapshot.row_ids.len(),
                     self.fetch
                 ),
+                ScanMode::Vector { .. } if self.fetch.is_none() => {
+                    write!(
+                        f,
+                        "VectorScanExec: rows={}, fetch=None",
+                        self.snapshot.row_ids.len()
+                    )
+                }
                 ScanMode::Vector { query } => write!(
                     f,
                     "VectorIndexScanExec: index={}, metric={:?}, query_dim={}, fetch={:?}, ordered={}",
-                    self.index.kind(),
-                    self.index.metric(),
+                    self.snapshot.index.kind(),
+                    self.snapshot.index.metric(),
                     query.len(),
                     self.fetch,
                     self.ordered
@@ -313,9 +492,10 @@ impl DisplayAs for VectorScanExec {
 
 impl ExecutionPlan for VectorScanExec {
     fn name(&self) -> &str {
-        match self.mode {
-            ScanMode::Full => "VectorScanExec",
-            ScanMode::Vector { .. } => "VectorIndexScanExec",
+        match (&self.mode, self.fetch) {
+            (ScanMode::Full, _) => "VectorScanExec",
+            (ScanMode::Vector { .. }, None) => "VectorScanExec",
+            (ScanMode::Vector { .. }, Some(_)) => "VectorIndexScanExec",
         }
     }
 
@@ -387,8 +567,12 @@ impl ExecutionPlan for VectorScanExec {
         &self,
         order: &[PhysicalSortExpr],
     ) -> DataFusionResult<SortOrderPushdownResult<Arc<dyn ExecutionPlan>>> {
-        let Some(query) = match_vector_order(order, &self.projected_schema, self.index.as_ref())
-        else {
+        let Some(query) = match_vector_order(
+            order,
+            &self.projected_schema,
+            self.snapshot.index.as_ref(),
+            &self.snapshot.vector_column,
+        ) else {
             return Ok(SortOrderPushdownResult::Unsupported);
         };
         let scan = self.with_mode_and_ordering(
@@ -422,6 +606,7 @@ fn match_vector_order(
     order: &[PhysicalSortExpr],
     schema: &Schema,
     index: &dyn VectorIndex,
+    vector_column: &str,
 ) -> Option<Vec<f32>> {
     let [sort] = order else {
         return None;
@@ -450,7 +635,7 @@ fn match_vector_order(
         },
     };
     if column.index() >= schema.fields().len()
-        || schema.field(column.index()).name() != EMBEDDING_COLUMN
+        || schema.field(column.index()).name() != vector_column
     {
         return None;
     }
