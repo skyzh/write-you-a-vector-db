@@ -78,26 +78,111 @@ pub struct VectorTable {
     snapshot: Arc<VectorTableSnapshot>,
 }
 
-/// Immutable table storage plus the vector index attached to it.
+/// A vector index attached to an immutable snapshot table.
 ///
-/// `batches` owns the table's `RecordBatch` values, but their schemas and
-/// column arrays remain shared through Arrow's `Arc`-backed handles. Converting
-/// `Vec<RecordBatch>` into `Arc<[RecordBatch]>` moves the lightweight batch
-/// metadata into a shared slice; it does not copy the underlying column
-/// buffers. The attached index separately materializes only `vector_column`.
+/// Full rows stay behind `SnapshotTable`; vector execution can only request
+/// projected rows through its opaque-`RowId` lookup API.
 #[derive(Debug)]
 struct VectorTableSnapshot {
-    schema: SchemaRef,
-    batches: Arc<[RecordBatch]>,
+    table: Arc<dyn SnapshotTable>,
     row_ids: Arc<[RowId]>,
     vector_column: Arc<str>,
     index: Arc<dyn VectorIndex>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct RowId {
+struct RowId(usize);
+
+/// Storage boundary needed by vector index execution.
+///
+/// DataFusion's `TableProvider` API supports scans but does not define stable
+/// row identifiers or point lookup. This course therefore provides only an
+/// in-memory implementation: a disk-backed table would need provider-specific
+/// locators behind `lookup`, or each vector hit would require another scan.
+trait SnapshotTable: fmt::Debug + Send + Sync {
+    fn schema(&self) -> SchemaRef;
+
+    fn lookup(
+        &self,
+        row_ids: &[RowId],
+        projection: Option<&Vec<usize>>,
+    ) -> DataFusionResult<RecordBatch>;
+}
+
+/// In-memory snapshot used by the current course adapter.
+///
+/// `batches` owns the `RecordBatch` values, but their schemas and column arrays
+/// remain shared through Arrow's `Arc`-backed handles. Converting
+/// `Vec<RecordBatch>` into `Arc<[RecordBatch]>` moves lightweight batch
+/// metadata; it does not copy the underlying column buffers.
+#[derive(Debug)]
+struct InMemorySnapshotTable {
+    schema: SchemaRef,
+    batches: Arc<[RecordBatch]>,
+    row_locations: Arc<[InMemoryRowLocation]>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct InMemoryRowLocation {
     batch: usize,
     row: usize,
+}
+
+impl SnapshotTable for InMemorySnapshotTable {
+    fn schema(&self) -> SchemaRef {
+        Arc::clone(&self.schema)
+    }
+
+    fn lookup(
+        &self,
+        row_ids: &[RowId],
+        projection: Option<&Vec<usize>>,
+    ) -> DataFusionResult<RecordBatch> {
+        let projected_schema = project_schema(&self.schema, projection)?;
+        let projected_columns = projection
+            .cloned()
+            .unwrap_or_else(|| (0..self.schema.fields().len()).collect());
+        let fragments = row_ids
+            .iter()
+            .map(|row_id| {
+                let location = self.row_locations.get(row_id.0).ok_or_else(|| {
+                    DataFusionError::Internal(format!(
+                        "row id {} does not exist in the snapshot table",
+                        row_id.0
+                    ))
+                })?;
+                let batch = self.batches.get(location.batch).ok_or_else(|| {
+                    DataFusionError::Internal(format!(
+                        "row id {} references unknown batch {}",
+                        row_id.0, location.batch
+                    ))
+                })?;
+                if location.row >= batch.num_rows() {
+                    return Err(DataFusionError::Internal(format!(
+                        "row id {} references row {} in a {}-row batch",
+                        row_id.0,
+                        location.row,
+                        batch.num_rows()
+                    )));
+                }
+                let columns = projected_columns
+                    .iter()
+                    .map(|column| batch.column(*column).slice(location.row, 1))
+                    .collect::<Vec<ArrayRef>>();
+                RecordBatch::try_new_with_options(
+                    Arc::clone(&projected_schema),
+                    columns,
+                    &RecordBatchOptions::new().with_row_count(Some(1)),
+                )
+                .map_err(DataFusionError::from)
+            })
+            .collect::<DataFusionResult<Vec<_>>>()?;
+
+        if fragments.is_empty() {
+            return Ok(RecordBatch::new_empty(projected_schema));
+        }
+        concat_batches(&projected_schema, &fragments).map_err(DataFusionError::from)
+    }
 }
 
 impl VectorTable {
@@ -228,6 +313,7 @@ impl VectorTable {
         let row_count = batches.iter().map(RecordBatch::num_rows).sum();
         let mut vectors = Vec::with_capacity(row_count);
         let mut row_ids = Vec::with_capacity(row_count);
+        let mut row_locations = Vec::with_capacity(row_count);
         let mut vector_ordinal = 0;
         for (batch_idx, batch) in batches.iter().enumerate() {
             let vectors_array = batch
@@ -260,21 +346,27 @@ impl VectorTable {
                     )));
                 }
                 vectors.push(values.values().to_vec());
-                row_ids.push(RowId {
+                let row_id = RowId(row_locations.len());
+                row_locations.push(InMemoryRowLocation {
                     batch: batch_idx,
                     row,
                 });
+                row_ids.push(row_id);
                 vector_ordinal += 1;
             }
         }
 
         let dataset = Dataset::try_new(vectors).map_err(core_error)?;
         let index = index.build(dataset, metric).map_err(core_error)?;
+        let table: Arc<dyn SnapshotTable> = Arc::new(InMemorySnapshotTable {
+            schema,
+            batches: batches.into(),
+            row_locations: row_locations.into(),
+        });
 
         Ok(Self {
             snapshot: Arc::new(VectorTableSnapshot {
-                schema,
-                batches: batches.into(),
+                table,
                 row_ids: row_ids.into(),
                 vector_column: vector_column.into(),
                 index,
@@ -298,7 +390,7 @@ impl VectorTable {
 #[async_trait]
 impl TableProvider for VectorTable {
     fn schema(&self) -> SchemaRef {
-        Arc::clone(&self.snapshot.schema)
+        self.snapshot.table.schema()
     }
 
     fn table_type(&self) -> TableType {
@@ -354,7 +446,7 @@ impl VectorScanExec {
         ordered: bool,
         ordering: Option<Vec<PhysicalSortExpr>>,
     ) -> DataFusionResult<Self> {
-        let projected_schema = project_schema(&snapshot.schema, projection.as_ref())?;
+        let projected_schema = project_schema(&snapshot.table.schema(), projection.as_ref())?;
         let properties = compute_properties(&projected_schema, ordering.as_deref());
         Ok(Self {
             snapshot,
@@ -426,42 +518,7 @@ impl VectorScanExec {
     }
 
     fn output_batch(&self, rows: &[RowId]) -> DataFusionResult<RecordBatch> {
-        let projected_columns = self
-            .projection
-            .clone()
-            .unwrap_or_else(|| (0..self.snapshot.schema.fields().len()).collect());
-        let fragments = rows
-            .iter()
-            .map(|row_id| {
-                let batch = self.snapshot.batches.get(row_id.batch).ok_or_else(|| {
-                    DataFusionError::Internal(format!(
-                        "row locator references unknown batch {}",
-                        row_id.batch
-                    ))
-                })?;
-                if row_id.row >= batch.num_rows() {
-                    return Err(DataFusionError::Internal(format!(
-                        "row locator references row {} in a {}-row batch",
-                        row_id.row,
-                        batch.num_rows()
-                    )));
-                }
-                let columns = projected_columns
-                    .iter()
-                    .map(|column| batch.column(*column).slice(row_id.row, 1))
-                    .collect::<Vec<ArrayRef>>();
-                RecordBatch::try_new_with_options(
-                    Arc::clone(&self.projected_schema),
-                    columns,
-                    &RecordBatchOptions::new().with_row_count(Some(1)),
-                )
-                .map_err(DataFusionError::from)
-            })
-            .collect::<DataFusionResult<Vec<_>>>()?;
-        if fragments.is_empty() {
-            return Ok(RecordBatch::new_empty(Arc::clone(&self.projected_schema)));
-        }
-        concat_batches(&self.projected_schema, &fragments).map_err(DataFusionError::from)
+        self.snapshot.table.lookup(rows, self.projection.as_ref())
     }
 }
 
@@ -706,4 +763,156 @@ fn primitive_vector(values: &dyn Array) -> Option<Vec<f32>> {
 
 fn core_error(error: vector_core::VectorError) -> DataFusionError {
     DataFusionError::Plan(error.to_string())
+}
+
+#[cfg(test)]
+mod snapshot_tests {
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    use datafusion::physical_plan::common::collect;
+
+    use super::*;
+
+    fn in_memory_snapshot() -> InMemorySnapshotTable {
+        let schema = Arc::new(Schema::new(vec![
+            Field::new("label", DataType::Utf8, false),
+            Field::new("score", DataType::Int32, false),
+        ]));
+        let batches = vec![
+            RecordBatch::try_new(
+                Arc::clone(&schema),
+                vec![
+                    Arc::new(StringArray::from(vec!["a", "b"])),
+                    Arc::new(Int32Array::from(vec![10, 20])),
+                ],
+            )
+            .unwrap(),
+            RecordBatch::try_new(
+                Arc::clone(&schema),
+                vec![
+                    Arc::new(StringArray::from(vec!["c", "d"])),
+                    Arc::new(Int32Array::from(vec![30, 40])),
+                ],
+            )
+            .unwrap(),
+        ];
+        InMemorySnapshotTable {
+            schema,
+            batches: batches.into(),
+            row_locations: vec![
+                InMemoryRowLocation { batch: 0, row: 0 },
+                InMemoryRowLocation { batch: 0, row: 1 },
+                InMemoryRowLocation { batch: 1, row: 0 },
+                InMemoryRowLocation { batch: 1, row: 1 },
+            ]
+            .into(),
+        }
+    }
+
+    #[test]
+    fn snapshot_lookup_preserves_multibatch_order_and_projection() {
+        let table = in_memory_snapshot();
+        let projection = vec![1, 0];
+        let batch = table
+            .lookup(&[RowId(3), RowId(0)], Some(&projection))
+            .unwrap();
+
+        assert_eq!(batch.schema().field(0).name(), "score");
+        assert_eq!(batch.schema().field(1).name(), "label");
+        let scores = batch
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .unwrap();
+        let labels = batch
+            .column(1)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .unwrap();
+        assert_eq!(scores.values(), &[40, 10]);
+        assert_eq!(labels.iter().collect::<Vec<_>>(), [Some("d"), Some("a")]);
+    }
+
+    #[test]
+    fn snapshot_lookup_rejects_unknown_row_ids() {
+        let error = in_memory_snapshot().lookup(&[RowId(4)], None).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("row id 4 does not exist in the snapshot table"),
+            "{error}"
+        );
+    }
+
+    #[derive(Debug)]
+    struct LookupOnlySnapshotTable {
+        schema: SchemaRef,
+        lookup_calls: Arc<AtomicUsize>,
+    }
+
+    impl SnapshotTable for LookupOnlySnapshotTable {
+        fn schema(&self) -> SchemaRef {
+            Arc::clone(&self.schema)
+        }
+
+        fn lookup(
+            &self,
+            row_ids: &[RowId],
+            projection: Option<&Vec<usize>>,
+        ) -> DataFusionResult<RecordBatch> {
+            self.lookup_calls.fetch_add(1, Ordering::SeqCst);
+            let schema = project_schema(&self.schema, projection)?;
+            let values = row_ids
+                .iter()
+                .map(|row_id| i32::try_from(row_id.0).unwrap())
+                .collect::<Vec<_>>();
+            RecordBatch::try_new(schema, vec![Arc::new(Int32Array::from(values))])
+                .map_err(DataFusionError::from)
+        }
+    }
+
+    #[tokio::test]
+    async fn vector_scan_reads_rows_only_through_snapshot_lookup() {
+        let schema = Arc::new(Schema::new(vec![Field::new(
+            "storage_row",
+            DataType::Int32,
+            false,
+        )]));
+        let lookup_calls = Arc::new(AtomicUsize::new(0));
+        let table: Arc<dyn SnapshotTable> = Arc::new(LookupOnlySnapshotTable {
+            schema,
+            lookup_calls: Arc::clone(&lookup_calls),
+        });
+        let dataset = Dataset::try_new(vec![vec![0.0], vec![10.0]]).unwrap();
+        let index: Arc<dyn VectorIndex> =
+            Arc::new(FlatIndex::try_new(dataset, Metric::Euclidean).unwrap());
+        let snapshot = Arc::new(VectorTableSnapshot {
+            table,
+            row_ids: vec![RowId(0), RowId(1)].into(),
+            vector_column: "features".into(),
+            index,
+        });
+        let scan = VectorScanExec::try_new(
+            snapshot,
+            None,
+            Some(1),
+            ScanMode::Vector {
+                query: vec![9.0].into(),
+            },
+            false,
+            None,
+        )
+        .unwrap();
+
+        let batches = collect(scan.execute(0, Arc::new(TaskContext::default())).unwrap())
+            .await
+            .unwrap();
+        let rows = batches[0]
+            .column(0)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .unwrap();
+        assert_eq!(rows.values(), &[1]);
+        assert_eq!(lookup_calls.load(Ordering::SeqCst), 1);
+    }
 }
