@@ -1,4 +1,4 @@
-# Restrict Search with IVFFlat
+# Narrow the Search with IVFFlat
 
 > **Chapter 2**
 >

@@ -29,6 +29,28 @@ plan.
 
 After your rule recognizes a compatible index, the physical plan becomes:
 
+## Data Model
+
+This chapter and every Rust chapter that follows use an in-memory design. Tables
+are DataFusion `MemTable`s with an arbitrary Arrow schema — any column names and
+types, not only `id`/`payload`/`embedding`. One column is selected as the vector
+column during index creation; it must be `FixedSizeList<Float32>` with the
+dimension declared in the index configuration.
+
+The vector index is a separate structure built from that single column. Full table
+rows stay in the MemTable. At search time the index returns opaque `RowId`s —
+engine-owned batch-and-row identifiers — and a private snapshot table reconstructs
+only the projected output columns through a `lookup(RowIds, projection)` API.
+Vector execution never reads arbitrary `RecordBatch` tuples directly.
+
+DataFusion's `TableProvider` contract defines scans but has no generic stable
+`RowId` point-lookup API. This course's adapter therefore works with in-memory
+tables only. A disk-backed or distributed provider would need its own RowId
+resolver; without one, index hits would degrade into full scans to reconstruct
+rows. The in-memory limitation is deliberate — it keeps the teaching engine small
+while the data-model boundary (snapshot table, opaque RowIds, lookup) is the
+same shape a production adapter would implement.
+
 ```text
 SortExec: TopK(fetch=3), ...
   VectorIndexScanExec: index=flat, metric=Cosine, query_dim=3, fetch=Some(3), ordered=false
@@ -50,7 +72,7 @@ Metric math, a `FlatIndex` that checks every vector, Arrow result execution, and
 will build the storage and extension boundary around them: validated vectors, an Arrow-backed table, a physical scan, and
 a rule that recognizes one safe top-k shape. Do not modify public APIs or tests.
 
-## Invariants
+## What Must Hold, and What Breaks If It Doesn't
 
 1. **I1 — Valid vectors:** a dataset is non-empty, has nonzero fixed dimension, and contains only finite `f32` values.
 2. **I2 — Consistent row identity:** each external `id` is unique, while a core row offset identifies the same row in the
@@ -103,7 +125,7 @@ its search result is otherwise correct.
 Build the selected `IndexConfig` over that dataset. Chapter 1 passes `IndexConfig::Flat`; Chapter 2 will pass
 `IndexConfig::IvfFlat` without changing table construction.
 
-### Define the Schema
+### Build This Course's Arrow Table
 
 DataFusion executes over Arrow arrays. Construct this schema:
 

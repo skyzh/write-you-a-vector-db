@@ -2,7 +2,7 @@
 
 > **Chapter 3**
 >
-> Complete [Restrict Search with IVFFlat](./rust-03-ivfflat.md) first. Finish with a bounded-degree NSW graph, best-first
+> Complete [Narrow the Search with IVFFlat](./rust-03-ivfflat.md) first. Finish with a bounded-degree NSW graph, best-first
 > search measured against exact results, and the same SQL top-k running through `index=nsw`.
 
 NSW is the graph-based building block of HNSW. It starts from one or more entry points and follows graph edges toward

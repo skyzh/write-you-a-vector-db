@@ -25,7 +25,7 @@ Your first SQL query uses DataFusion's vector distance expressions, bounded sort
 The starter includes a `FlatIndex`, which checks every vector, while you connect the table to the query planner. You will
 then add IVFFlat as your own candidate selector behind the same query.
 
-## Choose Your Workspace
+## Where to Write Your Code
 
 The Cargo workspace under `rust/` separates starter and reference trees:
 
