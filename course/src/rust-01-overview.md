@@ -24,23 +24,13 @@ Your first SQL query uses DataFusion's vector distance expressions, bounded sort
 The starter includes a `FlatIndex`, which checks every vector, while you connect the table to the query planner. You will
 then add IVFFlat as your own candidate selector behind the same query.
 
-## Choose Your Workspace
+## Where to Write Your Code
 
-The Cargo workspace under `rust/` separates starter and reference trees:
+Implement the TODOs in `vector-starter/` in chapter order. The `vector/`
+tree contains completed references; keep it closed while you work through
+the exercises.
 
-```text
-vector-starter/
-  core/                      dataset, IVFFlat, NSW, HNSW, benchmark, and IVF-PQ TODOs
-  datafusion/                Chapter 1 Arrow table and optimizer-rule TODOs
-vector/
-  core/                      completed core reference
-  datafusion/                completed DataFusion reference
-```
-
-Work in `vector-starter/` and implement its TODOs in chapter order. The `vector/` tree contains completed references; keep
-it closed while you work through the exercises, as required by the starter's `AGENTS.md` files.
-
-From the repository root, check that the untouched starter compiles:
+From the repository root, verify the starter compiles before you begin:
 
 ```sh
 cd rust
