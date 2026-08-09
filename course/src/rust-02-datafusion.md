@@ -29,6 +29,40 @@ plan.
 
 After your rule recognizes a compatible index, the physical plan becomes:
 
+## Data Model
+
+The learner checkpoint in this chapter uses a fixed in-memory convenience
+surface: `VectorTable::try_new` builds one Arrow batch with `id`, `payload`, and
+`embedding` columns from `VectorRow` values. The starter does not expose the
+generalized snapshot APIs described below.
+
+The reference engine extends that checkpoint with a custom `VectorTable` and an
+immutable `SnapshotTable`; it does not use DataFusion's `MemTable`. The extension
+accepts arbitrary Arrow schemas and multiple batches, binds one selected
+`FixedSizeList<Float32>` field as the vector column, and takes the dimension from
+that field's width. It copies the selected vector values into the index-owned
+`Dataset`, while the snapshot retains the source batches for projected output.
+
+A core index returns a dataset ordinal. Execution resolves that value through
+the snapshot in four steps:
+
+```text
+dataset ordinal -> snapshot.row_ids[ordinal] -> opaque RowId
+                -> checked batch/row location -> projected lookup
+```
+
+`RowId` is opaque snapshot identity, not a batch-and-row pair, and arbitrary
+user columns are not row identity. Vector execution never reconstructs output
+by treating a core ordinal as a `RecordBatch` row offset.
+
+DataFusion's `TableProvider` contract defines scans but has no generic stable
+`RowId` point-lookup API. This course's adapter therefore works with in-memory
+tables only. A disk-backed or distributed provider would need its own RowId
+resolver; without one, index hits would degrade into full scans to reconstruct
+rows. The in-memory limitation is deliberate — it keeps the teaching engine small
+while the data-model boundary (snapshot table, opaque RowIds, lookup) is the
+same shape a production adapter would implement.
+
 ```text
 SortExec: TopK(fetch=3), ...
   VectorIndexScanExec: index=flat, metric=Cosine, query_dim=3, fetch=Some(3), ordered=false
@@ -50,19 +84,45 @@ Metric math, a `FlatIndex` that checks every vector, Arrow result execution, and
 will build the storage and extension boundary around them: validated vectors, an Arrow-backed table, a physical scan, and
 a rule that recognizes one safe top-k shape. Do not modify public APIs or tests.
 
-## Invariants
+## What Must Hold, and What Breaks If It Doesn't
 
-1. **I1 — Valid vectors:** a dataset is non-empty, has nonzero fixed dimension, and contains only finite `f32` values.
-2. **I2 — Consistent row identity:** each external `id` is unique, while a core row offset identifies the same row in the
-   dataset and Arrow batch.
-3. **I3 — Faithful Arrow shape:** the table schema is `id: UInt64`, `payload: Utf8`, and
-   `embedding: FixedSizeList<Float32>` with the dataset dimension.
-4. **I4 — Safe match:** an index scan is selected only for one supported distance expression over `embedding`, a literal
-   query vector, a compatible metric and direction, and a valid dimension.
-5. **I5 — Exact fallback:** filters, multiple sort keys, non-literal vectors, wrong metrics, wrong directions, and invalid
-   query vectors remain on `VectorScanExec` plus DataFusion's exact sort.
-6. **I6 — SQL owns ordering:** unless the vector scan returns rows in the requested order, DataFusion retains its bounded
-   sort after the index selects candidates.
+The index may choose candidates only when it matches the SQL ranking. The table
+still owns row lookup, and DataFusion still owns any ordering the index does not
+promise.
+
+A dataset must be nonempty, have a fixed nonzero dimension, and contain only
+finite `f32` values. Rejecting invalid data at construction keeps the index from
+comparing incompatible coordinates or producing non-finite distances.
+
+Every index result must resolve to the source row that supplied its vector. The
+reference extension maps each index dataset ordinal through the snapshot's
+`RowId` table before checked batch/row lookup; this course's fixed helper also
+rejects duplicate external `id` values and preserves insertion order. If the
+vector and row location drift apart, search can find the right vector but return
+another row's payload.
+
+The reference extension accepts an arbitrary Arrow schema and binds its index to
+one selected `FixedSizeList<Float32>` column. The course exercises deliberately
+use the simpler `VectorTable::try_new` helper. It builds `UInt64` `id`, `Utf8`
+`payload`, and `FixedSizeList<Float32>` `embedding` columns, with the list width
+set to the dataset dimension. Construction rejects a selected-column type or
+width mismatch; without that check, search would interpret the wrong values or
+compare different dimensions.
+
+The optimizer selects an index scan only for one supported distance expression
+over the configured vector column, a literal query vector, a compatible metric
+and direction, and a valid dimension. A looser match could rank rows with a
+different metric, column, or query than the SQL requested.
+
+Filters, multiple sort keys, non-literal vectors, wrong metrics, wrong
+directions, and invalid query vectors stay on `VectorScanExec` plus
+DataFusion's exact sort. Forcing a filter or secondary sort onto the current
+index path could apply `LIMIT` too early; accepting a mismatched vector
+expression could rank by the wrong values. Either changes the SQL result.
+
+Unless the vector scan promises the requested order, DataFusion retains its
+bounded sort after the index selects candidates. Removing that sort would expose
+the index's candidate order rather than the query's distance order.
 
 ## Checkpoint 1: Validate the In-Memory Dataset
 
@@ -103,7 +163,7 @@ its search result is otherwise correct.
 Build the selected `IndexConfig` over that dataset. Chapter 1 passes `IndexConfig::Flat`; Chapter 2 will pass
 `IndexConfig::IvfFlat` without changing table construction.
 
-### Define the Schema
+### Build This Course's Arrow Table
 
 DataFusion executes over Arrow arrays. Construct this schema:
 
@@ -176,7 +236,7 @@ succeeds, clone the scan into `ScanMode::Vector { query }`, retain the requested
 `SortOrderPushdownResult::Exact`.
 
 **Prediction:** A cosine index exists, but the query uses `array_distance`. Both functions accept the same vector shapes.
-Should the rule select the index? No—the metric changes ranking, so I4 requires exact fallback.
+Should the rule select the index? No—the metric changes ranking, so the safe-match guarantee requires exact fallback.
 
 Run the positive and negative plan tests:
 

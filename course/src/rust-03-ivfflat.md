@@ -1,4 +1,4 @@
-# Restrict Search with IVFFlat
+# Narrow the Search with IVFFlat
 
 > **Chapter 2**
 >
@@ -53,14 +53,37 @@ rust/vector-starter/core/src/search.rs        recall_at_k only
 
 Keep the Chapter 1 DataFusion rule, public APIs, and tests unchanged. Your work stays in the two files above.
 
-## Invariants
+## What Must Hold, and What Breaks If It Doesn't
 
-1. **I1 — Valid budget:** `1 <= probes <= partitions <= rows`, and `iterations > 0`.
-2. **I2 — Complete assignment:** after training, every dataset row appears in exactly one inverted list.
-3. **I3 — Seeded build:** equal data, metric, configuration, and seed produce equal centroids and list sizes.
-4. **I4 — Metric consistency:** centroid assignment, centroid ranking, and candidate scoring all use the index metric.
-5. **I5 — Exact limit:** searching all partitions produces the same ordered top-k as `FlatIndex`.
-6. **I6 — Comparable measurement:** exact and approximate runs use the same data, queries, metric, and `k`.
+Your IVF configuration must satisfy `1 <= probes <= partitions <= rows`
+with `iterations > 0`. Construction and search reject invalid values before
+scanning; excess probes do not duplicate a uniquely ranked partition scan.
+
+After training, every dataset row must belong to exactly one inverted
+list. An orphaned row is invisible to every query; a row in two lists
+can occupy the result heap twice and crowd out a distinct row. Both copies use
+the same immutable vector and metric, so they do not acquire different exact
+distances.
+
+Given identical data, metric, configuration, and seed, k-means training
+must produce identical centroids and list sizes. A non-deterministic
+build makes every recall measurement unreproducible.
+
+Centroid assignment, centroid ranking, and candidate scoring must all
+use the same distance metric. Mixing metrics produces a result set
+ordered by a criterion the probe loop never optimized.
+
+Searching all partitions must produce the same ordered top-k as the
+exact `FlatIndex`. If the exhaustive probe disagrees with the flat
+index, inspect list membership as well as metric scoring, heap retention, and
+final ordering: an orphaned or duplicated row can also cause the mismatch.
+Placing a row in the wrong list does not change exhaustive results when the row
+still appears exactly once, but it can reduce recall when a query probes only
+some lists.
+
+Approximate and exact runs for recall measurement must use identical
+data, queries, metric, and `k`. Changing any of these between runs
+makes the recall number meaningless.
 
 ## Checkpoint 1: Measure Recall
 

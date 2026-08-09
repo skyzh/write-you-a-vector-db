@@ -31,16 +31,32 @@ The diagram shows the same vector IDs repeated across nested layers. A vertex th
 appear in every layer below it. Sparse upper-layer edges provide long jumps; denser lower-layer edges refine the search
 around the query.
 
-## Layer Invariants
+## What Must Hold, and What Breaks If It Doesn't
 
-Your implementation should preserve these rules:
+The hierarchy stays coherent only while each upper-layer vertex also exists in
+the layers below and every stored identifier names the same global vector.
 
-- layer 0 contains every vertex;
-- membership is nested: a vertex in layer `L` also appears in every lower layer;
-- each layer stores global vertex IDs into `vertices_` and `rids_`;
-- upper layers use `m_max_`, while layer 0 uses `m_max_0_`;
-- edges remain symmetric within each layer; and
-- the top entry point belongs to the current highest nonempty layer.
+Layer 0 contains every vertex. A vertex missing there can never appear in the
+final candidate search, even if an upper layer found it.
+
+Membership is nested: a vertex in layer `L` also appears in every lower layer.
+Without that nesting, the entry point selected in one layer may not exist in the
+next layer down.
+
+Every layer stores global vertex IDs that index `vertices_` and `rids_`.
+Treating a layer-local position as a global ID makes lookup compare or return
+the wrong record.
+
+Upper layers use `m_max_`, while layer 0 uses `m_max_0_`. Swapping or ignoring
+these bounds can make the navigation layers too dense or leave the final search
+layer too sparse.
+
+Edges remain symmetric within each layer. A one-sided edge makes reachability
+depend on traversal direction and leaves pruning with two different views of
+the graph.
+
+The top entry point belongs to the current highest nonempty layer. A stale entry
+point starts lookup from a vertex that the first search layer does not contain.
 
 The starter header has no dedicated top-entry-point field. You may add one, or derive it consistently from the highest
 layer. That representation is your choice; the invariants are not.

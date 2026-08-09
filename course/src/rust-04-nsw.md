@@ -2,7 +2,7 @@
 
 > **Chapter 3**
 >
-> Complete [Restrict Search with IVFFlat](./rust-03-ivfflat.md) first. Finish with a bounded-degree NSW graph, best-first
+> Complete [Narrow the Search with IVFFlat](./rust-03-ivfflat.md) first. Finish with a bounded-degree NSW graph, best-first
 > search measured against exact results, and the same SQL top-k running through `index=nsw`.
 
 NSW is the graph-based building block of HNSW. It starts from one or more entry points and follows graph edges toward
@@ -122,16 +122,34 @@ rust/vector-starter/core/src/nsw.rs
 The starter already exposes `NswConfig`, `NswIndex`, the shared `Neighbor` ordering, and bounded `TopK` helpers. Keep the
 public APIs, tests, metric behavior, and Chapter 1 DataFusion matcher unchanged.
 
-### Invariants
+### What Must Hold, and What Breaks If It Doesn't
 
-1. **I1 — Valid budget:** `max_connections > 0`, `ef_construction >= max_connections`, and `ef_search > 0`.
-2. **I2 — Visit once:** one layer search computes each visited row's query distance at most once.
-3. **I3 — Two frontiers:** `C` expands the nearest pending candidate while bounded `W` tracks the worst retained result.
-4. **I4 — Safe stop:** traversal stops only when `W` is full and the nearest pending candidate is worse than `W`'s worst
-   member.
-5. **I5 — Bounded reciprocal graph:** adjacency lists contain no duplicates or self-edges, every edge appears at both
-   endpoints, and every degree is at most `max_connections`.
-6. **I6 — Deterministic order:** all result and pruning ties use row offset after distance.
+Your graph budget must satisfy `max_connections > 0`,
+`ef_construction >= max_connections`, and `ef_search > 0`. A zero
+`max_connections` produces isolated nodes. Search widens an `ef_search`
+smaller than `k` to `ef_search.max(k)`; it can still return fewer than `k`
+only when the reachable graph contains too few rows.
+
+One layer search must compute each visited row's query distance at most
+once. Recomputing the same immutable metric operands wastes work; repeated
+calls do not acquire different rounding merely because they are repeated.
+
+Two frontiers drive the search: `C` expands the nearest pending
+candidate while bounded `W` tracks the worst retained result. Confusing
+these roles can discard a candidate that would have led to a better path.
+
+Traversal stops only when `W` is full and the nearest pending candidate
+is worse than `W`'s worst member. Stopping earlier can miss a closer
+neighbor. This is the course's bounded approximate-search rule, not a proof
+that later exploration could never reach a closer row through a currently
+worse candidate.
+
+Adjacency lists must contain no duplicates or self-edges. Every edge
+must appear at both endpoints with degree at most `max_connections`.
+
+All result and pruning ties use row offset after distance. Without a
+deterministic tie-break, two runs with identical data and seed can
+produce different result sets.
 
 ### Checkpoint 1: Search a Supplied Layer
 

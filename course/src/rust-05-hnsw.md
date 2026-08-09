@@ -96,17 +96,39 @@ The starter already contains the Chapter 3 layer search and pruning interfaces, 
 and the public HNSW configuration and inspection methods. Keep the NSW behavior, metric ordering, public APIs, and
 DataFusion matcher unchanged.
 
-### Invariants
+### What Must Hold, and What Breaks If It Doesn't
 
-1. **I1 — Nested membership:** row `r` appears in every layer from zero through `levels[r]` and in no higher layer.
-2. **I2 — Seeded levels:** equal data, configuration, and seed produce the same level sequence and top level.
-3. **I3 — Valid budget:** `max_connections > 0`, `ef_construction >= max_connections`, `ef_search > 0`, and
-   `max_level > 0`.
-4. **I4 — Greedy descent:** upper layers move only to a strictly closer neighbor and pass one entry point downward.
-5. **I5 — Layer-zero beam:** final search uses the Chapter 3 two-frontier traversal with width `ef_search.max(k)`.
-6. **I6 — Bounded reciprocal layers:** every layer preserves the degree cap, contains no duplicate or self-edges, and
-   stores every remaining edge at both endpoints.
-7. **I7 — Stable identity:** every layer stores the same core row offsets used by the dataset and Arrow batch.
+Row `r` must appear in every layer from zero through `levels[r]` and in
+no higher layer. A row missing from a lower layer is unreachable from
+below; a row in a higher layer than declared violates the level
+assignment the construction algorithm depends on.
+
+Given equal data, configuration, and seed, the level sequence and top
+layer must be identical. Non-deterministic levels make the graph
+structure unreproducible across runs.
+
+Your budget must satisfy `max_connections > 0`,
+`ef_construction >= max_connections`, `ef_search > 0`, and `max_level > 0`.
+
+Greedy descent in upper layers must strictly improve the public
+`(distance, row)` order and this course passes its single best entry point
+downward. Equal geometric distance may still move to a lower row offset, but
+the total order strictly decreases and therefore terminates. The shared
+`search_layer` also supports and deduplicates multiple entry points; the
+single-entry handoff is this course's descent schedule, not a frontier limit.
+
+The layer-zero beam search must use the Chapter 3 two-frontier
+traversal with width `ef_search.max(k)`. Reusing it preserves the algorithm
+implemented and tested in this course; another valid layer-zero strategy is not
+inherently inconsistent with greedy upper-layer descent.
+
+Every layer must preserve the degree cap, contain no duplicate or
+self-edges, and store every remaining edge at both endpoints.
+
+Every layer stores core dataset ordinals. The reference DataFusion adapter maps
+each returned ordinal through the snapshot's opaque `RowId` and then its checked
+batch/row location; a core ordinal is not an Arrow batch offset. Ordinal drift
+makes the graph score or return the wrong source row.
 
 ### Checkpoint 1: Descend One Layer
 
