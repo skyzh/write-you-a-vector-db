@@ -1,5 +1,7 @@
 # Benchmark Recall and Latency
 
+{{#include rust-in-progress.md}}
+
 > **Chapter 5**
 >
 > Complete [Add Hierarchy with HNSW](./rust-05-hnsw.md) first. Finish with one release-mode benchmark that compares
@@ -58,7 +60,7 @@ printing stay outside it. `black_box` keeps each returned result observable duri
 **Prediction:** Flat search should report recall `1.000`. If it does not, is the saved ground truth wrong, or did the
 comparison and reporting path fail to compare the Flat result with that ground truth correctly?
 
-## Understand the Report
+## Interpret the Benchmark Report
 
 Each output row has the same fields:
 
@@ -140,7 +142,7 @@ Do not require one approximate index to be universally faster or more accurate t
 Then choose two rows and explain the observed tradeoff. Name the build budget, search budget, recall, and latency fields
 that support your explanation instead of inferring a general ranking from the index names.
 
-## Review Your Chapter 5 Result
+## Chapter 5 Review
 
 After the release benchmark completes, explain:
 

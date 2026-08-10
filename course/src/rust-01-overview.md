@@ -1,5 +1,7 @@
 # Build Vector Search in Rust
 
+{{#include rust-in-progress.md}}
+
 <div class="warning">
 
 **Course status:** All five core chapters and the optional product-quantization follow-up are ready to implement. The

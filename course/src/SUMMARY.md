@@ -1,7 +1,7 @@
 # Summary
 
-- [Build Vector Search Inside a SQL Database](./00-introduction.md)
-- [Build Vector Search in Rust](./rust-01-overview.md)
+- [Preface](./00-introduction.md)
+- [The Rust Course](./rust-01-overview.md)
   - [Build an In-Memory Vector Table and Match Its Index](./rust-02-datafusion.md)
   - [Narrow the Search with IVFFlat](./rust-03-ivfflat.md)
   - [Navigate a Proximity Graph with NSW](./rust-04-nsw.md)

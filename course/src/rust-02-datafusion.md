@@ -1,5 +1,7 @@
 # Build an In-Memory Vector Table and Match Its Index
 
+{{#include rust-in-progress.md}}
+
 > **Chapter 1**
 >
 > Start from the two `*-starter` crates. Finish with an exact SQL top-k query, an Arrow-backed table, and a safe
@@ -84,7 +86,7 @@ Metric math, a `FlatIndex` that checks every vector, Arrow result execution, and
 will build the storage and extension boundary around them: validated vectors, an Arrow-backed table, a physical scan, and
 a rule that recognizes one safe top-k shape. Do not modify public APIs or tests.
 
-## What Must Hold, and What Breaks If It Doesn't
+## Correctness Requirements
 
 The index may choose candidates only when it matches the SQL ranking. The table
 still owns row lookup, and DataFusion still owns any ordering the index does not
@@ -154,7 +156,7 @@ boundary.
 
 Implement `VectorTable::try_new` in `vector-starter/datafusion/src/lib.rs`.
 
-### Preserve Identity
+### Preserve Row Identity
 
 First reject duplicate external IDs with a `HashSet`. Then build `Dataset` from the embeddings in exactly the same row
 order. If Arrow batch row 4 and dataset row 4 refer to different inputs, an index will return the wrong payload even when
@@ -276,7 +278,7 @@ cargo test -p vector-datafusion-starter --test sqllogictest day1_table_and_optim
 The SQLLogicTest asserts physical operators as well as rows. Its filtered case must remain exact; setting ordered mode may
 remove the generic sort, and setting it back to `false` must restore that sort in the next generated plan.
 
-## Review Your Chapter 1 Result
+## Chapter 1 Review
 
 After the two core tests, all `sql.rs` tests, and the Chapter 1 SQLLogicTest pass, choose one query and explain:
 
