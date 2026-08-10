@@ -1,5 +1,7 @@
 # Navigate a Proximity Graph with NSW
 
+{{#include rust-in-progress.md}}
+
 > **Chapter 3**
 >
 > Complete [Narrow the Search with IVFFlat](./rust-03-ivfflat.md) first. Finish with a bounded-degree NSW graph, best-first
@@ -122,7 +124,7 @@ rust/vector-starter/core/src/nsw.rs
 The starter already exposes `NswConfig`, `NswIndex`, the shared `Neighbor` ordering, and bounded `TopK` helpers. Keep the
 public APIs, tests, metric behavior, and Chapter 1 DataFusion matcher unchanged.
 
-### What Must Hold, and What Breaks If It Doesn't
+### Correctness Requirements
 
 Your graph budget must satisfy `max_connections > 0`,
 `ef_construction >= max_connections`, and `ef_search > 0`. A zero
@@ -201,7 +203,7 @@ SortExec: TopK(fetch=5), ...
 The NSW graph chooses candidate row offsets. DataFusion's bounded sort still owns final SQL ordering, and unsupported query
 shapes still use the exact scan.
 
-## Review Your Chapter 3 Result
+## Chapter 3 Review
 
 After the focused core test and SQLLogicTest pass, choose one insertion and one query and explain:
 

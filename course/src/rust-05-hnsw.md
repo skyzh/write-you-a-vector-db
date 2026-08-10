@@ -1,5 +1,7 @@
 # Add Hierarchy with HNSW
 
+{{#include rust-in-progress.md}}
+
 > **Chapter 4**
 >
 > Complete [Navigate a Proximity Graph with NSW](./rust-04-nsw.md) first. Finish with seeded sparse graph layers,
@@ -9,7 +11,7 @@ The previous chapter searches one NSW graph containing every vector. HNSW adds s
 skip list or a mipmap: upper layers make long jumps across the collection, while the complete layer zero refines the
 search around the query.
 
-## How Hierarchy Works
+## How HNSW Hierarchy Works
 
 Layer zero contains every vector. Each higher layer contains a progressively smaller random subset. A vertex that appears
 in an upper layer also appears in every layer below it.
@@ -96,7 +98,7 @@ The starter already contains the Chapter 3 layer search and pruning interfaces, 
 and the public HNSW configuration and inspection methods. Keep the NSW behavior, metric ordering, public APIs, and
 DataFusion matcher unchanged.
 
-### What Must Hold, and What Breaks If It Doesn't
+### Correctness Requirements
 
 Row `r` must appear in every layer from zero through `levels[r]` and in
 no higher layer. A row missing from a lower layer is unreachable from
@@ -185,7 +187,7 @@ SortExec: TopK(fetch=5), ...
 HNSW selects candidates; DataFusion still owns final SQL ordering. Filters and incompatible distance expressions remain on
 the exact scan.
 
-## Review Your Chapter 4 Result
+## Chapter 4 Review
 
 After the focused test and SQLLogicTest pass, choose one promoted row and one query and explain:
 

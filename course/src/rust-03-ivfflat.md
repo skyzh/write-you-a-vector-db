@@ -1,5 +1,7 @@
 # Narrow the Search with IVFFlat
 
+{{#include rust-in-progress.md}}
+
 > **Chapter 2**
 >
 > Complete [Build an In-Memory Vector Table and Match Its Index](./rust-02-datafusion.md) first. Finish with a seeded
@@ -53,7 +55,7 @@ rust/vector-starter/core/src/search.rs        recall_at_k only
 
 Keep the Chapter 1 DataFusion rule, public APIs, and tests unchanged. Your work stays in the two files above.
 
-## What Must Hold, and What Breaks If It Doesn't
+## Correctness Requirements
 
 Your IVF configuration must satisfy `1 <= probes <= partitions <= rows`
 with `iterations > 0`. Construction and search reject invalid values before
@@ -230,7 +232,7 @@ DataFusion passes `LIMIT 5` through Chapter 1's `with_fetch`. `VectorIndexScanEx
 the configured `probes`. The generic bounded sort remains responsible for final SQL ordering. Unsupported query shapes
 still use the exact `VectorScanExec` path.
 
-## Review Your Chapter 2 Result
+## Chapter 2 Review
 
 After the four Chapter 2 core tests, recall example, and Chapter 2 SQLLogicTest pass, choose one concrete build and query
 and explain:

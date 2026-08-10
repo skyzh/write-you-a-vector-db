@@ -1,5 +1,7 @@
 # Compress IVFFlat with Product Quantization
 
+{{#include rust-in-progress.md}}
+
 > **Optional Chapter 6**
 >
 > Complete [Benchmark Recall and Latency](./rust-06-benchmark.md) first. Finish with a residual IVF-PQ index that uses
@@ -16,7 +18,7 @@ quantization of the residual, the structure commonly called IVFADC or IVF-PQ. Th
 [Faiss index guide](https://github.com/facebookresearch/faiss/wiki/Faiss-indexes#summary-of-methods) uses the same
 coarse-quantizer-plus-residual-PQ decomposition.
 
-## Replace One Vector with Several Small Choices
+## Split Vectors into Subvectors
 
 Suppose a vector has eight dimensions. Split it into two four-dimensional subvectors:
 
@@ -40,7 +42,7 @@ encoded vector uses one byte per subquantizer even when the codebook has fewer t
 The supplied configuration uses 128 dimensions and 16 subquantizers. One full vector occupies `128 * 4 = 512` bytes,
 while its PQ code occupies 16 bytes. Shared codebooks add a fixed cost rather than a per-row cost.
 
-## Quantize the Residual, Not the Original Vector
+## Encode Residual Vectors
 
 IVF already gives every row a coarse centroid `c`. For a stored vector `x`, encode the residual:
 
@@ -126,7 +128,7 @@ The optional configuration is:
 | `rerank` | Full-precision shortlist budget | 100 |
 | `seed` | Reproducible training seed | 7 |
 
-## What Must Hold, and What Breaks If It Doesn't
+## Correctness Requirements
 
 This implementation accepts only `Metric::Euclidean` and rejects another metric
 before training. If that validation were removed, metric-specific coarse
@@ -273,7 +275,7 @@ the supplied value of 100 before you finish, and leave the data, query set, coar
 and `k` unchanged. Explain how recall and query latency respond. The encoded-byte count should not change because
 reranking changes query work, not stored codes.
 
-## Review Your Optional Chapter Result
+## IVF-PQ Review
 
 After all IVF-PQ core tests, the DataFusion plan check, and the release benchmark pass, explain:
 
