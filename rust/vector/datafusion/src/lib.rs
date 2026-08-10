@@ -11,7 +11,7 @@ use datafusion::arrow::array::{
 use datafusion::arrow::compute::concat_batches;
 use datafusion::arrow::datatypes::{DataType, Field, Schema, SchemaRef};
 use datafusion::arrow::record_batch::{RecordBatch, RecordBatchOptions};
-use datafusion::catalog::SchemaProvider;
+use datafusion::catalog::{CatalogProviderList, SchemaProvider};
 use datafusion::common::config::ConfigExtension;
 use datafusion::common::tree_node::{Transformed, TreeNode};
 use datafusion::common::{
@@ -83,6 +83,7 @@ impl VectorRow {
 pub struct VectorIndexAttachment {
     snapshot: Arc<VectorIndexSnapshot>,
     schema_provider: Arc<dyn SchemaProvider>,
+    catalog_list: Arc<dyn CatalogProviderList>,
     table_name: Arc<str>,
     table_provider: Weak<dyn datafusion::datasource::TableProvider>,
 }
@@ -234,6 +235,7 @@ impl VectorIndexAttachment {
         let table_ref = table_ref.into();
         let table_name = table_ref.table().to_owned();
         let schema_provider = context.state().schema_for_ref(table_ref.clone())?;
+        let catalog_list = Arc::clone(context.state().catalog_list());
         let current_provider = context.table_provider(table_ref).await?;
         let table_provider: Arc<dyn datafusion::datasource::TableProvider> = table.clone();
         if !Arc::ptr_eq(&current_provider, &table_provider) {
@@ -354,6 +356,7 @@ impl VectorIndexAttachment {
                 index,
             }),
             schema_provider,
+            catalog_list,
             table_name: table_name.into(),
             table_provider: Arc::downgrade(&table_provider),
         })
@@ -490,19 +493,36 @@ impl VectorIndexAttachment {
         }
 
         // `MemTable::scan` intentionally erases provider identity into a
-        // `MemorySourceConfig`. If another registered MemTable exposes the
-        // same shared batches, the physical source is ambiguous, so do not
-        // guess which table the scan came from.
-        self.schema_provider.table_names().into_iter().all(|name| {
-            let Some(Ok(Some(provider))) = poll_once(self.schema_provider.table(&name)) else {
-                return false;
-            };
-            Arc::ptr_eq(&provider, &expected)
-                || !provider
-                    .downcast_ref::<MemTable>()
-                    .and_then(|table| memtable_source_matches(table, source))
-                    .unwrap_or(false)
-        })
+        // `MemorySourceConfig`. If any other registered MemTable anywhere in
+        // the live catalog list exposes the same shared batches, the physical
+        // source is ambiguous (a same-named table in another schema can even
+        // shadow this one), so do not guess which table the scan came from.
+        // `Arc::ptr_eq` is the exact provider identity: a genuine alias of the
+        // same provider still short-circuits, while a distinct provider that
+        // happens to share Arrow buffers fails closed.
+        self.catalog_list
+            .catalog_names()
+            .into_iter()
+            .all(|catalog_name| {
+                let Some(catalog) = self.catalog_list.catalog(&catalog_name) else {
+                    return false;
+                };
+                catalog.schema_names().into_iter().all(|schema_name| {
+                    let Some(schema) = catalog.schema(&schema_name) else {
+                        return false;
+                    };
+                    schema.table_names().into_iter().all(|name| {
+                        let Some(Ok(Some(provider))) = poll_once(schema.table(&name)) else {
+                            return false;
+                        };
+                        Arc::ptr_eq(&provider, &expected)
+                            || !provider
+                                .downcast_ref::<MemTable>()
+                                .and_then(|table| memtable_source_matches(table, source))
+                                .unwrap_or(false)
+                    })
+                })
+            })
     }
 
     fn source_matches(&self, source: &MemorySourceConfig, scan_schema: &SchemaRef) -> bool {

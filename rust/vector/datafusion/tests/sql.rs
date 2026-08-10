@@ -7,6 +7,7 @@ use datafusion::arrow::buffer::NullBuffer;
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::arrow::util::pretty::pretty_format_batches;
+use datafusion::catalog::MemorySchemaProvider;
 use datafusion::common::Result as DataFusionResult;
 use datafusion::datasource::MemTable;
 use datafusion::execution::config::SessionConfig;
@@ -961,4 +962,69 @@ async fn arbitrary_schema_rejects_dimension_drift_and_null_vectors() {
     .await
     .unwrap_err();
     assert!(null.to_string().contains("contains null at row 1"));
+}
+
+#[tokio::test]
+async fn cross_schema_same_name_table_sharing_batches_never_rewrites() {
+    let base = SessionContext::new_with_config(with_vector_search_options(SessionConfig::new()));
+    let indexed = vector_mem_table(rows()).unwrap();
+    let shared_batch = indexed.batches[0].read().await[0].clone();
+
+    // A second schema holds a same-named MemTable over the exact same shared
+    // Arrow batch as the indexed table. MemTable::scan erases provider
+    // identity, so the rewrite-time proof must span every live catalog and
+    // schema: this scan is ambiguous and must stay on the exact DataFusion
+    // plan even though the attachment's own table still exists. Returning an
+    // approximate result from the wrong table would be a real bug.
+    let catalog = base.catalog("datafusion").expect("default catalog exists");
+    catalog
+        .register_schema("other", Arc::new(MemorySchemaProvider::new()))
+        .expect("second schema registers");
+    let other_schema = catalog.schema("other").expect("other schema resolves");
+    let other = Arc::new(
+        MemTable::try_new(shared_batch.schema(), vec![vec![shared_batch]])
+            .expect("shared Arrow buffers are valid MemTable input"),
+    );
+    other_schema
+        .register_table("points".to_owned(), other.clone())
+        .expect("same-named table registers");
+    base.register_table("points", indexed.clone()).unwrap();
+
+    let context = attach(
+        &base,
+        "points",
+        &indexed,
+        "embedding",
+        Metric::Euclidean,
+        // A deliberately low-recall index would return the wrong row if the
+        // rewrite fired for the ambiguous scan.
+        IndexConfig::Hnsw(HnswConfig {
+            max_connections: 1,
+            ef_construction: 1,
+            ef_search: 1,
+            max_level: 1,
+            seed: 7,
+        }),
+    )
+    .await;
+
+    let sql = "SELECT id FROM other.points \
+               ORDER BY array_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 1";
+    let plan = explain(&context, sql).await;
+    assert_memtable_fallback(&plan);
+
+    let batches = context.sql(sql).await.unwrap().collect().await.unwrap();
+    let ids = batches
+        .iter()
+        .flat_map(|batch| {
+            batch
+                .column(0)
+                .as_any()
+                .downcast_ref::<UInt64Array>()
+                .unwrap()
+                .iter()
+                .collect::<Vec<_>>()
+        })
+        .collect::<Vec<_>>();
+    assert_eq!(ids, vec![Some(10)]);
 }
