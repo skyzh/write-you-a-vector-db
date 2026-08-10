@@ -12,7 +12,10 @@ use datafusion::execution::context::SessionContext;
 use datafusion::physical_plan::collect;
 use sqllogictest::{AsyncDB, DBOutput, DefaultColumnType, Runner};
 use vector_core::{HnswConfig, IndexConfig, IvfFlatConfig, Metric, NswConfig};
-use vector_datafusion::{VectorRow, VectorTable, with_vector_search_options};
+use vector_datafusion::{
+    VectorIndexAttachment, VectorRow, vector_mem_table, with_vector_indexes,
+    with_vector_search_options,
+};
 
 struct DataFusionDb {
     context: SessionContext,
@@ -73,7 +76,8 @@ fn vector_plan_rows(batches: &[RecordBatch]) -> Result<Vec<Vec<String>>, DataFus
         .filter(|line| {
             line.starts_with("SortExec")
                 || line.starts_with("VectorIndexScanExec")
-                || line.starts_with("VectorScanExec")
+                || line.starts_with("FilterExec")
+                || line.starts_with("DataSourceExec")
         })
         .map(|line| vec![line.to_owned()])
         .collect::<Vec<_>>();
@@ -132,17 +136,28 @@ fn rows() -> Vec<VectorRow> {
         .collect()
 }
 
-fn database(config: IndexConfig) -> Result<DataFusionDb, DataFusionError> {
-    let context = SessionContext::new_with_config(with_vector_search_options(SessionConfig::new()));
-    let table = VectorTable::try_new(rows(), Metric::Euclidean, config)?;
-    context.register_table("points", Arc::new(table))?;
-    Ok(DataFusionDb { context })
+async fn database(config: IndexConfig) -> Result<DataFusionDb, DataFusionError> {
+    let base = SessionContext::new_with_config(with_vector_search_options(SessionConfig::new()));
+    let table = vector_mem_table(rows())?;
+    base.register_table("points", table.clone())?;
+    let attachment = VectorIndexAttachment::try_new(
+        &base,
+        "points",
+        &table,
+        "embedding",
+        Metric::Euclidean,
+        config,
+    )
+    .await?;
+    Ok(DataFusionDb {
+        context: with_vector_indexes(&base, vec![attachment]),
+    })
 }
 
 async fn run_case(filename: &str, config: IndexConfig) {
     let mut runner = Runner::new(move || {
         let config = config.clone();
-        async move { database(config) }
+        async move { database(config).await }
     });
     let path = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("tests/slt")
