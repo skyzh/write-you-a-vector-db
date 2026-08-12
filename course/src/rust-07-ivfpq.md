@@ -115,7 +115,8 @@ Implement `IvfPqIndex::try_new`. Validate before training:
 
 - `1 <= probes <= partitions <= rows` and `iterations > 0`;
 - `subquantizers > 0` and the dimension divides evenly into that many slices;
-- `2 <= codebook_size <= min(256, rows)`; and
+- `2 <= codebook_size <= min(256, rows)`;
+- `rerank > 0`; and
 - the metric is Euclidean.
 
 Build the coarse partition with the same partitions, probes, iterations, and seed. Assign every row against the final
@@ -156,13 +157,14 @@ Implement `search_with_probes`:
 1. validate the query, probe count, and nonzero rerank budget;
 2. rank coarse centroids and visit the nearest lists;
 3. build residual lookup tables for each visited list;
-4. sum one table entry per code to retain an approximate shortlist;
+4. sum one table entry per code with a shortlist budget of at least `k`, even when `rerank < k`;
 5. compute exact Euclidean distances for the shortlist row offsets; and
 6. return exact top-k results in the public `(distance, row)` order.
 
 Keep coarse selection, lookup scores, and exact rerank distances in `f64`. At the public `Neighbor` boundary, retain only
 finite distances representable as `f32`, convert them, and apply the public tie-break. Row identity must remain attached
-to each code through both candidate stages.
+to each code through both candidate stages. If discarding an unrepresentable exact distance would leave fewer than
+`min(k, rows)` results, return an error instead of silently returning an incomplete result.
 
 Probe every list and rerank every row as an exactness boundary:
 
