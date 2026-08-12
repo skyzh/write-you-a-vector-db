@@ -47,6 +47,7 @@ Join skyzh's Discord server to study with the write-you-a-vector-db community.
 
 ## License
 
-The BusTub vector-db starter code and solution are under the MIT license. Some files overlap with CMU's Database Systems
-course and must not be made public. The author reserves the full copyright of the course materials, including Markdown
-files and figures.
+The code in this repository is licensed under the [Apache License 2.0](./LICENSE). The book, including its Markdown and
+figures, is licensed under [CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/).
+
+The `bustub-vectordb-starter` and `bustub-vectordb-solution` git submodules retain their own upstream license terms.
