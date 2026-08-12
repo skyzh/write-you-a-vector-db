@@ -4,17 +4,16 @@
 
 <div class="warning">
 
-**Course status:** All five core chapters and the optional product-quantization follow-up are ready to implement. The
-repository includes starter code, focused tests, and separate reference solutions.
+**Course status:** All six required chapters are ready to implement. The repository includes starter code, focused tests,
+and separate reference solutions.
 
 </div>
 
-Across five chapters, you will connect an in-memory vector table to DataFusion, implement the optimizer rule that selects
-a safe vector-index scan, build IVFFlat behind that rule, navigate a proximity graph with NSW, add HNSW hierarchy, and
-compare every index on one benchmark workload. The first four chapters end with a runnable SQL query, so you can inspect
-how the physical plan changes as the index becomes more capable. The final core chapter measures recall and latency
-directly and establishes the shared measurement method. The optional follow-up applies that method to residual product
-quantization on a separate Euclidean workload.
+Across six chapters, you will connect an in-memory vector table to DataFusion, implement the optimizer rule that selects
+a safe vector-index scan, build IVFFlat behind that rule, navigate a proximity graph with NSW, add HNSW hierarchy,
+compress residual candidate scoring with IVF-PQ, and compare all five indexes on one Euclidean workload. The first five
+chapters end with a runnable SQL query, so you can inspect how the physical plan changes as the index becomes more
+capable. The final chapter measures recall and latency directly under one shared contract.
 
 ```sql
 SELECT id, payload
@@ -106,7 +105,7 @@ that rewrite is a correctness requirement.
 SQL + DataFusion optimizer --> VectorTable / VectorScanExec --> VectorIndex
                                                                   |-- exact FlatIndex
                                                                   |-- your IvfFlatIndex
-                                                                  |     `-- optional IvfPqIndex
+                                                                  |-- your IvfPqIndex
                                                                   |-- your NswIndex
                                                                   `-- your HnswIndex
 ```
@@ -116,8 +115,8 @@ crate owns dimensions, metrics, exact-search results, candidate selection, and d
 implementations will not import DataFusion.
 
 This separation gives each core index chapter two useful views of the same checkpoint: small Rust tests isolate the
-algorithm, while an SQLLogicTest shows that the Chapter 1 optimizer can reach it. The optional IVF-PQ follow-up reuses
-that optimizer boundary, then uses a dedicated benchmark to focus on compression and reranking.
+algorithm, while an SQLLogicTest shows that the Chapter 1 optimizer can reach it. Chapter 5 reuses that boundary for
+IVF-PQ; Chapter 6 brings every index into one fixed comparison.
 
 ## System Contract
 
@@ -139,19 +138,14 @@ that optimizer boundary, then uses a dedicated benchmark to focus on compression
 | [2 — IVFFlat](./rust-03-ivfflat.md) | 4–5 hours | A flat index handles matched SQL top-k queries exactly. | Seeded k-means, inverted lists, and `probes` create a measured recall/work tradeoff behind the same SQL query. |
 | [3 — NSW](./rust-04-nsw.md) | 4–5 hours | Candidate selection comes from centroid partitions. | Best-first traversal and bounded reciprocal graph insertion expose `ef_search` as a second recall/work tradeoff behind the same SQL query. |
 | [4 — HNSW](./rust-05-hnsw.md) | 4–5 hours | Every graph query starts in one complete layer. | Seeded sparse layers route greedily into layer-zero beam search while preserving the same SQL and recall contracts. |
-| [5 — Benchmark](./rust-06-benchmark.md) | 1–2 hours | Each index has been exercised separately. | Exact, IVFFlat, NSW, and HNSW share one reproducible build, recall, and latency measurement contract. |
-| [Optional 6 — IVF-PQ](./rust-07-ivfpq.md) | 3–4 hours | Chapter 5 established the comparison method, but compression has not been measured on a Euclidean workload. | Residual PQ codes provide lookup-table candidate scoring, exact reranking, and explicit compressed-representation accounting. |
+| [5 — IVF-PQ](./rust-07-ivfpq.md) | 3–4 hours | HNSW completes the course's full-precision index set. | Residual PQ codes provide lookup-table candidate scoring, exact reranking, and explicit search-representation accounting. |
+| [6 — Five-index benchmark](./rust-06-benchmark.md) | 1–2 hours | Each index has been exercised separately. | Flat, IVFFlat, NSW, HNSW, and IVF-PQ share one reproducible Euclidean build, recall, and latency measurement contract. |
 
-Chapter 1 gives you an exact end-to-end query whose rows and physical plan you can inspect. Chapters 2–4 keep that SQL
-interface and safety rule in place while changing how candidate rows are selected. Chapter 5 compares those indexes
-without changing the data, queries, metric, or `k`.
+Chapter 1 gives you an exact end-to-end query whose rows and physical plan you can inspect. Chapters 2–5 keep that SQL
+interface and safety rule in place while changing how candidate rows are selected. Chapter 6 then compares all five
+indexes without changing the data, queries, Euclidean metric, or `k`.
 
-Optional Chapter 6 returns to IVFFlat after Chapter 5 establishes the measurement method. It uses a separate 5,000-row,
-128-dimensional Euclidean workload and prints a fresh full-precision IVFFlat row; do not compare its numbers directly
-with Chapter 5's 2,000-row cosine results. The chapter adds compression without changing the collection or `VectorIndex`
-boundary.
-
-After Chapter 5, you should be able to explain:
+After Chapter 6, you should be able to explain:
 
 - how row identity survives conversion from Rust structs to core offsets and Arrow arrays;
 - which physical expression shapes are safe to lower to a vector index;
@@ -159,16 +153,17 @@ After Chapter 5, you should be able to explain:
 - why the optimizer rule must exist before an approximate index can be exercised from SQL;
 - why IVFFlat must rebuild list membership after its final centroid update; and
 - how `probes` trades candidate work for recall without changing SQL;
-- why NSW needs separate candidate and result frontiers; and
+- why NSW needs separate candidate and result frontiers;
 - how reciprocal pruning preserves a bounded graph;
-- why HNSW uses greedy upper layers and a layer-zero beam; and
-- how seeded promotion makes comparisons reproducible; and
-- how exact ground truth, warm-up, and one shared workload make recall and latency comparisons fair.
+- why HNSW uses greedy upper layers and a layer-zero beam;
+- how seeded promotion makes comparisons reproducible;
+- why IVF-PQ separates coarse centroids, residual codebooks, approximate scoring, and exact reranking; and
+- how exact ground truth, balanced warm-up, and one shared workload make recall and latency comparisons fair.
 
 ## Scope
 
-These chapters use an immutable in-memory collection. The optional follow-up covers readable Euclidean residual IVF-PQ,
-but not bit packing or optimized kernels. Online updates or deletes, index persistence, crash recovery, concurrent
+These chapters use an immutable in-memory collection and a readable Euclidean residual IVF-PQ implementation, but not
+bit packing or optimized kernels. Online updates or deletes, index persistence, crash recovery, concurrent
 mutation, filtered ANN, GPU kernels, distributed execution, DDL, and a network service remain outside this implementation.
 
 {{#include copyright.md}}

@@ -6,8 +6,8 @@
   - [Narrow the Search with IVFFlat](./rust-03-ivfflat.md)
   - [Navigate a Proximity Graph with NSW](./rust-04-nsw.md)
   - [Add Hierarchy with HNSW](./rust-05-hnsw.md)
-  - [Benchmark Recall and Latency](./rust-06-benchmark.md)
-  - [Optional: Compress IVFFlat with PQ](./rust-07-ivfpq.md)
+  - [Compress IVFFlat with Product Quantization](./rust-07-ivfpq.md)
+  - [Benchmark Five Indexes](./rust-06-benchmark.md)
 - [Where to Go Next](./10-epilogue.md)
 
 ---
