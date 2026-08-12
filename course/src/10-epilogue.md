@@ -1,9 +1,8 @@
 # Where to Go Next
 
-The Rust course builds an immutable in-memory collection, exact fallback, IVFFlat, NSW, HNSW, SQL query support, and a
-shared recall and latency benchmark. The optional quantization follow-up adds residual IVF-PQ and exact reranking. A
-teaching system still leaves plenty of room to explore the storage, query-processing, and serving concerns of a
-production vector database.
+The Rust course builds an immutable in-memory collection, exact fallback, IVFFlat, NSW, HNSW, residual IVF-PQ, SQL query
+support, and a shared five-index recall and latency benchmark. A teaching system still leaves plenty of room to explore
+the storage, query-processing, and serving concerns of a production vector database.
 
 ## One SQL Query, Many Layers
 
@@ -23,7 +22,7 @@ Once that system works, several extensions make good independent projects.
 
 - Map immutable vector and index files directly instead of decoding them into many heap allocations.
 - Compare array-of-structures and structure-of-arrays layouts for distance evaluation and graph traversal.
-- Extend the optional IVF-PQ index with scalar quantization, bit-packed codes, or optimized product quantization.
+- Extend IVF-PQ with scalar quantization, bit-packed codes, or optimized product quantization.
 - Rebuild large indexes with bounded memory and resumable checkpoints.
 
 ## Query Processing
@@ -70,8 +69,8 @@ course continues the same investigation with a small in-memory system whose laye
 
 ## Feedback
 
-The five Rust chapters include starter code, executable references, focused tests, SQL plan checks for the implementation
-chapters, a final benchmark across all four indexes, and an optional IVF-PQ follow-up.
+The six Rust chapters include starter code, executable references, focused tests, SQL plan checks for the implementation
+chapters, required residual IVF-PQ, and a final benchmark across all five indexes.
 Feedback about the scope, ordering, datasets, or architecture is welcome.
 
 [![Join skyzh's Discord Server](discord-badge.svg)](https://skyzh.dev/join/discord)

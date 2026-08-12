@@ -8,9 +8,9 @@ answer SQL top-k queries through DataFusion and make the tradeoff between recall
 
 <div class="warning">
 
-**Course status:** All five chapters are ready to implement: an in-memory Arrow table and DataFusion optimizer rule,
-followed by IVFFlat, NSW, HNSW, and a shared recall and latency benchmark. An optional sixth chapter adds residual product
-quantization and exact reranking. The repository includes starter code, focused tests, and separate completed references.
+**Course status:** All six chapters are ready to implement: an in-memory Arrow table and DataFusion optimizer rule,
+followed by IVFFlat, NSW, HNSW, residual IVF-PQ, and a shared five-index recall and latency benchmark. The repository
+includes starter code, focused tests, and separate completed references.
 
 </div>
 
@@ -30,16 +30,14 @@ behind one SQL top-k query.
 
 ## What You Will Build
 
-The five Rust chapters build:
+The six Rust chapters build:
 
 1. An Arrow-backed vector table and a conservative DataFusion optimizer rule that selects a vector-index scan.
 2. An IVFFlat index and recall harness that compare approximate results with exact search.
 3. An NSW proximity graph with bounded reciprocal edges and adjustable search width.
 4. An HNSW hierarchy that routes through sparse upper layers before searching the complete graph.
-5. A benchmark that compares exact, IVFFlat, NSW, and HNSW search on the same deterministic workload.
-
-An optional follow-up compresses IVFFlat's candidate-scoring representation with product quantization, then measures the
-resulting storage, recall, and latency tradeoff.
+5. An IVF-PQ index that compresses residual candidate scoring and reranks a shortlist with exact distances.
+6. A benchmark that compares Flat, IVFFlat, NSW, HNSW, and IVF-PQ on the same deterministic Euclidean workload.
 
 At its core, this is a regular Rust library. You will build a DataFusion adapter that recognizes a safe SQL top-k query and
 routes it to a vector index. The collection and indexes stay independent of Arrow and the query engine, so you can explore
@@ -51,7 +49,7 @@ After completing the course, you should be able to:
 
 - define the semantics and edge cases of Euclidean, cosine, and inner-product search;
 - preserve each row's identity when converting vectors into Arrow arrays and a DataFusion `TableProvider`;
-- explain how IVFFlat and graph indexes trade build cost, memory, latency, and recall;
+- explain how IVFFlat, graph indexes, and IVF-PQ trade build cost, representation size, latency, and recall;
 - design benchmarks that compare ANN results with exact-search results;
 - recognize when a SQL top-k query can safely use an approximate index; and
 - separate a storage and search engine from its SQL interface.
@@ -83,10 +81,9 @@ Each implementation chapter begins with a concrete goal, the relevant invariants
 with focused tests and a short reflection on what you observed.
 
 Chapter 1 makes the table and optimizer rule runnable. Chapter 2 compares IVFFlat with exact search, Chapter 3 follows
-graph edges with NSW, and Chapter 4 adds sparse HNSW layers. Chapter 5 compares all four indexes under one measurement
-contract. The optional Chapter 6 reuses that measurement method on a separate Euclidean workload, where a fresh IVFFlat
-row provides the full-precision baseline for IVF-PQ. Every approximate index uses the same collection API, so you can
-compare algorithms without changing the core search contract.
+graph edges with NSW, and Chapter 4 adds sparse HNSW layers. Chapter 5 adds residual IVF-PQ behind the same collection and
+SQL boundary. Chapter 6 compares all five indexes under one fixed Euclidean measurement contract, so the reported recall
+and latency fields describe the same data, queries, metric, and `k`.
 
 ## Community
 

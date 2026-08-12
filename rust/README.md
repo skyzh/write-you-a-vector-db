@@ -13,9 +13,9 @@ vector/
 
 Chapter 1 makes vector-index selection observable from SQL. Chapter 2 implements
 IVFFlat behind that unchanged optimizer boundary, and Chapter 3 adds NSW graph
-search. Chapter 4 adds HNSW hierarchy, and Chapter 5 benchmarks every index on
-the same workload. Optional Chapter 6 adds residual product quantization and
-exact reranking to IVFFlat.
+search. Chapter 4 adds HNSW hierarchy, Chapter 5 adds residual product
+quantization and exact reranking to IVFFlat, and Chapter 6 benchmarks all five
+indexes on the same Euclidean workload.
 
 Check the untouched starter without executing TODOs:
 
@@ -30,7 +30,6 @@ Validate the completed reference:
 cargo test -p vector-core
 cargo test -p vector-datafusion
 cargo run --release -p vector-core --example recall
-cargo run --release -p vector-core --example quantization
 ```
 
 The workspace uses the stable Rust channel from `rust-toolchain.toml` and pins

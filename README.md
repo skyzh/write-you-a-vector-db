@@ -10,7 +10,7 @@ compare approximate results with exact search, and connect the resulting indexes
 The course focuses on the boundary where algorithms become database features:
 
 ```text
-in-memory table → DataFusion optimizer rule → IVFFlat → NSW → HNSW
+in-memory table → DataFusion optimizer rule → IVFFlat → NSW → HNSW → IVF-PQ → benchmark
 ```
 
 Instead of hiding vector search behind an HTTP API or an ANN library, the course exposes the algorithms, evaluation
@@ -18,14 +18,13 @@ contracts, query planning, and execution boundary that make SQL vector search wo
 
 ## Course Status
 
-The [Rust course](https://skyzh.github.io/write-you-a-vector-db/rust-01-overview) has five chapters: an Arrow-backed
-in-memory table and safe DataFusion optimizer rule, followed by IVFFlat, NSW, HNSW, and a shared recall and latency
-benchmark. An optional follow-up adds residual product quantization and exact reranking to IVFFlat. The implementation
-chapters include starter code, focused tests, and separate completed reference crates; the four SQL-facing chapters also
-include SQLLogicTests.
+The [Rust course](https://skyzh.github.io/write-you-a-vector-db/rust-01-overview) has six required chapters: an
+Arrow-backed in-memory table and safe DataFusion optimizer rule, IVFFlat, NSW, HNSW, residual IVF-PQ, and a final shared
+recall and latency benchmark. The implementation chapters include starter code, focused tests, and separate completed
+reference crates. Chapters 1–4 include SQLLogicTests; Chapter 5 includes a focused SQL planner/EXPLAIN test.
 
-The core benchmark compares recall and latency on one shared cosine workload. The optional IVF-PQ example uses a
-separate Euclidean workload, so its results are not directly comparable.
+The final benchmark compares Flat, IVFFlat, NSW, HNSW, and IVF-PQ on one shared Euclidean workload. It reports build
+time, recall, p50 and p99 search latency, plus the IVF-PQ search-representation accounting.
 
 Run the completed reference with:
 
@@ -33,7 +32,6 @@ Run the completed reference with:
 cd rust
 cargo test -p vector-core -p vector-datafusion
 cargo run --release -p vector-core --example recall
-cargo run --release -p vector-core --example quantization
 ```
 
 The original [C++/BusTub edition](https://skyzh.github.io/write-you-a-vector-db/cpp-01-overview) is deprecated and
