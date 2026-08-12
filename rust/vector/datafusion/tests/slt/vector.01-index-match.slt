@@ -20,8 +20,9 @@ query T
 EXPLAIN SELECT id FROM points WHERE id >= 4
 ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 2;
 ----
-SortExec: TopK(fetch=2), expr=[array_distance(CAST(embedding@1 AS List(non-null Float64)), [1.0, 1.0, 1.0]) ASC NULLS LAST], preserve_partitioning=[true]
-VectorScanExec: rows=8, fetch=None
+SortExec: TopK(fetch=2), expr=[array_distance(CAST(embedding@1 AS List(non-null Float64)), [1.0, 1.0, 1.0]) ASC NULLS LAST], preserve_partitioning=[false]
+FilterExec: id@0 >= 4
+DataSourceExec: partitions=1, partition_sizes=[1]
 
 query I
 SELECT id FROM points WHERE id >= 4
