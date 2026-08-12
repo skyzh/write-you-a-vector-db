@@ -101,8 +101,9 @@ fn main() -> vector_core_starter::Result<()> {
     let workload = Workload::fixed()?;
 
     let dataset = workload.dataset.clone();
+    let metric = workload.metric;
     let started = Instant::now();
-    let flat = FlatIndex::try_new(dataset, workload.metric)?;
+    let flat = FlatIndex::try_new(dataset, metric)?;
     let flat_build = started.elapsed();
     let ground_truth = workload
         .queries
@@ -111,23 +112,31 @@ fn main() -> vector_core_starter::Result<()> {
         .collect::<vector_core_starter::Result<Vec<_>>>()?;
 
     let dataset = workload.dataset.clone();
+    let metric = workload.metric;
+    let config = ivf_flat_config();
     let started = Instant::now();
-    let ivf_flat = IvfFlatIndex::try_new(dataset, workload.metric, ivf_flat_config())?;
+    let ivf_flat = IvfFlatIndex::try_new(dataset, metric, config)?;
     let ivf_flat_build = started.elapsed();
 
     let dataset = workload.dataset.clone();
+    let metric = workload.metric;
+    let config = nsw_config();
     let started = Instant::now();
-    let nsw = build_nsw(dataset)?;
+    let nsw = build_nsw(dataset, metric, config)?;
     let nsw_build = started.elapsed();
 
     let dataset = workload.dataset.clone();
+    let metric = workload.metric;
+    let config = hnsw_config();
     let started = Instant::now();
-    let hnsw = build_hnsw(dataset)?;
+    let hnsw = build_hnsw(dataset, metric, config)?;
     let hnsw_build = started.elapsed();
 
     let dataset = workload.dataset.clone();
+    let metric = workload.metric;
+    let config = ivf_pq_config();
     let started = Instant::now();
-    let ivf_pq = build_ivf_pq(dataset)?;
+    let ivf_pq = build_ivf_pq(dataset, metric, config)?;
     let ivf_pq_build = started.elapsed();
     let accounting = PqAccounting::from_index(&ivf_pq);
 
@@ -206,18 +215,27 @@ fn ivf_pq_config() -> IvfPqConfig {
     }
 }
 
-fn build_nsw(_dataset: Dataset) -> vector_core_starter::Result<NswIndex> {
-    let _config = nsw_config();
+fn build_nsw(
+    _dataset: Dataset,
+    _metric: Metric,
+    _config: NswConfig,
+) -> vector_core_starter::Result<NswIndex> {
     todo!("Chapter 6: build NSW with the benchmark configuration")
 }
 
-fn build_hnsw(_dataset: Dataset) -> vector_core_starter::Result<HnswIndex> {
-    let _config = hnsw_config();
+fn build_hnsw(
+    _dataset: Dataset,
+    _metric: Metric,
+    _config: HnswConfig,
+) -> vector_core_starter::Result<HnswIndex> {
     todo!("Chapter 6: build HNSW with the benchmark configuration")
 }
 
-fn build_ivf_pq(_dataset: Dataset) -> vector_core_starter::Result<IvfPqIndex> {
-    let _config = ivf_pq_config();
+fn build_ivf_pq(
+    _dataset: Dataset,
+    _metric: Metric,
+    _config: IvfPqConfig,
+) -> vector_core_starter::Result<IvfPqIndex> {
     todo!("Chapter 6: build IVF-PQ with the benchmark configuration")
 }
 
@@ -333,9 +351,124 @@ fn sample(row: u64, dimension: u64) -> f32 {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
     use std::sync::{Arc, Mutex};
 
     use super::*;
+
+    fn assert_build_boundary(
+        source: &str,
+        elapsed_marker: &str,
+        constructor_marker: &str,
+        config_marker: Option<&str>,
+        uses_try_new: bool,
+    ) {
+        let end = source.find(elapsed_marker).unwrap();
+        let prefix = &source[..end];
+        let constructor = prefix.rfind(constructor_marker).unwrap();
+        let timer = prefix[..constructor]
+            .rfind("let started = Instant::now();")
+            .unwrap();
+        let dataset = prefix[..timer]
+            .rfind("let dataset = workload.dataset.clone();")
+            .unwrap();
+        let metric = prefix[..timer]
+            .rfind("let metric = workload.metric;")
+            .unwrap();
+        assert!(dataset < metric);
+        if let Some(config_marker) = config_marker {
+            let config = prefix[..timer].rfind(config_marker).unwrap();
+            assert!(metric < config);
+        }
+
+        let timed = &source[timer..end];
+        assert_eq!(timed.matches("let ").count(), 2);
+        assert_eq!(timed.matches("try_new(").count(), usize::from(uses_try_new));
+        assert!(timed.contains(constructor_marker));
+        assert!(!timed.contains("workload.metric"));
+        assert!(!timed.contains("_config()"));
+    }
+
+    #[test]
+    fn build_timers_include_only_constructor_work() {
+        let source = include_str!("recall.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        assert_build_boundary(
+            source,
+            "let flat_build = started.elapsed();",
+            "FlatIndex::try_new(dataset, metric)",
+            None,
+            true,
+        );
+        assert_build_boundary(
+            source,
+            "let ivf_flat_build = started.elapsed();",
+            "IvfFlatIndex::try_new(dataset, metric, config)",
+            Some("let config = ivf_flat_config();"),
+            true,
+        );
+        assert_build_boundary(
+            source,
+            "let nsw_build = started.elapsed();",
+            "build_nsw(dataset, metric, config)",
+            Some("let config = nsw_config();"),
+            false,
+        );
+        assert_build_boundary(
+            source,
+            "let hnsw_build = started.elapsed();",
+            "build_hnsw(dataset, metric, config)",
+            Some("let config = hnsw_config();"),
+            false,
+        );
+        assert_build_boundary(
+            source,
+            "let ivf_pq_build = started.elapsed();",
+            "build_ivf_pq(dataset, metric, config)",
+            Some("let config = ivf_pq_config();"),
+            false,
+        );
+    }
+
+    #[test]
+    fn contract_source_rejects_known_shortcuts() {
+        let source = include_str!("recall.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap();
+        let summarize = source
+            .split("fn summarize(")
+            .nth(1)
+            .unwrap()
+            .split("fn format_report(")
+            .next()
+            .unwrap();
+        assert!(summarize.contains(".zip(ground_truth)"));
+        assert!(summarize.contains("/ ground_truth.len() as f64"));
+        assert!(!summarize.contains("ground_truth[0]"));
+
+        let report = source
+            .split("fn format_report(")
+            .nth(1)
+            .unwrap()
+            .split("fn format_row(")
+            .next()
+            .unwrap();
+        assert!(!report.contains(".take(4)"));
+        assert!(report.contains("lines.push(format_accounting(accounting));"));
+
+        let percentile = source
+            .split("fn percentile(")
+            .nth(1)
+            .unwrap()
+            .split("fn sample(")
+            .next()
+            .unwrap();
+        assert!(!percentile.contains(".len()) / 100"));
+        assert!(!percentile.contains(".len() - 1) / 100"));
+    }
 
     #[test]
     fn inventory_and_configs_match_the_frozen_matrix() {
@@ -380,6 +513,18 @@ mod tests {
             ),
             (32, 6, 12, 4, 16, 100, 7)
         );
+    }
+
+    #[test]
+    fn query_domains_pin_stride_offset_uniqueness_and_disjointness() {
+        assert_eq!(QUERY_STRIDE, 17);
+        assert_eq!(QUERY_OFFSET, 3);
+        let dataset_domains = (0..ROWS).collect::<HashSet<_>>();
+        let query_domains = (0..QUERIES)
+            .map(|query| ROWS + query * QUERY_STRIDE + QUERY_OFFSET)
+            .collect::<HashSet<_>>();
+        assert_eq!(query_domains.len(), QUERIES);
+        assert!(dataset_domains.is_disjoint(&query_domains));
     }
 
     #[test]
@@ -512,41 +657,38 @@ mod tests {
     #[test]
     fn nearest_rank_percentile_selects_expected_samples() {
         let samples = (1..=100).map(Duration::from_micros).collect::<Vec<_>>();
+        let six_samples = (1..=6).map(Duration::from_micros).collect::<Vec<_>>();
 
         assert_eq!(percentile(&samples, 0), Duration::from_micros(1));
         assert_eq!(percentile(&samples, 50), Duration::from_micros(50));
         assert_eq!(percentile(&samples, 99), Duration::from_micros(99));
         assert_eq!(percentile(&samples, 100), Duration::from_micros(100));
+        assert_eq!(percentile(&six_samples, 34), Duration::from_micros(3));
+    }
+
+    fn neighbors(rows: &[usize]) -> Vec<Neighbor> {
+        rows.iter()
+            .map(|row| Neighbor {
+                row: *row,
+                distance: *row as f32,
+            })
+            .collect()
     }
 
     #[test]
-    fn flat_ground_truth_and_result_invariants_are_explicit() {
-        let ground_truth = vec![
-            vec![Neighbor {
-                row: 4,
-                distance: 1.0,
-            }],
-            vec![Neighbor {
-                row: 9,
-                distance: 2.0,
-            }],
-        ];
+    fn summarize_uses_arithmetic_mean_recall() {
+        let ground_truth = vec![neighbors(&[1, 2]), neighbors(&[3, 4]), neighbors(&[5, 6])];
         let run = TimedRun {
-            latencies: vec![Duration::from_micros(2), Duration::from_micros(5)],
-            results: vec![
-                vec![Neighbor {
-                    row: 4,
-                    distance: 999.0,
-                }],
-                vec![Neighbor {
-                    row: 9,
-                    distance: 999.0,
-                }],
+            latencies: vec![
+                Duration::from_micros(2),
+                Duration::from_micros(5),
+                Duration::from_micros(8),
             ],
+            results: vec![neighbors(&[1, 2]), neighbors(&[3, 9]), neighbors(&[7, 8])],
         };
 
-        let measurement = summarize(&run, &ground_truth, 1);
-        assert_eq!(measurement.recall, 1.0);
+        let measurement = summarize(&run, &ground_truth, 2);
+        assert_eq!(measurement.recall, 0.5);
         assert!(measurement.recall.is_finite());
         assert!((0.0..=1.0).contains(&measurement.recall));
         assert!(measurement.p99 >= measurement.p50);
@@ -554,35 +696,42 @@ mod tests {
 
     #[test]
     fn formatting_has_five_shared_rows_and_one_accounting_line() {
-        let workload = Workload::fixed().unwrap();
-        let measurement = Measurement {
-            recall: 0.875,
-            p50: Duration::from_micros(12),
-            p99: Duration::from_micros(34),
-        };
-        let rows = INDEX_NAMES
+        let (workload, indexes, _) = recording_fixture();
+        let ground_truth = workload
+            .queries
             .iter()
-            .map(|name| format_row(name, &workload, Duration::from_millis(5), measurement))
+            .map(|query| {
+                vec![Neighbor {
+                    row: query[0] as usize,
+                    distance: 0.0,
+                }]
+            })
             .collect::<Vec<_>>();
-
-        assert_eq!(rows.len(), INDEX_COUNT);
-        for (ordinal, row) in rows.iter().enumerate() {
-            assert_eq!(
-                row,
-                &format!(
-                    "{}: rows=2000, dimensions=16, queries=100, metric=euclidean, k=10, build_ms=5.00, recall=0.875, p50_us=12.0, p99_us=34.0",
-                    INDEX_NAMES[ordinal]
-                )
-            );
-        }
-
+        let timed_runs = (0..INDEX_COUNT)
+            .map(|_| TimedRun {
+                latencies: vec![Duration::from_micros(12); QUERIES],
+                results: ground_truth.clone(),
+            })
+            .collect::<Vec<_>>();
         let accounting = PqAccounting {
             codes_bytes: 8_000,
             codebooks_bytes: 1_024,
             full_vectors_bytes: 128_000,
         };
+        let lines = format_report(&workload, &indexes, &timed_runs, &ground_truth, accounting);
+
+        assert_eq!(lines.len(), INDEX_COUNT + 1);
+        for (ordinal, row) in lines[..INDEX_COUNT].iter().enumerate() {
+            assert_eq!(
+                row,
+                &format!(
+                    "{}: rows=1, dimensions=1, queries=100, metric=euclidean, k=1, build_ms=0.00, recall=1.000, p50_us=12.0, p99_us=12.0",
+                    INDEX_NAMES[ordinal]
+                )
+            );
+        }
         assert_eq!(
-            format_accounting(accounting),
+            lines[INDEX_COUNT],
             "ivf_pq search representation: codes_bytes=8000, codebooks_bytes=1024, search_bytes=9024, full_vectors_bytes=128000, compression=14.2x"
         );
     }
