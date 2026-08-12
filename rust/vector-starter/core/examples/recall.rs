@@ -471,6 +471,22 @@ mod tests {
     }
 
     #[test]
+    fn unfinished_percentile_rejects_floor_indexing() {
+        let percentile = include_str!("recall.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .unwrap()
+            .split("fn percentile(")
+            .nth(1)
+            .unwrap()
+            .split("fn sample(")
+            .next()
+            .unwrap();
+
+        assert!(!percentile.contains("percent * sorted.len().saturating_sub(1) / 100"));
+    }
+
+    #[test]
     fn inventory_and_configs_match_the_frozen_matrix() {
         assert_eq!(INDEX_NAMES, ["flat", "ivf_flat", "nsw", "hnsw", "ivf_pq"]);
 
