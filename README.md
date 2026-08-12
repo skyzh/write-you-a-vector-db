@@ -21,7 +21,7 @@ contracts, query planning, and execution boundary that make SQL vector search wo
 The [Rust course](https://skyzh.github.io/write-you-a-vector-db/rust-01-overview) has six required chapters: an
 Arrow-backed in-memory table and safe DataFusion optimizer rule, IVFFlat, NSW, HNSW, residual IVF-PQ, and a final shared
 recall and latency benchmark. The implementation chapters include starter code, focused tests, and separate completed
-reference crates; the five SQL-facing chapters also include SQLLogicTests.
+reference crates. Chapters 1–4 include SQLLogicTests; Chapter 5 includes a focused SQL planner/EXPLAIN test.
 
 The final benchmark compares Flat, IVFFlat, NSW, HNSW, and IVF-PQ on one shared Euclidean workload. It reports build
 time, recall, p50 and p99 search latency, plus the IVF-PQ search-representation accounting.

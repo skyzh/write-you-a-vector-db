@@ -66,8 +66,8 @@ score(code) = table[0][code[0]] + ... + table[M - 1][code[M - 1]]
 ```
 
 The query stays full precision while stored residuals are quantized, so this is asymmetric distance computation. Keep
-the best `rerank` row offsets under the approximate score, then compute exact Euclidean distance from the original
-dataset and select the final `k`:
+the best `min(max(rerank, k), rows)` row offsets under the approximate score, then compute exact Euclidean distance from
+the original dataset and select the final `k`:
 
 ```text
 probed lists -> PQ score -> rerank shortlist -> exact distance -> top-k
