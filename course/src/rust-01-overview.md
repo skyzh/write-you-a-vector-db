@@ -114,9 +114,9 @@ The DataFusion crate owns Arrow conversion, SQL-pattern matching, plan propertie
 crate owns dimensions, metrics, exact-search results, candidate selection, and deterministic result order. Later index
 implementations will not import DataFusion.
 
-This separation gives each core index chapter two useful views of the same checkpoint: small Rust tests isolate the
-algorithm, while an SQLLogicTest shows that the Chapter 1 optimizer can reach it. Chapter 5 reuses that boundary for
-IVF-PQ; Chapter 6 brings every index into one fixed comparison.
+This separation gives Chapters 1–4 two useful views of each checkpoint: small Rust tests isolate the algorithm, while
+SQLLogicTests show that the Chapter 1 optimizer can reach it. Chapter 5 keeps the focused core tests and uses a focused
+planner/EXPLAIN test for IVF-PQ; Chapter 6 brings every index into one fixed comparison.
 
 ## System Contract
 
