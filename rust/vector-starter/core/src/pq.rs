@@ -44,7 +44,7 @@ pub struct IvfPqIndex {
 
 impl IvfPqIndex {
     pub fn try_new(_dataset: Dataset, _metric: Metric, _config: IvfPqConfig) -> Result<Self> {
-        todo!("Optional Chapter 6: train IVF-PQ and encode every residual")
+        todo!("Chapter 5: train IVF-PQ and encode every residual")
     }
 
     pub fn centroids(&self) -> &[Vec<f32>] {
@@ -82,7 +82,7 @@ impl IvfPqIndex {
         _probes: usize,
         _rerank: usize,
     ) -> Result<Vec<Neighbor>> {
-        todo!("Optional Chapter 6: scan PQ codes with lookup tables and rerank candidates")
+        todo!("Chapter 5: scan PQ codes with lookup tables and rerank candidates")
     }
 }
 
