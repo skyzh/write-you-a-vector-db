@@ -7,6 +7,38 @@ ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 3;
 SortExec: TopK(fetch=3), expr=[array_distance(CAST(embedding@2 AS List(non-null Float64)), [1.0, 1.0, 1.0]) ASC NULLS LAST], preserve_partitioning=[false]
 VectorIndexScanExec: index=flat, metric=Euclidean, query_dim=3, fetch=Some(3), ordered=false
 
+# The selected text vector owns the index even though the table has another
+# vector column with the same Arrow type and width.
+query T
+EXPLAIN SELECT price, doc_key, active, tenant_id, inventory FROM documents
+ORDER BY array_distance(text_embedding, [1.0, 0.0, 0.0]) LIMIT 2;
+----
+SortExec: TopK(fetch=2), expr=[array_distance(CAST(text_embedding@5 AS List(non-null Float64)), [1.0, 0.0, 0.0]) ASC NULLS LAST], preserve_partitioning=[false]
+VectorIndexScanExec: index=flat, metric=Euclidean, query_dim=3, fetch=Some(2), ordered=false
+
+query FTTII
+SELECT price, doc_key, active, tenant_id, inventory FROM documents
+ORDER BY array_distance(text_embedding, [1.0, 0.0, 0.0]) LIMIT 2;
+----
+10.5 alpha true 7 4
+20.25 beta false 8 3
+
+# The otherwise-identical image-vector query must stay on DataFusion's exact
+# scan and return its deliberately different ranking.
+query T
+EXPLAIN SELECT price, doc_key, active, tenant_id, inventory FROM documents
+ORDER BY array_distance(image_embedding, [1.0, 0.0, 0.0]) LIMIT 2;
+----
+SortExec: TopK(fetch=2), expr=[array_distance(CAST(image_embedding@5 AS List(non-null Float64)), [1.0, 0.0, 0.0]) ASC NULLS LAST], preserve_partitioning=[false]
+DataSourceExec: partitions=1, partition_sizes=[1]
+
+query FTTII
+SELECT price, doc_key, active, tenant_id, inventory FROM documents
+ORDER BY array_distance(image_embedding, [1.0, 0.0, 0.0]) LIMIT 2;
+----
+40.0 delta false 10 1
+30.75 gamma true 9 2
+
 query IT
 SELECT id, payload FROM points
 ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 3;
@@ -20,8 +52,9 @@ query T
 EXPLAIN SELECT id FROM points WHERE id >= 4
 ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 2;
 ----
-SortExec: TopK(fetch=2), expr=[array_distance(CAST(embedding@1 AS List(non-null Float64)), [1.0, 1.0, 1.0]) ASC NULLS LAST], preserve_partitioning=[true]
-VectorScanExec: rows=8, fetch=None
+SortExec: TopK(fetch=2), expr=[array_distance(CAST(embedding@1 AS List(non-null Float64)), [1.0, 1.0, 1.0]) ASC NULLS LAST], preserve_partitioning=[false]
+FilterExec: id@0 >= 4
+DataSourceExec: partitions=1, partition_sizes=[1]
 
 query I
 SELECT id FROM points WHERE id >= 4

@@ -1,7 +1,8 @@
 use std::sync::Arc;
 
 use datafusion::arrow::array::{
-    ArrayRef, FixedSizeListArray, Float32Array, Int32Array, StringArray, UInt64Array,
+    ArrayRef, BooleanArray, FixedSizeListArray, Float32Array, Float64Array, Int32Array,
+    StringArray, UInt32Array, UInt64Array,
 };
 use datafusion::arrow::buffer::NullBuffer;
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
@@ -134,6 +135,59 @@ fn arbitrary_batches() -> Vec<RecordBatch> {
         )
         .unwrap(),
     ]
+}
+
+fn rich_schema_batches() -> Vec<RecordBatch> {
+    let item = Arc::new(Field::new("item", DataType::Float32, false));
+    let schema = Arc::new(Schema::new(vec![
+        Field::new("doc_key", DataType::Utf8, false),
+        Field::new("tenant_id", DataType::UInt32, false),
+        Field::new("price", DataType::Float64, false),
+        Field::new("inventory", DataType::Int32, false),
+        Field::new(
+            "text_embedding",
+            DataType::FixedSizeList(Arc::clone(&item), 3),
+            false,
+        ),
+        Field::new("image_embedding", DataType::FixedSizeList(item, 3), false),
+        Field::new("active", DataType::Boolean, false),
+    ]));
+    vec![
+        RecordBatch::try_new(
+            schema,
+            vec![
+                Arc::new(StringArray::from(vec!["alpha", "beta", "gamma", "delta"])),
+                Arc::new(UInt32Array::from(vec![7, 8, 9, 10])),
+                Arc::new(Float64Array::from(vec![10.5, 20.25, 30.75, 40.0])),
+                Arc::new(Int32Array::from(vec![4, 3, 2, 1])),
+                vector_array(&[
+                    [1.0, 0.0, 0.0],
+                    [0.9, 0.1, 0.0],
+                    [0.0, 1.0, 0.0],
+                    [-1.0, 0.0, 0.0],
+                ]),
+                vector_array(&[
+                    [-1.0, 0.0, 0.0],
+                    [0.0, 1.0, 0.0],
+                    [0.9, 0.1, 0.0],
+                    [1.0, 0.0, 0.0],
+                ]),
+                Arc::new(BooleanArray::from(vec![true, false, true, false])),
+            ],
+        )
+        .unwrap(),
+    ]
+}
+
+async fn rich_schema_context() -> SessionContext {
+    context_with_batches(
+        "documents",
+        rich_schema_batches(),
+        "text_embedding",
+        Metric::Euclidean,
+        IndexConfig::Flat,
+    )
+    .await
 }
 
 async fn arbitrary_context() -> SessionContext {
@@ -545,6 +599,142 @@ async fn only_the_selected_vector_column_and_top_k_match_the_index() {
 }
 
 #[tokio::test]
+async fn rich_schema_matches_only_the_configured_vector_column() {
+    let context = rich_schema_context().await;
+    let text_sql = "SELECT price, doc_key, active, tenant_id, inventory FROM documents \
+                    ORDER BY array_distance(text_embedding, [1.0, 0.0, 0.0]) LIMIT 2";
+    let text_plan = explain(&context, text_sql).await;
+    assert!(text_plan.contains("VectorIndexScanExec"), "{text_plan}");
+    assert!(text_plan.contains("ordered=false"), "{text_plan}");
+    assert!(text_plan.contains("SortExec: TopK(fetch=2)"), "{text_plan}");
+    assert!(!text_plan.contains("DataSourceExec"), "{text_plan}");
+
+    let text = context
+        .sql(text_sql)
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let text = &text[0];
+    assert_eq!(
+        text.schema()
+            .fields()
+            .iter()
+            .map(|field| field.name().as_str())
+            .collect::<Vec<_>>(),
+        ["price", "doc_key", "active", "tenant_id", "inventory"]
+    );
+    assert_eq!(
+        text.column(0)
+            .as_any()
+            .downcast_ref::<Float64Array>()
+            .unwrap()
+            .values(),
+        &[10.5, 20.25]
+    );
+    assert_eq!(
+        text.column(1)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .unwrap()
+            .iter()
+            .collect::<Vec<_>>(),
+        [Some("alpha"), Some("beta")]
+    );
+    assert_eq!(
+        text.column(2)
+            .as_any()
+            .downcast_ref::<BooleanArray>()
+            .unwrap()
+            .iter()
+            .collect::<Vec<_>>(),
+        [Some(true), Some(false)]
+    );
+    assert_eq!(
+        text.column(3)
+            .as_any()
+            .downcast_ref::<UInt32Array>()
+            .unwrap()
+            .values(),
+        &[7, 8]
+    );
+    assert_eq!(
+        text.column(4)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .unwrap()
+            .values(),
+        &[4, 3]
+    );
+
+    let image_sql = "SELECT price, doc_key, active, tenant_id, inventory FROM documents \
+                     ORDER BY array_distance(image_embedding, [1.0, 0.0, 0.0]) LIMIT 2";
+    let image_plan = explain(&context, image_sql).await;
+    assert_memtable_fallback(&image_plan);
+    assert!(
+        image_plan.contains("SortExec: TopK(fetch=2)"),
+        "{image_plan}"
+    );
+
+    let image = context
+        .sql(image_sql)
+        .await
+        .unwrap()
+        .collect()
+        .await
+        .unwrap();
+    let image = &image[0];
+    assert_eq!(
+        image
+            .column(0)
+            .as_any()
+            .downcast_ref::<Float64Array>()
+            .unwrap()
+            .values(),
+        &[40.0, 30.75]
+    );
+    assert_eq!(
+        image
+            .column(1)
+            .as_any()
+            .downcast_ref::<StringArray>()
+            .unwrap()
+            .iter()
+            .collect::<Vec<_>>(),
+        [Some("delta"), Some("gamma")]
+    );
+    assert_eq!(
+        image
+            .column(2)
+            .as_any()
+            .downcast_ref::<BooleanArray>()
+            .unwrap()
+            .iter()
+            .collect::<Vec<_>>(),
+        [Some(false), Some(true)]
+    );
+    assert_eq!(
+        image
+            .column(3)
+            .as_any()
+            .downcast_ref::<UInt32Array>()
+            .unwrap()
+            .values(),
+        &[10, 9]
+    );
+    assert_eq!(
+        image
+            .column(4)
+            .as_any()
+            .downcast_ref::<Int32Array>()
+            .unwrap()
+            .values(),
+        &[1, 2]
+    );
+}
+
+#[tokio::test]
 async fn ordered_session_mode_allows_sort_elision() {
     let context = context(Metric::Cosine, IndexConfig::Flat).await;
     context
@@ -843,6 +1033,28 @@ fn reference_adapter_has_no_custom_snapshot_table_provider() {
     assert!(source.contains("struct IndexedSnapshot"));
 }
 
+#[test]
+fn starter_exposes_the_attachment_api_without_solution_bodies() {
+    let source = include_str!("../../../vector-starter/datafusion/src/lib.rs");
+    assert!(!source.contains("pub struct VectorTable"));
+    assert!(source.contains("pub fn vector_mem_table"));
+    assert!(source.contains("pub struct VectorIndexAttachment"));
+    assert!(source.contains("pub async fn try_new"));
+    assert!(source.contains("pub fn with_vector_indexes"));
+    assert!(source.contains("_vector_column: impl Into<String>"));
+    assert_eq!(source.matches("Chapter 1:").count(), 6);
+    for task in [
+        "build the introductory Arrow MemTable",
+        "selected vector column",
+        "matching MemTable top-k sort",
+        "snapshot row id",
+        "configured vector column",
+        "preserve DataFusion's final sort",
+    ] {
+        assert!(source.contains(task), "missing solution-free task: {task}");
+    }
+}
+
 #[tokio::test]
 async fn arbitrary_schema_rejects_missing_or_wrong_type_before_index_build() {
     let schema = Arc::new(Schema::new(vec![
@@ -962,6 +1174,99 @@ async fn arbitrary_schema_rejects_dimension_drift_and_null_vectors() {
     .await
     .unwrap_err();
     assert!(null.to_string().contains("contains null at row 1"));
+}
+
+#[tokio::test]
+async fn rich_schema_rejects_a_missing_selected_column() {
+    let error = attachment_result(
+        rich_schema_batches(),
+        "missing_embedding",
+        Metric::Euclidean,
+        IndexConfig::Flat,
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("vector column 'missing_embedding' does not exist or is ambiguous")
+    );
+}
+
+#[tokio::test]
+async fn rich_schema_rejects_a_scalar_selected_column() {
+    let error = attachment_result(
+        rich_schema_batches(),
+        "price",
+        Metric::Euclidean,
+        IndexConfig::Flat,
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("vector column 'price' must be FixedSizeList<Float32>")
+    );
+}
+
+#[tokio::test]
+async fn rich_schema_rejects_a_zero_width_selected_column() {
+    let item = Arc::new(Field::new("item", DataType::Float32, false));
+    let schema = Arc::new(Schema::new(vec![Field::new(
+        "text_embedding",
+        DataType::FixedSizeList(Arc::clone(&item), 0),
+        false,
+    )]));
+    let batch = RecordBatch::try_new(
+        schema,
+        vec![Arc::new(FixedSizeListArray::new_null(item, 0, 0))],
+    )
+    .unwrap();
+    let error = attachment_result(
+        vec![batch],
+        "text_embedding",
+        Metric::Euclidean,
+        IndexConfig::Flat,
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("vector column 'text_embedding' dimension must be greater than zero")
+    );
+}
+
+#[tokio::test]
+async fn rich_schema_rejects_a_null_selected_value() {
+    let item = Arc::new(Field::new("item", DataType::Float32, false));
+    let schema = Arc::new(Schema::new(vec![Field::new(
+        "text_embedding",
+        DataType::FixedSizeList(Arc::clone(&item), 3),
+        true,
+    )]));
+    let vectors = FixedSizeListArray::try_new(
+        item,
+        3,
+        Arc::new(Float32Array::from(vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0])),
+        Some(NullBuffer::from(vec![true, false])),
+    )
+    .unwrap();
+    let batch = RecordBatch::try_new(schema, vec![Arc::new(vectors)]).unwrap();
+    let error = attachment_result(
+        vec![batch],
+        "text_embedding",
+        Metric::Euclidean,
+        IndexConfig::Flat,
+    )
+    .await
+    .unwrap_err();
+    assert!(
+        error
+            .to_string()
+            .contains("vector column 'text_embedding' contains null at row 1")
+    );
 }
 
 #[tokio::test]
