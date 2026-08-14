@@ -84,8 +84,9 @@ active          Boolean
 Both vector columns have the same type and width, but their nearest-neighbor
 orders differ. A query ordered by `text_embedding` may use the attached index.
 The same query shape over `image_embedding` must remain on DataFusion's exact
-scan and return the image-vector ranking. No field name or ordinal except the
-configured field is special.
+scan and return the image-vector ranking. No field name or ordinal is
+inherently special; only the field selected by the attachment may use its
+index.
 
 The attachment snapshots the registered `MemTable` batches. It copies only the
 selected vectors into the core `Dataset` and records a checked row location

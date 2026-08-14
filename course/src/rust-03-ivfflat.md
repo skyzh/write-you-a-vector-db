@@ -230,7 +230,7 @@ SortExec: TopK(fetch=5), ...
 
 DataFusion passes `LIMIT 5` through Chapter 1's `with_fetch`. `VectorIndexScanExec` calls `IvfFlatIndex::search`, which uses
 the configured `probes`. The generic bounded sort remains responsible for final SQL ordering. Unsupported query shapes
-still use the exact `VectorScanExec` path.
+still use the exact `DataSourceExec` path.
 
 ## Chapter 2 Review
 
