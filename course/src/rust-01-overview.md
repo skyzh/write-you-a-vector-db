@@ -59,15 +59,15 @@ Before index matching, the query is exact:
 
 ```text
 SortExec: TopK(fetch=10), ...
-  VectorScanExec: rows=..., fetch=None
+  DataSourceExec: partitions=1, ...
 ```
 
-`VectorScanExec` emits Arrow rows. DataFusion evaluates the distance function for every row and uses its own bounded sort
-to produce the nearest ten.
+An ordinary `MemTable` emits Arrow rows. DataFusion evaluates the distance function for every row and uses its own
+bounded sort to produce the nearest ten.
 
-In Chapter 1, you implement `ExecutionPlan::try_pushdown_sort`. It accepts only one compatible distance ordering over the
-`embedding` column with a literal query vector. `with_fetch` receives `LIMIT k`, and the matched scan asks the selected
-index for `k` candidate row offsets:
+In Chapter 1, you attach one index to an explicitly selected vector column, then implement a physical optimizer rule. It
+accepts only one compatible distance ordering over that configured field with a literal query vector. The matched scan
+asks the selected index for `LIMIT k` candidate row identities:
 
 ```text
 SortExec: TopK(fetch=10), ...
@@ -95,19 +95,19 @@ The default plan retains DataFusion's bounded sort. The index selects candidates
 selected index returns rows in the requested order, `SET vector_search.ordered = true` tells DataFusion it can skip this
 final sort.
 
-Filters, multiple sort keys, a non-literal query vector, the wrong distance function, the wrong direction, or a dimension
-mismatch keep the exact plan. In particular, taking ANN top-k before applying a filter can change the answer, so refusing
-that rewrite is a correctness requirement.
+Filters, multiple sort keys, a non-literal query vector, another same-shaped vector column, the wrong distance function,
+the wrong direction, or a dimension mismatch keep the exact plan. In particular, taking ANN top-k before applying a
+filter can change the answer, so refusing that rewrite is a correctness requirement.
 
 ## Architecture
 
 ```text
-SQL + DataFusion optimizer --> VectorTable / VectorScanExec --> VectorIndex
-                                                                  |-- exact FlatIndex
-                                                                  |-- your IvfFlatIndex
-                                                                  |-- your IvfPqIndex
-                                                                  |-- your NswIndex
-                                                                  `-- your HnswIndex
+ordinary MemTable --> selected-column attachment --> DataFusion optimizer --> VectorIndexScanExec
+                                                                            |-- exact FlatIndex
+                                                                            |-- your IvfFlatIndex
+                                                                            |-- your IvfPqIndex
+                                                                            |-- your NswIndex
+                                                                            `-- your HnswIndex
 ```
 
 The DataFusion crate owns Arrow conversion, SQL-pattern matching, plan properties, limits, and output batches. The core
@@ -123,7 +123,8 @@ planner/EXPLAIN test for IVF-PQ; Chapter 6 brings every index into one fixed com
 1. **Dimension:** a dataset has one nonzero dimension; every stored vector and query matches it.
 2. **Numeric domain:** stored values are finite `f32`, while metric accumulation uses `f64`. Cosine inputs have nonzero
    norm.
-3. **Identity:** core row offset `r` maps to Arrow batch row `r`, which carries the corresponding external ID and payload.
+3. **Identity:** each core row offset maps through the attachment's checked snapshot location to the complete source row;
+   no user field is row identity.
 4. **Ordering:** lower internal distance is better. Ties use row offset. Dot product is negated at the metric boundary.
 5. **Exact baseline:** exact search defines the expected result. When you report approximate latency, include recall from
    the same data, queries, metric, and `k`.
@@ -134,7 +135,7 @@ planner/EXPLAIN test for IVF-PQ; Chapter 6 brings every index into one fixed com
 
 | Chapter | Estimate | Before | After |
 | --- | ---: | --- | --- |
-| [1 — DataFusion table and optimizer](./rust-02-datafusion.md) | 3–4 hours | Vectors are Rust structs and DataFusion has no table or vector access path. | Rows become an Arrow-backed `TableProvider`; exact top-k runs in DataFusion; a conservative sort-pushdown rule selects a compatible vector scan and preserves exact fallback. |
+| [1 — DataFusion table and optimizer](./rust-02-datafusion.md) | 3–4 hours | Vectors are Rust structs and DataFusion has no vector access path. | Rows become ordinary Arrow `MemTable` data; one attachment owns a selected vector field; a conservative physical rule selects its compatible index scan and preserves exact fallback. |
 | [2 — IVFFlat](./rust-03-ivfflat.md) | 4–5 hours | A flat index handles matched SQL top-k queries exactly. | Seeded k-means, inverted lists, and `probes` create a measured recall/work tradeoff behind the same SQL query. |
 | [3 — NSW](./rust-04-nsw.md) | 4–5 hours | Candidate selection comes from centroid partitions. | Best-first traversal and bounded reciprocal graph insertion expose `ef_search` as a second recall/work tradeoff behind the same SQL query. |
 | [4 — HNSW](./rust-05-hnsw.md) | 4–5 hours | Every graph query starts in one complete layer. | Seeded sparse layers route greedily into layer-zero beam search while preserving the same SQL and recall contracts. |
