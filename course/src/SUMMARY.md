@@ -2,7 +2,8 @@
 
 - [Preface](./00-introduction.md)
 - [The Rust Course](./rust-01-overview.md)
-  - [Build an In-Memory Vector Table and Match Its Index](./rust-02-datafusion.md)
+  - [Try the Vector Database from SQL](./rust-00-sql-shell.md)
+  - [Make the SQL Path Reach Your Index Safely](./rust-02-datafusion.md)
   - [Narrow the Search with IVFFlat](./rust-03-ivfflat.md)
   - [Navigate a Proximity Graph with NSW](./rust-04-nsw.md)
   - [Add Hierarchy with HNSW](./rust-05-hnsw.md)

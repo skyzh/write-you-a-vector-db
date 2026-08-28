@@ -17,6 +17,17 @@ search. Chapter 4 adds HNSW hierarchy, Chapter 5 adds residual product
 quantization and exact reranking to IVFFlat, and Chapter 6 benchmarks all five
 indexes on the same Euclidean workload.
 
+Before implementing Chapter 1, launch the supplied product shell:
+
+```sh
+cargo run -p vector-datafusion --example sql
+```
+
+It loads the small `points` table and accepts one SQL statement per line. Follow
+the product-tour chapter to compare the same query and `EXPLAIN` before and after
+the shell's single fixed `CREATE INDEX` command. You do not need to inspect or
+modify the completed reference example.
+
 Check the untouched starter without executing TODOs:
 
 ```sh
