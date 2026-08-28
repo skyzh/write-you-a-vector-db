@@ -10,10 +10,9 @@ in Chapter 1.
 
 ## Launch the Supplied Shell
 
-From the repository root:
+For an interactive run, start from the `rust/` directory:
 
 ```sh
-cd rust
 cargo run -p vector-datafusion --example sql
 ```
 
@@ -23,10 +22,11 @@ The shell creates and registers a small in-memory table when it starts:
 points(id UInt64, payload Utf8, embedding FixedSizeList<Float32, 3>)
 ```
 
-It then accepts one SQL statement per input line. For a repeatable first run, paste the whole transcript below into your
-terminal instead of entering the statements interactively:
+It then accepts one SQL statement per input line. For a repeatable first run from the repository root, paste the whole
+transcript below into your terminal instead of entering the statements interactively:
 
 ```sh
+cd rust
 cargo run -p vector-datafusion --example sql <<'SQL'
 EXPLAIN SELECT id, payload FROM points ORDER BY cosine_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 3
 SELECT id, payload FROM points ORDER BY cosine_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 3

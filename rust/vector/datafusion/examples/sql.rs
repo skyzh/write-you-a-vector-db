@@ -173,39 +173,26 @@ async fn main() -> Result<()> {
 
 #[cfg(test)]
 mod tests {
-    use datafusion::arrow::array::UInt64Array;
+    use datafusion::arrow::array::{StringArray, UInt64Array};
 
     use super::*;
 
-    fn create_index(sql: &str) -> CreateIndex {
-        let statements = DFParser::parse_sql(sql).unwrap();
-        let Statement::Statement(statement) = statements.front().unwrap() else {
-            panic!("expected SQL statement")
-        };
-        let SqlStatement::CreateIndex(create) = statement.as_ref() else {
-            panic!("expected CREATE INDEX")
-        };
-        create.clone()
-    }
-
-    fn error(sql: &str) -> String {
-        validate_create_index(&create_index(sql))
-            .unwrap_err()
-            .to_string()
-    }
-
-    fn ids(batches: &[RecordBatch]) -> Vec<u64> {
+    fn rows(batches: &[RecordBatch]) -> Vec<(u64, String)> {
         batches
             .iter()
             .flat_map(|batch| {
-                batch
+                let ids = batch
                     .column(0)
                     .as_any()
                     .downcast_ref::<UInt64Array>()
-                    .unwrap()
-                    .values()
-                    .iter()
-                    .copied()
+                    .unwrap();
+                let payloads = batch
+                    .column(1)
+                    .as_any()
+                    .downcast_ref::<StringArray>()
+                    .unwrap();
+                (0..batch.num_rows())
+                    .map(|row| (ids.value(row), payloads.value(row).to_owned()))
                     .collect::<Vec<_>>()
             })
             .collect()
@@ -222,11 +209,22 @@ mod tests {
         batches
     }
 
-    #[test]
-    fn create_index_parser_accepts_only_the_documented_command() {
-        let create =
-            create_index("CREATE INDEX points_embedding_idx ON points USING ivfflat (embedding)");
-        assert_eq!(validate_create_index(&create).unwrap(), INDEX_NAME);
+    async fn assert_rejected_without_consuming_index(sql: &str, message: &str) {
+        let mut shell = VectorSqlShell::new().unwrap();
+        let error = shell.execute(sql).await.unwrap_err().to_string();
+        assert!(error.contains(message), "{sql}: {error}");
+        let output = shell
+            .execute("CREATE INDEX points_embedding_idx ON points USING ivfflat (embedding)")
+            .await
+            .unwrap();
+        assert!(matches!(
+            output,
+            ShellOutput::CreatedIndex(ref name) if name == INDEX_NAME
+        ));
+    }
+
+    #[tokio::test]
+    async fn create_index_execute_accepts_only_the_documented_command() {
         for (sql, message) in [
             (
                 "CREATE INDEX other ON points USING ivfflat (embedding)",
@@ -249,7 +247,7 @@ mod tests {
                 "only plain CREATE INDEX",
             ),
         ] {
-            assert!(error(sql).contains(message), "{sql}");
+            assert_rejected_without_consuming_index(sql, message).await;
         }
     }
 
@@ -277,8 +275,15 @@ mod tests {
         assert!(after_plan.contains("VectorIndexScanExec"), "{after_plan}");
         assert!(after_plan.contains("index=ivf_flat"), "{after_plan}");
         assert!(!after_plan.contains("DataSourceExec"), "{after_plan}");
-        assert_eq!(ids(&before), ids(&after));
-        assert_eq!(ids(&after), [1, 2, 3]);
+        assert_eq!(rows(&before), rows(&after));
+        assert_eq!(
+            rows(&after),
+            [
+                (1, "one".to_owned()),
+                (2, "two".to_owned()),
+                (3, "three".to_owned()),
+            ]
+        );
 
         let duplicate = shell
             .execute("CREATE INDEX points_embedding_idx ON points USING ivfflat (embedding)")
