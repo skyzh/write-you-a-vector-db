@@ -16,6 +16,29 @@ fn line_dataset(size: usize) -> Dataset {
 
 #[test]
 fn flat_search_is_deterministic_and_validates_queries() {
+    assert_eq!(
+        Dataset::try_new(vec![]).unwrap_err(),
+        VectorError::EmptyDataset
+    );
+    assert_eq!(
+        Dataset::try_new(vec![vec![]]).unwrap_err(),
+        VectorError::EmptyVector
+    );
+    assert_eq!(
+        Dataset::try_new(vec![vec![1.0, 0.0], vec![1.0]]).unwrap_err(),
+        VectorError::DimensionMismatch {
+            expected: 2,
+            actual: 1,
+        }
+    );
+    assert_eq!(
+        Dataset::try_new(vec![vec![1.0, 0.0], vec![2.0, f32::INFINITY]]).unwrap_err(),
+        VectorError::NonFiniteValue {
+            vector: 1,
+            dimension: 1,
+        }
+    );
+
     let dataset = Dataset::try_new(vec![vec![1.0, 0.0], vec![-1.0, 0.0], vec![0.0, 1.0]]).unwrap();
     let index = FlatIndex::try_new(dataset, Metric::Euclidean).unwrap();
 
@@ -32,6 +55,13 @@ fn flat_search_is_deterministic_and_validates_queries() {
 fn cosine_rejects_zero_norm_vectors() {
     let dataset = Dataset::try_new(vec![vec![1.0, 0.0], vec![0.0, 0.0]]).unwrap();
     assert!(FlatIndex::try_new(dataset, Metric::Cosine).is_err());
+
+    let dataset = Dataset::try_new(vec![vec![1.0, 0.0], vec![0.0, 1.0]]).unwrap();
+    let index = FlatIndex::try_new(dataset, Metric::Cosine).unwrap();
+    assert_eq!(
+        index.search(&[0.0, 0.0], 1).unwrap_err(),
+        VectorError::ZeroNorm { vector: 2 }
+    );
 }
 
 #[test]

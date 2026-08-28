@@ -42,7 +42,51 @@ SortExec: TopK(fetch=3), ...
 
 Chapter 2 will put `index=ivf_flat` behind the same boundary.
 
-## Data Model
+## From the Product Tour to Your First Checkpoint
+
+The product tour showed the complete path before asking you to build it. Keep
+these boundaries separate as you work through the chapter:
+
+| What you observed | What is supplied | What you implement |
+| --- | --- | --- |
+| Ordinary SQL scans `points`, while the fixed `CREATE INDEX` bridge changes only the physical leaf. | The shell, DDL bridge, metric math, exact `FlatIndex`, and shared attachment/lookup scaffolding. | Checkpoint 1 validates the core `Dataset`. |
+| Both plans return the same rows and keep DataFusion's final sort. | Examples and tests that expose the plan and results. | Checkpoint 2 builds the introductory Arrow `MemTable`. |
+| The indexed leaf is chosen only for the configured vector field and safe query shape. | The public attachment and optimizer interfaces. | Checkpoints 3–5 attach one field, match a safe top-k, then search and fetch source rows. |
+
+You will modify:
+
+```text
+rust/vector-starter/core/src/dataset.rs
+rust/vector-starter/datafusion/src/lib.rs
+```
+
+The starter exposes the same public API as the reference but leaves the Chapter
+1 implementation points as TODOs. Metric math, the exact `FlatIndex`, shared
+snapshot/lookup scaffolding, examples, and tests are ready. IVFFlat, NSW, HNSW,
+and IVF-PQ remain later learner work. Do not modify public APIs or tests while
+completing the exercises.
+
+## Checkpoint 1: Validate the In-Memory Dataset
+
+Implement the three TODOs in `vector-starter/core/src/dataset.rs`.
+
+A dataset must be nonempty, have a fixed nonzero dimension, and contain only
+finite `f32` values. `Dataset::try_new` reads the first row to establish the
+dimension, rejects an empty dataset or zero-dimensional vector, then checks
+every row for equal length and finite components. Store the vectors as
+`Arc<[Vec<f32>]>`.
+
+`validate_for_metric` rejects zero-norm stored rows for cosine distance.
+`validate_query` checks dimension, finiteness, and the same cosine boundary
+for a query. Use the existing `VectorError` variants.
+
+```sh
+cd rust
+cargo test -p vector-core-starter --test indexes flat_search_is_deterministic_and_validates_queries
+cargo test -p vector-core-starter --test indexes cosine_rejects_zero_norm_vectors
+```
+
+## Checkpoint 2: Build the Introductory MemTable
 
 A vector index belongs to one field of an ordinary table. It does not own a
 special `(id, payload, vector)` row format.
@@ -55,6 +99,28 @@ id         UInt64
 payload    Utf8
 embedding  FixedSizeList<Float32, dimension>
 ```
+
+Implement `vector_mem_table` in
+`vector-starter/datafusion/src/lib.rs`.
+
+Build a `Dataset` from the `VectorRow` embeddings to validate their shared
+dimension. Create the three Arrow arrays in the same input order, assemble one
+`RecordBatch`, then return an ordinary `MemTable`.
+
+`FixedSizeListArray` stores vector components in one flat `Float32Array`.
+For two three-dimensional rows, its child values are:
+
+```text
+[x0, y0, z0, x1, y1, z1]
+ `---row 0--' `---row 1--'
+```
+
+Use `i32::try_from(dataset.dimension())` for Arrow's list width.
+
+**Prediction:** What breaks if the payload array is reordered while the
+embedding array keeps insertion order?
+
+## Checkpoint 3: Attach One Selected Vector Column
 
 The public indexing surface is more general. Register any `MemTable`, then
 construct a `VectorIndexAttachment` with its table reference and selected
@@ -110,25 +176,6 @@ DataFusion has no generic stable point-lookup API for arbitrary
 limited to registered in-memory `MemTable` instances. A disk or distributed
 provider would need its own stable row locator and lookup implementation.
 
-## Build the Exact Path and Matcher in Rust
-
-You will modify:
-
-```text
-rust/vector-starter/core/src/dataset.rs
-rust/vector-starter/datafusion/src/lib.rs
-```
-
-The starter exposes the same public API as the reference but leaves the Chapter
-1 implementation points as TODOs. Metric math, index implementations, snapshot
-lookup scaffolding, examples, and tests are ready. Do not modify public APIs or
-tests while completing the exercises.
-
-## Correctness Requirements
-
-A dataset must be nonempty, have a fixed nonzero dimension, and contain only
-finite `f32` values. Reject invalid data before an index is built.
-
 An attachment must resolve the exact registered `MemTable` instance and the
 configured field. The selected field must exist, be
 `FixedSizeList<Float32>`, have a positive width, and contain no null list or
@@ -139,58 +186,6 @@ A different positive list width is a valid schema choice; the core dataset takes
 its dimension from the selected field. The SQL matcher later rejects a literal
 whose width differs from that dataset. A zero-width selected field is invalid at
 construction.
-
-The optimizer may replace a scan only for one supported distance expression
-over the configured vector field, a literal query vector, a compatible metric
-and direction, a positive `LIMIT`, and a live source snapshot. Filters,
-multiple sort keys, non-literal vectors, another vector field, wrong metrics or
-directions, and invalid literals remain on DataFusion's exact scan and sort.
-
-Unless ordered output is explicitly enabled for the session, DataFusion retains
-the final bounded sort after the index selects candidates. Candidate order is
-not automatically SQL order.
-
-## Checkpoint 1: Validate the In-Memory Dataset
-
-Implement the three TODOs in `vector-starter/core/src/dataset.rs`.
-
-`Dataset::try_new` reads the first row to establish the dimension, rejects an
-empty dataset or zero-dimensional vector, then checks every row for equal length
-and finite components. Store the vectors as `Arc<[Vec<f32>]>`.
-
-`validate_for_metric` rejects zero-norm stored rows for cosine distance.
-`validate_query` checks dimension, finiteness, and the same cosine boundary
-for a query. Use the existing `VectorError` variants.
-
-```sh
-cd rust
-cargo test -p vector-core-starter --test indexes flat_search_is_deterministic_and_validates_queries
-cargo test -p vector-core-starter --test indexes cosine_rejects_zero_norm_vectors
-```
-
-## Checkpoint 2: Build the Introductory MemTable
-
-Implement `vector_mem_table` in
-`vector-starter/datafusion/src/lib.rs`.
-
-Build a `Dataset` from the `VectorRow` embeddings to validate their shared
-dimension. Create the three Arrow arrays in the same input order, assemble one
-`RecordBatch`, then return an ordinary `MemTable`.
-
-`FixedSizeListArray` stores vector components in one flat `Float32Array`.
-For two three-dimensional rows, its child values are:
-
-```text
-[x0, y0, z0, x1, y1, z1]
- `---row 0--' `---row 1--'
-```
-
-Use `i32::try_from(dataset.dimension())` for Arrow's list width.
-
-**Prediction:** What breaks if the payload array is reordered while the
-embedding array keeps insertion order?
-
-## Checkpoint 3: Attach One Selected Vector Column
 
 Implement `VectorIndexAttachment::try_new`.
 
@@ -218,6 +213,16 @@ cargo test -p vector-datafusion-starter --test sql rich_schema_rejects_a_null_se
 
 Implement `match_vector_order` and
 `VectorIndexOptimizer::rewrite_sort`.
+
+The optimizer may replace a scan only for one supported distance expression
+over the configured vector field, a literal query vector, a compatible metric
+and direction, a positive `LIMIT`, and a live source snapshot. Filters,
+multiple sort keys, non-literal vectors, another vector field, wrong metrics or
+directions, and invalid literals remain on DataFusion's exact scan and sort.
+
+Unless ordered output is explicitly enabled for the session, DataFusion retains
+the final bounded sort after the index selects candidates. Candidate order is
+not automatically SQL order.
 
 The matcher accepts only:
 
