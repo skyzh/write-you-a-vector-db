@@ -9,11 +9,13 @@ and separate reference solutions.
 
 </div>
 
-Across six chapters, you will connect an in-memory vector table to DataFusion, implement the optimizer rule that selects
-a safe vector-index scan, build IVFFlat behind that rule, navigate a proximity graph with NSW, add HNSW hierarchy,
-compress residual candidate scoring with IVF-PQ, and compare all five indexes on one Euclidean workload. The first five
-chapters end with a runnable SQL query, so you can inspect how the physical plan changes as the index becomes more
-capable. The final chapter measures recall and latency directly under one shared contract.
+Start with a supplied product tour: launch a small SQL shell, query its in-memory `points` table, create one fixed IVFFlat
+index, and watch `EXPLAIN` change without changing the nearest rows. Across the six implementation chapters that follow,
+you will connect that table to DataFusion, implement the optimizer rule that selects a safe vector-index scan, build
+IVFFlat behind that rule, navigate a proximity graph with NSW, add HNSW hierarchy, compress residual candidate scoring
+with IVF-PQ, and compare all five indexes on one Euclidean workload. The first five chapters return to runnable SQL so you
+can inspect how the same product path changes as the index becomes more capable. The final chapter measures recall and
+latency directly under one shared contract.
 
 ```sql
 SELECT id, payload
@@ -22,9 +24,11 @@ ORDER BY cosine_distance(embedding, [0.1, 0.2, 0.3])
 LIMIT 10;
 ```
 
-Your first SQL query uses DataFusion's vector distance expressions, bounded sort, and `LIMIT` to return an exact result.
-The starter includes a `FlatIndex`, which checks every vector, while you connect the table to the query planner. You will
-then add IVFFlat as your own candidate selector behind the same query.
+The [product tour](./rust-00-sql-shell.md) runs a concrete query of this shape through the supplied completed system before
+you edit anything. DataFusion's vector distance expression, bounded sort, and `LIMIT` return an exact result; after the
+fixed `CREATE INDEX` command, that unchanged SQL reaches the course's vector-index scan. Chapter 1 then asks you to build
+the safe table, attachment, and planner path behind that observation. Later, you will add IVFFlat as your own candidate
+selector behind the same interface.
 
 ## Where to Write Your Code
 
@@ -39,8 +43,9 @@ vector/
   datafusion/                completed DataFusion reference
 ```
 
-Work in `vector-starter/` and implement its TODOs in chapter order. The `vector/` tree contains completed references; keep
-it closed while you work through the exercises, as required by the starter's `AGENTS.md` files.
+The product tour executes one supplied example from `vector/`; you do not need to inspect or modify that implementation.
+After the tour, work in `vector-starter/` and implement its TODOs in chapter order. Keep the completed reference source
+closed while you work through the exercises, as required by the starter's `AGENTS.md` files.
 
 From the repository root, check that the untouched starter compiles:
 
@@ -135,6 +140,7 @@ planner/EXPLAIN test for IVF-PQ; Chapter 6 brings every index into one fixed com
 
 | Chapter | Estimate | Before | After |
 | --- | ---: | --- | --- |
+| [Product tour](./rust-00-sql-shell.md) | 10–15 minutes | The course has not yet shown a running database interface. | The supplied shell loads `points`, runs nearest-neighbor SQL, creates one fixed IVFFlat index, and makes the plan change observable. |
 | [1 — DataFusion table and optimizer](./rust-02-datafusion.md) | 3–4 hours | Vectors are Rust structs and DataFusion has no vector access path. | Rows become ordinary Arrow `MemTable` data; one attachment owns a selected vector field; a conservative physical rule selects its compatible index scan and preserves exact fallback. |
 | [2 — IVFFlat](./rust-03-ivfflat.md) | 4–5 hours | A flat index handles matched SQL top-k queries exactly. | Seeded k-means, inverted lists, and `probes` create a measured recall/work tradeoff behind the same SQL query. |
 | [3 — NSW](./rust-04-nsw.md) | 4–5 hours | Candidate selection comes from centroid partitions. | Best-first traversal and bounded reciprocal graph insertion expose `ef_search` as a second recall/work tradeoff behind the same SQL query. |
@@ -164,7 +170,9 @@ After Chapter 6, you should be able to explain:
 ## Scope
 
 These chapters use an immutable in-memory collection and a readable Euclidean residual IVF-PQ implementation, but not
-bit packing or optimized kernels. Online updates or deletes, index persistence, crash recovery, concurrent
-mutation, filtered ANN, GPU kernels, distributed execution, DDL, and a network service remain outside this implementation.
+bit packing or optimized kernels. Online updates or deletes, index persistence, crash recovery, concurrent mutation,
+filtered ANN, GPU kernels, distributed execution, general DDL/catalog semantics, and a network service remain outside
+this implementation. The supplied shell's one fixed `CREATE INDEX` command is a course-owned bridge to the existing
+attachment path, not a general DDL subsystem.
 
 {{#include copyright.md}}

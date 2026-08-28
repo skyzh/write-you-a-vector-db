@@ -27,7 +27,7 @@ Once that system works, several extensions make good independent projects.
 
 ## Query Processing
 
-- Extend the DataFusion adapter with safe filtered top-k pushdown, DDL, and index selection.
+- Extend the DataFusion adapter with safe filtered top-k pushdown, general DDL/catalog semantics, and index selection.
 - Add hybrid lexical and vector retrieval with an explicit score-combination contract.
 - Explore pre-filtering, in-traversal filtering, post-filtering, and adaptive oversampling for selective predicates.
 - Add a reranking stage that fetches full-precision vectors only for the final candidates.

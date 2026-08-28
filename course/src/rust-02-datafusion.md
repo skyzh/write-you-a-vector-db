@@ -1,4 +1,4 @@
-# Build an In-Memory Vector Table and Match Its Index
+# Make the SQL Path Reach Your Index Safely
 
 {{#include rust-in-progress.md}}
 
@@ -7,6 +7,11 @@
 > Start from the two `*-starter` crates. Finish with ordinary Arrow tables, one
 > explicitly attached vector index, and a conservative DataFusion optimizer
 > rule.
+
+In the [product tour](./rust-00-sql-shell.md), you ran the supplied shell before and after creating an index. The SQL and
+nearest rows stayed fixed while the physical leaf changed from `DataSourceExec` to `VectorIndexScanExec`. This chapter
+opens that path: you will build the Arrow table, bind one selected vector field to an index, and make the optimizer choose
+the new scan only when the query is safe.
 
 Your first query uses the course's small three-column table:
 
@@ -277,7 +282,9 @@ After the core tests, `sql.rs`, and the Chapter 1 SQLLogicTest pass, explain:
 - where DataFusion performs exact fallback and final ordering; and
 - how later approximate indexes reuse this boundary without weakening it.
 
-IVFFlat, filtered pushdown, joins, DDL, persistence, and disk row lookup remain
-outside this chapter.
+IVFFlat implementation, filtered pushdown, joins, general DDL/catalog semantics,
+persistence, and disk row lookup remain outside this chapter. The product tour's
+single supplied `CREATE INDEX` command is only a fixed shell bridge into the
+attachment path you implemented here.
 
 {{#include copyright.md}}
