@@ -4,90 +4,60 @@
 
 > **Chapter 2**
 >
-> Complete [Build an In-Memory Vector Table and Match Its Index](./rust-02-datafusion.md) first. Finish with a seeded
-> IVFFlat index, recall measured against exact search, and the same SQL top-k running through `index=ivf_flat`.
+> Complete [Make the SQL Path Reach Your Index Safely](./rust-02-datafusion.md) first. Finish with a seeded IVFFlat
+> index behind the same SQL top-k path, recall defined against exact search, and an explicit `probes` tradeoff.
 
-IVFFlat is a simple quantization-based vector index that splits data into buckets to accelerate vector similarity search.
-A query probes only the nearest buckets, reducing distance calculations at the cost of possibly missing a true neighbor.
+Chapter 1 left you with an exact `FlatIndex` and a conservative DataFusion path that can use it. The SQL matcher, selected
+vector column, checked row lookup, and final `SortExec` are already working. This chapter changes only how the index
+chooses candidates: IVFFlat groups dataset rows into inverted lists, then searches the lists nearest to the query.
+It is a coarse quantization index: comparing against a small set of centroids chooses which full-precision vectors to
+score.
 
-## How IVFFlat Works
+## Start from the SQL Path You Already Own
 
-IVFFlat builds clusters over vectors already stored in the collection. Each cluster has a centroid and a list of the
-vectors closest to that centroid. At lookup time, the index compares the query with the centroids first, then searches
-only a configured number of nearby lists instead of every vector.
+The Chapter 2 SQL case keeps Chapter 1's table, matcher, lookup, and Euclidean query:
 
-Before the index exists, all points belong to one unpartitioned dataset, so an exact query compares its target with every
-point.
-
-![Vectors before IVFFlat clustering](./vector-db/04-ivfflat-step1.svg)
-
-At build time, k-means chooses centroids and alternates between assigning vectors to their nearest centroid and moving
-each centroid to the mean of its assigned vectors. Each colored region will become one inverted list.
-
-![K-means chooses centroids and their Voronoi regions](./vector-db/04-ivfflat-step2.svg)
-
-After the last centroid update, assign every vector once more using the final centroids. The result is one list per
-centroid, and vectors in the same region will be searched together.
-
-![Every vector is assigned to its nearest centroid](./vector-db/04-ivfflat-step3.svg)
-
-The red vector in the next diagram asks for its nearest neighbors. If lookup searches only its nearest centroid's list,
-it can miss a closer point just across the partition boundary:
-
-![Probing one centroid can miss a nearby point in another list](./vector-db/04-ivfflat-lookup.svg)
-
-Probing the next-nearest list exposes those candidates. Increasing the number of probes does more work, but it is less
-likely to miss a true neighbor:
-
-![Probing two centroids expands the candidate set](./vector-db/04-ivfflat-lookup-2.svg)
-
-## Build IVFFlat in Rust
-
-Chapter 1 left you with an exact SQL path and a `FlatIndex` that checks every vector. You will now build IVFFlat to choose
-a smaller candidate set for the same query, then compare its result with exact search.
-
-You will modify:
-
-```text
-rust/vector-starter/core/src/ivf.rs
-rust/vector-starter/core/src/search.rs        recall_at_k only
+```sql
+SELECT id, payload
+FROM points
+ORDER BY array_distance(embedding, [1.0, 1.0, 1.0])
+LIMIT 5;
 ```
 
-Keep the Chapter 1 DataFusion rule, public APIs, and tests unchanged. Your work stays in the two files above.
+From the repository root, enter the Rust workspace and confirm the completed Chapter 1 case first:
 
-## Correctness Requirements
+```sh
+cd rust
+cargo test -p vector-datafusion-starter --test sqllogictest day1_table_and_optimizer_sql
+```
 
-Your IVF configuration must satisfy `1 <= probes <= partitions <= rows`
-with `iterations > 0`. Construction and search reject invalid values before
-scanning; excess probes do not duplicate a uniquely ranked partition scan.
+Now run the Chapter 2 case before implementing IVFFlat:
 
-After training, every dataset row must belong to exactly one inverted
-list. An orphaned row is invisible to every query; a row in two lists
-can occupy the result heap twice and crowd out a distinct row. Both copies use
-the same immutable vector and metric, so they do not acquire different exact
-distances.
+```sh
+cargo test -p vector-datafusion-starter --test sqllogictest day2_ivfflat_sql
+```
 
-Given identical data, metric, configuration, and seed, k-means training
-must produce identical centroids and list sizes. A non-deterministic
-build makes every recall measurement unreproducible.
+This second command is your product-level expected failure. It uses the same DataFusion integration with
+`IndexConfig::IvfFlat`, then reaches the unfinished IVFFlat constructor. At the end of the chapter, the same command must
+reach this plan and return the five expected rows:
 
-Centroid assignment, centroid ranking, and candidate scoring must all
-use the same distance metric. Mixing metrics produces a result set
-ordered by a criterion the probe loop never optimized.
+```text
+SortExec: TopK(fetch=5), ...
+  VectorIndexScanExec: index=ivf_flat, metric=Euclidean, query_dim=3, fetch=Some(5), ordered=false
+```
 
-Searching all partitions must produce the same ordered top-k as the
-exact `FlatIndex`. If the exhaustive probe disagrees with the flat
-index, inspect list membership as well as metric scoring, heap retention, and
-final ordering: an orphaned or duplicated row can also cause the mismatch.
-Placing a row in the wrong list does not change exhaustive results when the row
-still appears exactly once, but it can reduce recall when a query probes only
-some lists.
+Your work is limited to three functions:
 
-Approximate and exact runs for recall measurement must use identical
-data, queries, metric, and `k`. Changing any of these between runs
-makes the recall number meaningless.
+```text
+rust/vector-starter/core/src/search.rs    recall_at_k
+rust/vector-starter/core/src/ivf.rs       IvfFlatIndex::try_new
+rust/vector-starter/core/src/ivf.rs       IvfFlatIndex::search_with_probes
+```
 
-## Checkpoint 1: Measure Recall
+The starter already supplies `Dataset`, `Metric`, `TopK`, `DeterministicRng`, the IVFFlat configuration and public index
+shell, and the complete Chapter 1 DataFusion path. Keep those public APIs and the Chapter 1 tests unchanged.
+
+## Checkpoint 1: Define Recall against Flat Search
 
 Implement `recall_at_k` in `search.rs`. Recall is the fraction of expected top-k row offsets present in the approximate
 top-k:
@@ -98,26 +68,32 @@ actual   = [0, 2, 9]
 recall@3 = 2 / 3
 ```
 
-Use row membership, not distance equality or result position. Define recall as `1.0` when the exact denominator is zero;
-an empty request has missed nothing.
+Use row membership, not distance equality or result position. The denominator is the number of exact results available
+within `k`, not always `k` itself. If exact search returns two rows for `k = 10`, an approximate index can recover at most
+those two rows. Define recall as `1.0` when that denominator is zero; an empty request has missed nothing.
 
 ```sh
-cd rust
 cargo test -p vector-core-starter --test indexes recall_reports_result_overlap
 ```
 
-**Prediction:** If exact search returns two rows because the dataset contains two rows while `k = 10`, should the
-denominator be 2 or 10? Relate your answer to what the approximate index could possibly return.
+This function gives the approximate result a correctness meaning. Timing and cross-index comparison remain separate;
+the final benchmark will measure all five indexes under one shared workload.
 
 ## Checkpoint 2: Validate and Seed the Build
 
-Implement `IvfFlatIndex::try_new` in `ivf.rs`. Start by validating the Chapter 2 configuration and calling
-`dataset.validate_for_metric(metric)`.
+Implement the validation boundary at the start of `IvfFlatIndex::try_new`. The configuration must satisfy
+`1 <= probes <= partitions <= rows` with `iterations > 0`. Call `dataset.validate_for_metric(metric)` before training so
+cosine builds reject zero-norm rows just as exact search does.
 
-The starter supplies `DeterministicRng`. Use it to shuffle row offsets, then copy the first `partitions` dataset rows as
-initial centroids. Sampling distinct offsets avoids beginning with the same row twice.
+```sh
+cargo test -p vector-core-starter --test indexes ivf_rejects_invalid_build_configuration
+```
 
-For a tiny build with six rows and two partitions, the state is:
+Once invalid configurations fail before any training work, initialize the centroids. The starter supplies
+`DeterministicRng`; use it to shuffle row offsets, then copy the first `partitions` dataset rows. Sampling distinct offsets
+avoids beginning with the same row twice.
+
+For a tiny build with six rows and two partitions, the initial state is:
 
 ```text
 dataset rows:     0 1 2 3 4 5
@@ -125,7 +101,19 @@ seeded centroids: row 4, row 1
 assignments:      unknown until the first assignment pass
 ```
 
-The exact selected rows depend on the seed, but a second build with the same inputs must make the same choice.
+The selected rows depend on the seed, but a second build with the same data, metric, configuration, and seed must choose
+the same centroids and later produce the same list sizes. A nondeterministic build would make its recall results
+irreproducible.
+
+Before the index exists, all points belong to one unpartitioned dataset, so an exact query compares its target with every
+point.
+
+![Vectors before IVFFlat clustering](./vector-db/04-ivfflat-step1.svg)
+
+K-means begins from the seeded centroids and alternates between assigning vectors to their nearest centroid and moving
+each centroid to the mean of its assigned vectors. Each colored region will become one inverted list.
+
+![K-means chooses centroids and their Voronoi regions](./vector-db/04-ivfflat-step2.svg)
 
 ## Checkpoint 3: Alternate Assignment and Update
 
@@ -150,21 +138,30 @@ repeat up to iterations:
 rebuild lists once using the final centroids
 ```
 
-The final rebuild establishes I2. Without it, list membership may describe centroid positions from the previous round.
+After the last centroid update, assign every vector once more using the final centroids. The result must contain every
+dataset row exactly once. An orphaned row is invisible to every query; a duplicate can occupy the result heap twice and
+crowd out a distinct row. Both copies use the same immutable vector and metric, so they do not acquire different exact
+distances.
 
-### Empty and Zero-Mean Clusters
+![Every vector is assigned to its nearest centroid](./vector-db/04-ivfflat-step3.svg)
+
+The final rebuild matters because the preceding assignment can describe centroid positions from the previous round.
+Placing a row in the wrong list does not change exhaustive results when that row still appears exactly once, but it can
+reduce recall when a query probes only some lists.
+
+### Recover Empty and Zero-Mean Clusters
 
 An empty cluster has no mean. Re-seed it from the row farthest from its nearest current centroid; do not divide by zero or
 silently remove a partition.
 
-Cosine adds another boundary: nonzero assigned vectors can average to the zero vector. Normalize every nonzero cosine
-centroid after the mean. If its norm is zero, replace it with an assigned dataset row, which has already passed Chapter 1's
-nonzero-norm validation.
+Cosine adds a different boundary: nonzero assigned vectors can average to the zero vector. Normalize every nonzero cosine
+centroid after the mean. If its norm is zero, replace it with an assigned dataset row, which has already passed Chapter
+1's nonzero-norm validation.
 
 **Prediction:** The mean of `[1, 0]` and `[-1, 0]` is `[0, 0]`. What would cosine distance do with that centroid if you
 kept it? Which already validated row can safely replace it?
 
-Run the seeded and zero-mean cases:
+Run the deterministic-build and zero-mean cases:
 
 ```sh
 cargo test -p vector-core-starter --test indexes ivf_build_is_seeded
@@ -179,71 +176,89 @@ Implement `search_with_probes`:
 2. compute one `Neighbor` per centroid and sort centroids nearest-first;
 3. visit row offsets from the first `probes` lists;
 4. score those dataset rows with the original metric; and
-5. feed all candidates into the existing `TopK` and return nearest-first.
+5. feed every candidate into the existing `TopK` and return nearest-first.
 
-Do not return a separate top-k from each list. The SQL query asks for the best `k` across the union of candidates.
+Reject an invalid probe count before scanning any list. A request above the partition count is an error, not permission to
+visit a uniquely ranked partition more than once.
+
+Centroid assignment, centroid ranking, and candidate scoring must all use the same metric. Mixing metrics produces a
+result set ordered by a criterion the probe loop never optimized. Do not return a separate top-k from each list: the SQL
+query asks for the best `k` across the union of candidates.
+
+The red vector below probes its nearest centroid's list. It can miss a closer point just across the partition boundary:
+
+![Probing one centroid can miss a nearby point in another list](./vector-db/04-ivfflat-lookup.svg)
+
+Probing the next-nearest list exposes those candidates. Increasing `probes` does more candidate work, but it is less
+likely to miss a true neighbor:
+
+![Probing two centroids expands the candidate set](./vector-db/04-ivfflat-lookup-2.svg)
 
 Suppose ranked list IDs are `[2, 0, 1]` and their sizes are `[10, 40, 5]`. With `probes = 1`, search reads the five rows
 in list 2. With `probes = 2`, it reads those five plus the ten rows in list 0. `k` controls retained output; `probes`
 controls which candidates can enter it.
 
-A useful boundary test is to probe every partition. IVFFlat then visits every dataset row and must match exact search,
-including tie order:
+Approximate and exact recall runs must use identical data, queries, metric, and `k`. Changing any of these between runs
+makes the recall number meaningless.
+
+The decisive boundary is to probe every partition. IVFFlat then visits every dataset row and must produce the same complete
+ordered result as `FlatIndex`, including tie order:
 
 ```sh
 cargo test -p vector-core-starter --test indexes ivf_scanning_every_partition_matches_exact_search
 ```
 
-If this fails, inspect list completeness, metric choice, and final sorting. With every list open, approximation is no
-longer an explanation.
+If this fails, inspect list completeness, metric choice, heap retention, and final sorting. With every list open,
+approximation is no longer an explanation.
 
-## Checkpoint 5: Draw a Recall/Work Curve
+## Checkpoint 5: Put IVFFlat behind the Same SQL
 
-The included example creates one deterministic dataset and query set, computes the exact results once with `FlatIndex`,
-and reports IVFFlat recall and latency:
-
-```sh
-cargo run --release -p vector-core-starter --example recall
-```
-
-Change `probes` while keeping the seed, rows, queries, metric, and `k` fixed. Record at least a small-probe point and an
-all-partitions point. Timings vary by machine, so compare how candidate work and recall change instead of aiming for a
-fixed microsecond target.
-
-As `probes` approaches `partitions`, candidate work approaches exact search and recall must reach `1.0` on the same
-deterministic workload.
-
-## Checkpoint 6: Use IVFFlat from SQL
-
-Run the Chapter 2 SQLLogicTest:
+Return to the product-level case you ran at the start:
 
 ```sh
 cargo test -p vector-datafusion-starter --test sqllogictest day2_ivfflat_sql
 ```
 
-The SQL text and the matcher you implemented in Chapter 1 are unchanged. Only `IndexConfig` changes:
+The SQL text and the matcher you implemented in Chapter 1 are unchanged. DataFusion passes `LIMIT 5` through Chapter 1's
+`with_fetch`. `VectorIndexScanExec` calls `IvfFlatIndex::search`, which uses the configured `probes`; the generic bounded
+sort remains responsible for final SQL ordering. Unsupported query shapes still use the exact `DataSourceExec` path.
 
-```text
-SortExec: TopK(fetch=5), ...
-  VectorIndexScanExec: index=ivf_flat, metric=Euclidean, query_dim=3, fetch=Some(5), ordered=false
+The test uses all three partitions, so its five returned rows must match exact search. This is an integration check, not
+a claim that a smaller probe count always returns the same rows.
+
+## Checkpoint 6: Run the Chapter 2 Product Loop
+
+Run the supplied example after the focused core and SQL tests pass:
+
+```sh
+cargo run -p vector-datafusion-starter --example ivfflat_sql
 ```
 
-DataFusion passes `LIMIT 5` through Chapter 1's `with_fetch`. `VectorIndexScanExec` calls `IvfFlatIndex::search`, which uses
-the configured `probes`. The generic bounded sort remains responsible for final SQL ordering. Unsupported query shapes
-still use the exact `DataSourceExec` path.
+The example issues one cosine top-k over the same five-row table through a Flat attachment and then a seeded IVFFlat
+attachment with all partitions probed. Compare the two `EXPLAIN` leaves:
+
+```text
+VectorIndexScanExec: index=flat, metric=Cosine, query_dim=3, fetch=Some(3), ordered=false
+VectorIndexScanExec: index=ivf_flat, metric=Cosine, query_dim=3, fetch=Some(3), ordered=false
+```
+
+Both runs keep DataFusion's final `SortExec` and return the same three rows. The product contract did not change; the
+candidate-selection implementation did. Smaller probe counts expose the recall/work tradeoff you reasoned about above,
+while Chapter 6 owns the release-mode latency comparison across all five indexes.
 
 ## Chapter 2 Review
 
-After the four Chapter 2 core tests, recall example, and Chapter 2 SQLLogicTest pass, choose one concrete build and query
+After the five Chapter 2 core tests, Chapter 2 SQLLogicTest, and product example pass, choose one concrete build and query
 and explain:
 
+- why the configuration is rejected before training;
 - why list membership must be rebuilt after the final centroid update;
 - how a dataset row flows from assignment to a probed list to `TopK`;
 - why empty and zero-mean cosine clusters need different recovery logic;
 - why probing every list is an exactness test; and
-- how Chapter 1's optimizer rule reaches a new index without changing its safety contract.
+- how Chapter 1's optimizer rule reaches a new index without changing its SQL safety contract.
 
 Keep this checkpoint focused on in-memory IVFFlat. Persistent postings, online centroid retraining, product quantization,
-and reproducible latency targets remain outside this chapter.
+cross-index timing, and reproducible latency targets remain outside this chapter.
 
 {{#include copyright.md}}
