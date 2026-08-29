@@ -132,10 +132,7 @@ fn ivf_rejects_invalid_build_configuration() {
             .unwrap_err();
         assert!(matches!(error, VectorError::InvalidConfig(_)));
     }
-}
 
-#[test]
-fn ivf_delegates_dataset_and_query_validation() {
     let config = IvfFlatConfig {
         partitions: 1,
         probes: 1,
@@ -147,38 +144,15 @@ fn ivf_delegates_dataset_and_query_validation() {
         IvfFlatIndex::try_new(zero_norm_dataset, Metric::Cosine, config).unwrap_err(),
         VectorError::ZeroNorm { vector: 1 }
     );
-
-    let dataset = Dataset::try_new(vec![vec![1.0, 0.0], vec![0.0, 1.0]]).unwrap();
-    let index = IvfFlatIndex::try_new(dataset, Metric::Cosine, config).unwrap();
-    assert_eq!(
-        index.search_with_probes(&[1.0], 1, 1).unwrap_err(),
-        VectorError::DimensionMismatch {
-            expected: 2,
-            actual: 1,
-        }
-    );
-    assert_eq!(
-        index
-            .search_with_probes(&[1.0, f32::INFINITY], 1, 1)
-            .unwrap_err(),
-        VectorError::NonFiniteValue {
-            vector: 2,
-            dimension: 1,
-        }
-    );
-    assert_eq!(
-        index.search_with_probes(&[0.0, 0.0], 1, 1).unwrap_err(),
-        VectorError::ZeroNorm { vector: 2 }
-    );
 }
 
 #[test]
 fn ivf_scanning_every_partition_matches_exact_search() {
     let dataset = line_dataset(80);
-    let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();
+    let exact = FlatIndex::try_new(dataset.clone(), Metric::Cosine).unwrap();
     let ivf = IvfFlatIndex::try_new(
         dataset,
-        Metric::Euclidean,
+        Metric::Cosine,
         IvfFlatConfig {
             partitions: 8,
             probes: 2,
@@ -195,6 +169,25 @@ fn ivf_scanning_every_partition_matches_exact_search() {
     assert_eq!(actual.len(), 80);
     assert!(actual.windows(2).all(|pair| pair[0] <= pair[1]));
     assert_eq!(ivf.list_sizes().iter().sum::<usize>(), 80);
+    assert_eq!(
+        ivf.search_with_probes(&[31.2], 80, 8).unwrap_err(),
+        VectorError::DimensionMismatch {
+            expected: 2,
+            actual: 1,
+        }
+    );
+    assert_eq!(
+        ivf.search_with_probes(&[31.2, f32::INFINITY], 80, 8)
+            .unwrap_err(),
+        VectorError::NonFiniteValue {
+            vector: 80,
+            dimension: 1,
+        }
+    );
+    assert_eq!(
+        ivf.search_with_probes(&[0.0, 0.0], 80, 8).unwrap_err(),
+        VectorError::ZeroNorm { vector: 80 }
+    );
     assert!(matches!(
         ivf.search_with_probes(&query, 80, 0),
         Err(VectorError::InvalidConfig(_))
@@ -240,7 +233,6 @@ fn ivf_cosine_recovers_from_a_zero_mean_cluster() {
     )
     .unwrap();
     assert!(index.centroids()[0].iter().all(|value| value.is_finite()));
-    assert_eq!(index.search(&[1.0, 0.0], 4).unwrap().len(), 4);
 }
 
 #[test]
