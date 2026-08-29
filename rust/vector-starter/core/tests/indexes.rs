@@ -1,8 +1,9 @@
 use std::mem::size_of;
 
 use vector_core_starter::{
-    Dataset, FlatIndex, HnswConfig, HnswIndex, IvfFlatConfig, IvfFlatIndex, IvfPqConfig,
-    IvfPqIndex, Metric, Neighbor, NswConfig, NswIndex, VectorError, VectorIndex, recall_at_k,
+    Dataset, FlatIndex, HnswConfig, HnswIndex, IndexConfig, IvfFlatConfig, IvfFlatIndex,
+    IvfPqConfig, IvfPqIndex, Metric, Neighbor, NswConfig, NswIndex, VectorError, VectorIndex,
+    recall_at_k,
 };
 
 fn line_dataset(size: usize) -> Dataset {
@@ -81,6 +82,51 @@ fn recall_reports_result_overlap() {
         },
     ];
     assert_eq!(recall_at_k(&expected, &actual, 3), 2.0 / 3.0);
+    assert_eq!(recall_at_k(&expected[..2], &actual, 10), 0.5);
+    assert_eq!(recall_at_k(&[], &actual, 10), 1.0);
+}
+
+#[test]
+fn ivf_rejects_invalid_build_configuration() {
+    let invalid_configs = [
+        IvfFlatConfig {
+            partitions: 0,
+            probes: 1,
+            iterations: 1,
+            seed: 7,
+        },
+        IvfFlatConfig {
+            partitions: 81,
+            probes: 1,
+            iterations: 1,
+            seed: 7,
+        },
+        IvfFlatConfig {
+            partitions: 8,
+            probes: 0,
+            iterations: 1,
+            seed: 7,
+        },
+        IvfFlatConfig {
+            partitions: 8,
+            probes: 9,
+            iterations: 1,
+            seed: 7,
+        },
+        IvfFlatConfig {
+            partitions: 8,
+            probes: 1,
+            iterations: 0,
+            seed: 7,
+        },
+    ];
+
+    for config in invalid_configs {
+        let error = IndexConfig::IvfFlat(config)
+            .build(line_dataset(80), Metric::Euclidean)
+            .unwrap_err();
+        assert!(matches!(error, VectorError::InvalidConfig(_)));
+    }
 }
 
 #[test]
@@ -100,10 +146,20 @@ fn ivf_scanning_every_partition_matches_exact_search() {
     .unwrap();
     let query = [31.2, 4.0];
 
-    let expected = exact.search(&query, 12).unwrap();
-    let actual = ivf.search_with_probes(&query, 12, 8).unwrap();
+    let expected = exact.search(&query, 80).unwrap();
+    let actual = ivf.search_with_probes(&query, 80, 8).unwrap();
     assert_eq!(actual, expected);
+    assert_eq!(actual.len(), 80);
+    assert!(actual.windows(2).all(|pair| pair[0] <= pair[1]));
     assert_eq!(ivf.list_sizes().iter().sum::<usize>(), 80);
+    assert!(matches!(
+        ivf.search_with_probes(&query, 80, 0),
+        Err(VectorError::InvalidConfig(_))
+    ));
+    assert!(matches!(
+        ivf.search_with_probes(&query, 80, 9),
+        Err(VectorError::InvalidConfig(_))
+    ));
 }
 
 #[test]
