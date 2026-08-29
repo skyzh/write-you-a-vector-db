@@ -51,6 +51,51 @@ fn recall_reports_result_overlap() {
         },
     ];
     assert_eq!(recall_at_k(&expected, &actual, 3), 2.0 / 3.0);
+    assert_eq!(recall_at_k(&expected[..2], &actual, 10), 0.5);
+    assert_eq!(recall_at_k(&[], &actual, 10), 1.0);
+
+    let duplicate_actual = [expected[0], expected[0], expected[2]];
+    let duplicate_recall = recall_at_k(&expected[..2], &duplicate_actual, 3);
+    assert_eq!(duplicate_recall, 0.5);
+    assert!((0.0..=1.0).contains(&duplicate_recall));
+}
+
+#[test]
+fn ivf_delegates_dataset_and_query_validation() {
+    let config = IvfFlatConfig {
+        partitions: 1,
+        probes: 1,
+        iterations: 1,
+        seed: 7,
+    };
+    let zero_norm_dataset = Dataset::try_new(vec![vec![1.0, 0.0], vec![0.0, 0.0]]).unwrap();
+    assert_eq!(
+        IvfFlatIndex::try_new(zero_norm_dataset, Metric::Cosine, config).unwrap_err(),
+        VectorError::ZeroNorm { vector: 1 }
+    );
+
+    let dataset = Dataset::try_new(vec![vec![1.0, 0.0], vec![0.0, 1.0]]).unwrap();
+    let index = IvfFlatIndex::try_new(dataset, Metric::Cosine, config).unwrap();
+    assert_eq!(
+        index.search_with_probes(&[1.0], 1, 1).unwrap_err(),
+        VectorError::DimensionMismatch {
+            expected: 2,
+            actual: 1,
+        }
+    );
+    assert_eq!(
+        index
+            .search_with_probes(&[1.0, f32::INFINITY], 1, 1)
+            .unwrap_err(),
+        VectorError::NonFiniteValue {
+            vector: 2,
+            dimension: 1,
+        }
+    );
+    assert_eq!(
+        index.search_with_probes(&[0.0, 0.0], 1, 1).unwrap_err(),
+        VectorError::ZeroNorm { vector: 2 }
+    );
 }
 
 #[test]
