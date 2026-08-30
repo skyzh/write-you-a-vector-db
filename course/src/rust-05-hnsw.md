@@ -4,32 +4,151 @@
 
 > **Chapter 4**
 >
-> Complete [Navigate a Proximity Graph with NSW](./rust-04-nsw.md) first. Finish with seeded sparse graph layers,
-> greedy upper-layer descent, layer-zero beam search, and the same SQL top-k running through `index=hnsw`.
+> Complete [Navigate a Proximity Graph with NSW](./rust-04-nsw.md) first. You will turn that one-layer graph into a
+> seeded hierarchy, route through its sparse upper layers, and run the same SQL top-k through `index=hnsw`.
 
-The previous chapter searches one NSW graph containing every vector. HNSW adds sparse graph layers above it, much like a
-skip list or a mipmap: upper layers make long jumps across the collection, while the complete layer zero refines the
-search around the query.
+## Start from the NSW Product
 
-## How HNSW Hierarchy Works
+Chapter 3 ended with one five-row table and one cosine-distance query running through IVFFlat and NSW. From the `rust/`
+directory, run that supplied comparison again:
 
-Layer zero contains every vector. Each higher layer contains a progressively smaller random subset. A vertex that appears
-in an upper layer also appears in every layer below it.
+```sh
+cargo run -p vector-datafusion-starter --example nsw_sql
+```
+
+The second plan contains `index=nsw`, and both indexes return:
+
+```text
+(1, one)
+(2, two)
+(3, three)
+```
+
+This chapter keeps the table, query, SQL matcher, source-row lookup, and final `SortExec` fixed. You will change the core
+candidate path: instead of starting every query in one graph that contains every row, HNSW first makes coarse moves
+through sparse upper layers and then reuses Chapter 3's bounded search in the all-row layer-zero graph.
+
+**Prediction:** When you return to this query with HNSW, which plan field should change? Why can the three rows stay the
+same even though the route that proposes them changes?
+
+The cumulative starter leaves exactly three Chapter 4 units unfinished:
+
+```text
+rust/vector-starter/core/src/graph.rs        greedy_search
+rust/vector-starter/core/src/hnsw.rs         HnswIndex::try_new
+rust/vector-starter/core/src/hnsw.rs         HnswIndex::search_with_ef
+```
+
+Chapter 3 already supplied `search_layer`, `prune_neighbors`, deterministic metric ordering, and the DataFusion boundary.
+`try_new` is one complete build operation: level assignment and graph construction share the same insertion loop, so you
+will implement and check them together.
+
+## Checkpoint 1: Route Through One Upper Layer
+
+Layer zero contains every vector. Each higher layer contains a progressively smaller subset, and a row promoted to level
+`L` belongs to every layer from zero through `L`.
 
 ![Sparse HNSW layers route into the complete layer-zero graph](./vector-db/06-hnsw-architecture.svg)
 
-The diagram repeats the same vector IDs across nested layers. Sparse upper-layer edges cross large parts of the dataset;
-denser lower-layer edges make shorter moves. The highest promoted vertex becomes the entry point for the whole index.
-
-### Look Up a Query
-
-Begin at the entry point in the highest layer. Greedily follow closer neighbors until no adjacent vertex improves the
-distance, then carry that vertex down as the entry point for the next layer.
+A query begins at the global entry point in the highest layer. Within one upper layer, `greedy_search` repeatedly moves
+to the best allowed neighbor only when that neighbor strictly improves the public `(distance, row)` order. Equal
+geometric distance can therefore move to a lower row offset, but every move still decreases the total order and the walk
+terminates.
 
 ![HNSW descends through progressively denser layers](./vector-db/06-hnsw-explore.svg)
 
-Upper layers use a width-one greedy walk because their job is coarse routing. At layer zero, reuse the NSW best-first
-search from Chapter 3 with width `max(k, ef_search)`, then return the nearest `k` candidates.
+```text
+current = distance(query, entry)
+loop:
+    next = minimum allowed neighbor by (distance, row)
+    if next is strictly better than current:
+        current = next
+    else:
+        return current.row
+```
+
+Implement `greedy_search` in `graph.rs`. Respect `allowed_rows`: during construction, row `r` may route only through rows
+`0..r`; during a query, every stored row is allowed. Do not turn this into a beam search. Upper layers choose one coarse
+handoff, while layer zero will retain multiple candidates for top-k output.
+
+Run the focused helper test:
+
+```sh
+cargo test -p vector-core-starter --lib \
+  graph_tests::greedy_search_moves_on_public_tie_order_and_respects_bounds -- --exact
+```
+
+Its fixture begins at row 2. An equal-distance row 1 wins by row offset, while a closer row 3 is first excluded and then
+admitted by changing `allowed_rows`. A no-op walk or a distance-only tie comparison fails at this checkpoint.
+
+## Checkpoint 2: Build the Seeded Nested Graph
+
+Implement the complete `HnswIndex::try_new` unit in `hnsw.rs`. Validate stored vectors for the selected metric and reject
+an invalid graph budget:
+
+- `max_connections` must be greater than zero;
+- `ef_construction` must be at least `max_connections`;
+- `ef_search` must be greater than zero; and
+- `max_level` must be greater than zero.
+
+For each dataset row, use the supplied deterministic generator to flip a seeded coin until the first failure or
+`max_level`. A sampled level of one places the row in layers one and zero, but not layer two.
+
+![A new vector is promoted to level one and every lower layer](./vector-db/06-hnsw-insert-1.svg)
+
+As each row arrives, extend the adjacency storage of every existing layer and create missing layers through the sampled
+level. Rows that do not belong to a layer keep an empty adjacency list there. That shape makes these two facts directly
+inspectable:
+
+- `levels[r]` is the highest layer containing row `r`; and
+- membership is nested: appearing in an upper layer requires appearing in every lower layer.
+
+The first row needs no search. Store it in every included layer and make it the entry point. For each later row, start
+from the current global entry point. Greedily descend through layers above the new row's sampled level. At every layer the
+new row joins, reuse Chapter 3's `search_layer` with `ef_construction`, connect the nearest
+`max_connections` candidates, and prune reciprocal edges back to the cap.
+
+![Search each included layer before connecting the new vector](./vector-db/06-hnsw-insert-2.svg)
+
+```text
+target_level = seeded_geometric_level()
+entry = top entry point
+
+for level above target_level, from highest down:
+    entry = greedy_search(layer[level], new_vector, entry)
+
+for shared level from min(highest, target_level) down to 0:
+    candidates = search_layer(layer[level], new_vector, [entry], ef_construction)
+    connect the nearest max_connections candidates in both directions
+    prune every affected endpoint and remove rejected reciprocal edges
+    entry = nearest candidate, when one exists
+
+if target_level is above the previous highest level:
+    make the new row the global entry point
+```
+
+Every layer must remain deterministic, degree-bounded, duplicate-free, self-free, and reciprocal. Keep core row values as
+dataset ordinals; the supplied DataFusion adapter maps those ordinals through its snapshot row-ID boundary later.
+
+Run the construction test:
+
+```sh
+cargo test -p vector-core-starter --test indexes \
+  hnsw_rejects_invalid_configuration_and_builds_seeded_nested_layers -- --exact
+```
+
+It checks invalid budgets, the exact seed-99 level prefix, the top level, nested membership, degree caps, and the absence
+of duplicate or self-edges. It also checks every retained edge at both endpoints. Forcing every sampled level to zero or
+injecting a self-edge fails here rather than being hidden by a later recall result.
+
+## Checkpoint 3: Search from the Top Layer
+
+Implement `HnswIndex::search_with_ef`. Validate the query for dimension, finite values, and the selected metric, and
+reject a zero explicit search width.
+
+Begin at the stored global entry point. Call `greedy_search` once per upper layer, from the top layer down through layer
+one, carrying the returned row into the next layer. At layer zero, call Chapter 3's `search_layer` with width
+`ef_search.max(k)`, then truncate the nearest-first result to `k`.
 
 ```text
 entry = top entry point
@@ -45,159 +164,82 @@ candidates = search_layer(
 return nearest k candidates
 ```
 
-**Prediction:** Why would using the full beam width in every sparse upper layer do more work without changing the final
-result contract? Which layer still needs multiple candidates to produce top-k output?
+The `.max(k)` floor separates the requested result count from the exploration hint. A caller asking for five rows with
+`ef_search = 1` still needs a result frontier capable of holding five rows.
 
-### Insert a Vector
-
-Assign each new vector a random maximum level. The course uses repeated seeded coin flips: every successful flip promotes
-the vector one layer higher, up to `max_level`. This produces many layer-zero vertices and progressively fewer vertices in
-higher layers.
-
-Suppose the new vector reaches level one. It belongs to layers one and zero, but not layer two.
-
-![A new vector is promoted to level one and every lower layer](./vector-db/06-hnsw-insert-1.svg)
-
-Start at the current top entry point. Greedily descend through layers above the new vector's level. At each layer the new
-vector joins, run the Chapter 3 best-first search with `ef_construction`, choose the nearest `max_connections` candidates,
-add reciprocal edges, and prune both sides of rejected edges.
-
-![Search each included layer before connecting the new vector](./vector-db/06-hnsw-insert-2.svg)
-
-```text
-target_level = seeded_geometric_level()
-entry = top entry point
-
-for level above target_level, from highest down:
-    entry = greedy_search(layer[level], new_vector, entry)
-
-for shared level from min(highest, target_level) down to 0:
-    candidates = search_layer(layer[level], new_vector, entry, ef_construction)
-    connect the nearest max_connections candidates
-    prune reciprocal edges to the degree cap
-    entry = nearest candidate
-
-if target_level is above the previous highest level:
-    add the missing sparse layers
-    make the new vector the top entry point
-```
-
-When the first vector creates the index, add it to every layer through its sampled level and use it as the entry point.
-When a later vector reaches a new highest level, its new upper layers initially contain only that vector.
-
-## Build HNSW in Rust
-
-You will modify:
-
-```text
-rust/vector-starter/core/src/graph.rs        greedy_search only
-rust/vector-starter/core/src/hnsw.rs
-```
-
-The starter already contains the Chapter 3 layer search and pruning interfaces, a deterministic random-number generator,
-and the public HNSW configuration and inspection methods. Keep the NSW behavior, metric ordering, public APIs, and
-DataFusion matcher unchanged.
-
-### Correctness Requirements
-
-Row `r` must appear in every layer from zero through `levels[r]` and in
-no higher layer. A row missing from a lower layer is unreachable from
-below; a row in a higher layer than declared violates the level
-assignment the construction algorithm depends on.
-
-Given equal data, configuration, and seed, the level sequence and top
-layer must be identical. Non-deterministic levels make the graph
-structure unreproducible across runs.
-
-Your budget must satisfy `max_connections > 0`,
-`ef_construction >= max_connections`, `ef_search > 0`, and `max_level > 0`.
-
-Greedy descent in upper layers must strictly improve the public
-`(distance, row)` order and this course passes its single best entry point
-downward. Equal geometric distance may still move to a lower row offset, but
-the total order strictly decreases and therefore terminates. The shared
-`search_layer` also supports and deduplicates multiple entry points; the
-single-entry handoff is this course's descent schedule, not a frontier limit.
-
-The layer-zero beam search must use the Chapter 3 two-frontier
-traversal with width `ef_search.max(k)`. Reusing it preserves the algorithm
-implemented and tested in this course; another valid layer-zero strategy is not
-inherently inconsistent with greedy upper-layer descent.
-
-Every layer must preserve the degree cap, contain no duplicate or
-self-edges, and store every remaining edge at both endpoints.
-
-Every layer stores core dataset ordinals. The reference DataFusion adapter maps
-each returned ordinal through the snapshot's opaque `RowId` and then its checked
-batch/row location; a core ordinal is not an Arrow batch offset. Ordinal drift
-makes the graph score or return the wrong source row.
-
-### Checkpoint 1: Descend One Layer
-
-Implement `greedy_search` in `graph.rs`. Start from one valid entry point, repeatedly choose its nearest allowed neighbor,
-and move only when that neighbor is strictly better than the current vertex. A strict improvement prevents cycles and
-makes distance-and-row tie order deterministic.
-
-### Checkpoint 2: Assign Seeded Levels
-
-Validate `HnswConfig`, then sample one capped geometric level per dataset row from the supplied deterministic generator.
-Store the sampled levels so two builds with the same seed can be compared directly.
-
-As rows arrive, extend every existing layer's adjacency storage and create missing upper layers through the row's sampled
-level. Rows below a layer's membership threshold keep an empty adjacency list in that layer.
-
-### Checkpoint 3: Build the Layered Graph
-
-Implement the insertion descent and connection loops from the algorithm above. Reuse the Chapter 3 search and pruning
-rules. At every connected layer, remove rejected edges from both endpoints and preserve the same deterministic neighbor
-order.
-
-Update the global entry point only when the new row's level is higher than the previous top level.
-
-### Checkpoint 4: Search from Top to Bottom
-
-Implement `search_with_ef`. Validate the query and search width, greedily descend every upper layer, then call
-`search_layer` at layer zero with `ef_search.max(k)`. Truncate the nearest-first result to `k`.
-
-Run the focused test:
+Run the query test:
 
 ```sh
-cd rust
-cargo test -p vector-core-starter --test indexes hnsw_is_seeded_and_high_ef_recovers_neighbors
+cargo test -p vector-core-starter --test indexes \
+  hnsw_search_validates_widens_and_recovers_neighbors -- --exact
 ```
 
-The test checks seeded level assignment, nested membership, degree bounds, reciprocal edges, and exact overlap on one
-connected fixture at a high search width. It does not make HNSW exact for arbitrary data or smaller budgets.
+It checks query validation, zero width, result ordering, the `ef_search.max(k)` floor, and one connected high-width
+fixture. Matching `FlatIndex` on that fixture is a bounded observation, not a promise that HNSW is exact for arbitrary
+datasets or search budgets.
 
-### Checkpoint 5: Use HNSW from SQL
+## Return to the SQL Product
 
-Run the Chapter 4 SQLLogicTest:
+Run the supplied comparison that includes Flat, IVFFlat, and HNSW:
 
 ```sh
-cargo test -p vector-datafusion-starter --test sqllogictest day4_hnsw_sql
+cargo run -p vector-datafusion-starter --example sql
 ```
 
-The unchanged SQL boundary now exposes the hierarchical index:
+The HNSW section contains:
 
 ```text
-SortExec: TopK(fetch=5), ...
-  VectorIndexScanExec: index=hnsw, metric=Euclidean, query_dim=3, fetch=Some(5), ordered=false
+VectorIndexScanExec: index=hnsw, metric=Cosine, query_dim=3, fetch=Some(3), ordered=false
 ```
 
-HNSW selects candidates; DataFusion still owns final SQL ordering. Filters and incompatible distance expressions remain on
-the exact scan.
+and returns the same three rows you predicted:
+
+```text
+(1, one)
+(2, two)
+(3, three)
+```
+
+This small comparison shows the product handoff, not a performance or general-recall result. HNSW proposes core dataset
+ordinals; the supplied adapter resolves them to source rows, and the supplied `SortExec` still owns final SQL ordering.
+Unsupported SQL shapes continue to use the exact scan.
+
+Keep the separate five-result Chapter 4 SQL fixture green:
+
+```sh
+cargo test -p vector-datafusion-starter --test sqllogictest day4_hnsw_sql -- --exact
+```
+
+That fixture uses Euclidean distance and `LIMIT 5`; it verifies `index=hnsw`, the supplied final sort, and its own expected
+rows. It is intentionally different from the five-row cosine example above.
+
+## Check the Course Through Chapter 4
+
+Run the checks that stop before Chapter 5's IVF-PQ work:
+
+```sh
+cargo test -p vector-core-starter --lib
+cargo test -p vector-core-starter --test indexes -- --skip ivf_pq
+cargo test -p vector-datafusion-starter --test sql -- --skip ivf_pq
+cargo test -p vector-datafusion-starter --test sqllogictest
+```
+
+The unfiltered starter packages intentionally include Chapter 5 tests whose `pq.rs` TODOs are still unfinished. Skipping
+those named IVF-PQ tests here keeps this gate cumulative through HNSW without treating future work as a Chapter 4 failure.
 
 ## Chapter 4 Review
 
-After the focused test and SQLLogicTest pass, choose one promoted row and one query and explain:
+Choose one insertion and one query and explain:
 
-- why membership must be nested across layers;
-- how one entry point moves from the top layer to layer zero;
-- why upper layers use greedy search while layer zero keeps a beam;
+- why a promoted row must also belong to every lower layer;
+- why the seed changes graph structure but must reproduce the same structure when repeated;
+- why construction carries one entry point downward before connecting the new row;
+- why query-time upper layers use greedy routing while layer zero keeps a bounded frontier;
 - when the global entry point changes; and
-- how the seed affects graph structure and a fair recall comparison.
+- why equal rows in the supplied SQL comparison say nothing about general recall or speed.
 
-Keep this chapter focused on an immutable in-memory HNSW index. Deletion, concurrent mutation, persistence, production
-neighbor-diversification heuristics, and adaptive search budgets remain outside this checkpoint.
+The index in this chapter is immutable and in memory. Deletion, concurrent mutation, persistence, production
+neighbor-diversification heuristics, and adaptive search budgets would change the learner contract rather than complete
+this checkpoint.
 
 {{#include copyright.md}}
