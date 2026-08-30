@@ -600,7 +600,85 @@ fn nsw_search_validates_widens_and_matches_exact_on_connected_fixture() {
 }
 
 #[test]
-fn hnsw_is_seeded_and_high_ef_recovers_neighbors() {
+fn hnsw_rejects_invalid_configuration_and_builds_seeded_nested_layers() {
+    let invalid_configs = [
+        HnswConfig {
+            max_connections: 0,
+            ef_construction: 8,
+            ef_search: 8,
+            max_level: 8,
+            seed: 99,
+        },
+        HnswConfig {
+            max_connections: 8,
+            ef_construction: 7,
+            ef_search: 8,
+            max_level: 8,
+            seed: 99,
+        },
+        HnswConfig {
+            max_connections: 8,
+            ef_construction: 8,
+            ef_search: 0,
+            max_level: 8,
+            seed: 99,
+        },
+        HnswConfig {
+            max_connections: 8,
+            ef_construction: 8,
+            ef_search: 8,
+            max_level: 0,
+            seed: 99,
+        },
+    ];
+    for config in invalid_configs {
+        assert!(matches!(
+            HnswIndex::try_new(line_dataset(24), Metric::Euclidean, config),
+            Err(VectorError::InvalidConfig(_))
+        ));
+    }
+
+    let config = HnswConfig {
+        max_connections: 8,
+        ef_construction: 40,
+        ef_search: 32,
+        max_level: 8,
+        seed: 99,
+    };
+    let dataset = line_dataset(96);
+    let left = HnswIndex::try_new(dataset.clone(), Metric::Euclidean, config).unwrap();
+    let right = HnswIndex::try_new(dataset, Metric::Euclidean, config).unwrap();
+
+    assert_eq!(left.levels(), right.levels());
+    assert_eq!(
+        &left.levels()[..16],
+        &[0, 1, 0, 1, 0, 0, 2, 1, 2, 3, 0, 4, 2, 3, 0, 7]
+    );
+    assert_eq!(left.top_level(), 7);
+    for level in 0..=left.top_level() {
+        let adjacency = left.layer(level).unwrap();
+        for (row, neighbors) in adjacency.iter().enumerate() {
+            assert!(neighbors.len() <= config.max_connections);
+            if left.levels()[row] < level {
+                assert!(neighbors.is_empty());
+                continue;
+            }
+            let unique = neighbors
+                .iter()
+                .copied()
+                .collect::<std::collections::HashSet<_>>();
+            assert_eq!(unique.len(), neighbors.len());
+            assert!(!neighbors.contains(&row));
+            for neighbor in neighbors {
+                assert!(left.levels()[*neighbor] >= level);
+                assert!(adjacency[*neighbor].contains(&row));
+            }
+        }
+    }
+}
+
+#[test]
+fn hnsw_search_validates_widens_and_recovers_neighbors() {
     let config = HnswConfig {
         max_connections: 8,
         ef_construction: 40,
@@ -610,27 +688,33 @@ fn hnsw_is_seeded_and_high_ef_recovers_neighbors() {
     };
     let dataset = line_dataset(96);
     let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();
-    let left = HnswIndex::try_new(dataset.clone(), Metric::Euclidean, config).unwrap();
-    let right = HnswIndex::try_new(dataset, Metric::Euclidean, config).unwrap();
-
-    assert_eq!(left.levels(), right.levels());
-    assert_eq!(left.top_level(), *left.levels().iter().max().unwrap());
-    for level in 0..=left.top_level() {
-        let adjacency = left.layer(level).unwrap();
-        for (row, neighbors) in adjacency.iter().enumerate() {
-            assert!(neighbors.len() <= config.max_connections);
-            if left.levels()[row] < level {
-                assert!(neighbors.is_empty());
-            }
-            for neighbor in neighbors {
-                assert!(left.levels()[*neighbor] >= level);
-                assert!(adjacency[*neighbor].contains(&row));
-            }
-        }
-    }
-
+    let index = HnswIndex::try_new(dataset, Metric::Euclidean, config).unwrap();
     let query = [72.6, 3.0];
+
+    assert_eq!(
+        index.search_with_ef(&[72.6], 5, 8).unwrap_err(),
+        VectorError::DimensionMismatch {
+            expected: 2,
+            actual: 1,
+        }
+    );
+    assert_eq!(
+        index.search_with_ef(&[72.6, f32::NAN], 5, 8).unwrap_err(),
+        VectorError::NonFiniteValue {
+            vector: 96,
+            dimension: 1,
+        }
+    );
+    assert!(matches!(
+        index.search_with_ef(&query, 5, 0),
+        Err(VectorError::InvalidConfig(_))
+    ));
+
+    let widened = index.search_with_ef(&query, 5, 1).unwrap();
+    assert_eq!(widened.len(), 5);
+    assert!(widened.windows(2).all(|pair| pair[0] < pair[1]));
+
     let expected = exact.search(&query, 10).unwrap();
-    let actual = left.search_with_ef(&query, 10, 96).unwrap();
+    let actual = index.search_with_ef(&query, 10, 96).unwrap();
     assert_eq!(recall_at_k(&expected, &actual, 10), 1.0);
 }
