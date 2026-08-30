@@ -1,4 +1,4 @@
-use crate::graph::{prune_neighbors, search_layer};
+use crate::graph::{greedy_search, prune_neighbors, search_layer};
 use crate::{Dataset, Metric};
 
 fn rows(neighbors: &[crate::Neighbor]) -> Vec<usize> {
@@ -38,4 +38,16 @@ fn prune_neighbors_is_deterministic_and_bounded() {
     prune_neighbors(&dataset, Metric::Euclidean, 0, &mut neighbors, 2);
 
     assert_eq!(neighbors, [1, 2]);
+}
+
+#[test]
+fn greedy_search_moves_on_public_tie_order_and_respects_bounds() {
+    let dataset = Dataset::try_new(vec![vec![8.0], vec![-1.0], vec![1.0], vec![0.0]]).unwrap();
+    let adjacency = vec![vec![], vec![2, 3], vec![1, 3], vec![1, 2]];
+
+    let bounded = greedy_search(&dataset, Metric::Euclidean, &[0.0], &adjacency, 2, 3);
+    assert_eq!(bounded, 1);
+
+    let unbounded = greedy_search(&dataset, Metric::Euclidean, &[0.0], &adjacency, 2, 4);
+    assert_eq!(unbounded, 3);
 }
