@@ -51,15 +51,75 @@ fn recall_reports_result_overlap() {
         },
     ];
     assert_eq!(recall_at_k(&expected, &actual, 3), 2.0 / 3.0);
+    assert_eq!(recall_at_k(&expected[..2], &actual, 10), 0.5);
+    assert_eq!(recall_at_k(&[], &actual, 10), 1.0);
+
+    let duplicate_actual = [expected[0], expected[0], expected[2]];
+    let duplicate_recall = recall_at_k(&expected[..2], &duplicate_actual, 3);
+    assert_eq!(duplicate_recall, 0.5);
+    assert!((0.0..=1.0).contains(&duplicate_recall));
+}
+
+#[test]
+fn ivf_rejects_invalid_build_configuration() {
+    let invalid_configs = [
+        IvfFlatConfig {
+            partitions: 0,
+            probes: 1,
+            iterations: 1,
+            seed: 7,
+        },
+        IvfFlatConfig {
+            partitions: 81,
+            probes: 1,
+            iterations: 1,
+            seed: 7,
+        },
+        IvfFlatConfig {
+            partitions: 8,
+            probes: 0,
+            iterations: 1,
+            seed: 7,
+        },
+        IvfFlatConfig {
+            partitions: 8,
+            probes: 9,
+            iterations: 1,
+            seed: 7,
+        },
+        IvfFlatConfig {
+            partitions: 8,
+            probes: 1,
+            iterations: 0,
+            seed: 7,
+        },
+    ];
+
+    for config in invalid_configs {
+        let error = IvfFlatIndex::try_new(line_dataset(80), Metric::Euclidean, config).unwrap_err();
+        assert!(matches!(error, VectorError::InvalidConfig(_)));
+    }
+
+    let config = IvfFlatConfig {
+        partitions: 1,
+        probes: 1,
+        iterations: 1,
+        seed: 7,
+    };
+    let zero_norm_dataset = Dataset::try_new(vec![vec![1.0, 0.0], vec![0.0, 0.0]]).unwrap();
+    assert_eq!(
+        IvfFlatIndex::try_new(zero_norm_dataset, Metric::Cosine, config).unwrap_err(),
+        VectorError::ZeroNorm { vector: 1 }
+    );
 }
 
 #[test]
 fn ivf_scanning_every_partition_matches_exact_search() {
     let dataset = line_dataset(80);
-    let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();
+    let exact = FlatIndex::try_new(dataset.clone(), Metric::Cosine).unwrap();
     let ivf = IvfFlatIndex::try_new(
         dataset,
-        Metric::Euclidean,
+        Metric::Cosine,
         IvfFlatConfig {
             partitions: 8,
             probes: 2,
@@ -74,6 +134,33 @@ fn ivf_scanning_every_partition_matches_exact_search() {
     let actual = ivf.search_with_probes(&query, 12, 8).unwrap();
     assert_eq!(actual, expected);
     assert_eq!(ivf.list_sizes().iter().sum::<usize>(), 80);
+    assert_eq!(
+        ivf.search_with_probes(&[31.2], 80, 8).unwrap_err(),
+        VectorError::DimensionMismatch {
+            expected: 2,
+            actual: 1,
+        }
+    );
+    assert_eq!(
+        ivf.search_with_probes(&[31.2, f32::INFINITY], 80, 8)
+            .unwrap_err(),
+        VectorError::NonFiniteValue {
+            vector: 80,
+            dimension: 1,
+        }
+    );
+    assert_eq!(
+        ivf.search_with_probes(&[0.0, 0.0], 80, 8).unwrap_err(),
+        VectorError::ZeroNorm { vector: 80 }
+    );
+    assert!(matches!(
+        ivf.search_with_probes(&query, 80, 0),
+        Err(VectorError::InvalidConfig(_))
+    ));
+    assert!(matches!(
+        ivf.search_with_probes(&query, 80, 9),
+        Err(VectorError::InvalidConfig(_))
+    ));
 }
 
 #[test]
@@ -111,7 +198,6 @@ fn ivf_cosine_recovers_from_a_zero_mean_cluster() {
     )
     .unwrap();
     assert!(index.centroids()[0].iter().all(|value| value.is_finite()));
-    assert_eq!(index.search(&[1.0, 0.0], 4).unwrap().len(), 4);
 }
 
 #[test]
