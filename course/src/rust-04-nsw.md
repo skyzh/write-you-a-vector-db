@@ -4,82 +4,107 @@
 
 > **Chapter 3**
 >
-> Complete [Narrow the Search with IVFFlat](./rust-03-ivfflat.md) first. Finish with a bounded-degree NSW graph, best-first
-> search measured against exact results, and the same SQL top-k running through `index=nsw`.
+> Complete [Narrow the Search with IVFFlat](./rust-03-ivfflat.md) first. You will replace centroid/list selection with graph
+> reachability while keeping the SQL matcher, row lookup, and final top-k sort supplied.
 
-NSW is the graph-based building block of HNSW. It starts from one or more entry points and follows graph edges toward
-vectors closer to the query. Because it explores only connected neighbors instead of comparing every stored vector, it
-can answer with less work and can also stop before reaching the true nearest neighbor.
+## Start from the Product You Already Have
 
-## Search One Layer
+Chapter 2 ended with one five-row table and one SQL query running through IVFFlat. Run it again from the `rust/`
+directory:
 
-### One Entry Point and One Neighbor
+```sh
+cargo run -p vector-datafusion-starter --example ivfflat_sql
+```
 
-The first diagram shows an NSW graph in two dimensions. The highlighted red vertex is the entry point, and the query
-vector is elsewhere in the space. Search begins at the entry point because the graph has no global ordering or centroid
-that points directly to the answer.
+The seeded IVFFlat plan contains `index=ivf_flat`, and its `LIMIT 3` result is:
+
+```text
+(1, one)
+(2, two)
+(3, three)
+```
+
+This chapter keeps that query and fixture fixed. What changes is how the core index proposes candidate row offsets:
+IVFFlat probes centroid lists, while navigable small world (NSW) search follows edges in a proximity graph. DataFusion's
+bounded `SortExec` still owns final SQL ordering.
+
+The cumulative starter already contains these two files:
+
+```text
+rust/vector-starter/core/src/graph.rs
+rust/vector-starter/core/src/nsw.rs
+```
+
+You own four TODOs:
+
+1. `search_layer`;
+2. `prune_neighbors`;
+3. `NswIndex::try_new`; and
+4. `NswIndex::search_with_ef`.
+
+The same starter also declares `greedy_search`, HNSW, and IVF-PQ surfaces for later chapters. Leave those future TODOs
+alone. The supplied private tests let you finish one NSW boundary at a time without making graph helpers public.
+
+## Checkpoint 1: Search One Supplied Layer
+
+An NSW graph has no centroid that points directly at the query. Search begins from one or more entry points and explores
+their connected neighbors.
 
 ![One entry point begins the NSW walk](./vector-db/05-nsw-explore-1.svg)
 
-Compare the query with every neighbor of the current vertex and move toward a closer neighbor. Repeating this greedy step
-walks through the graph toward the query.
-
 ![A greedy step moves to a closer neighbor](./vector-db/05-nsw-explore-2.svg)
 
-The walk stops when none of the current vertex's neighbors is closer. It may stop at a local minimum instead of the
-globally nearest vector, which is why NSW is approximate.
+For top-k search, keep three pieces of state:
 
-### Multiple Entry Points and k Neighbors
+- `C`, a min-heap whose nearest candidate is the next vertex to expand;
+- `W`, a bounded max-heap whose top is the worst retained result; and
+- `visited`, a set that prevents a row from being measured or expanded twice.
 
-Now ask for three neighbors while starting from two entry points. Maintain three pieces of state:
-
-- `C`, a min-heap whose nearest candidate is the next vertex to explore;
-- `W`, a max-heap whose top is the worst of the best visited vertices; and
-- `visited`, a set that prevents a vertex from being expanded twice.
-
-Seed all three structures from the entry points. The next diagram shows the state before any vertex is expanded.
+Seed all three from the valid, unique entry points.
 
 ![Seed the candidate and result frontiers](./vector-db/05-nsw-explore-3.svg)
 
-Pop the nearest item from `C`. For each unseen neighbor, compute its distance once. If it can still improve the bounded
-result frontier, add it to both `C` and `W`, then keep only the best three vertices in `W`.
+Pop the nearest item from `C`. For each unseen neighbor, compute its distance once. If it can improve `W`, add it to
+both frontiers and trim `W` back to the search width.
 
 ![Expand the nearest candidate and update both frontiers](./vector-db/05-nsw-explore-4.svg)
 
-A later candidate may have only neighbors that are already visited. Expanding it adds nothing, but the search can continue
-with the remaining candidates.
+A candidate may add nothing because all its neighbors were already visited. Other pending candidates can still continue
+the search.
 
 ![Visited neighbors are not expanded twice](./vector-db/05-nsw-explore-5.svg)
 
-The second entry point reaches another part of the graph. It does not guarantee exact search, but it reduces the chance
-that one poorly placed entry point traps the walk in the wrong region.
+Multiple entry points can reach different graph regions, but no heap width can cross a disconnected component without an
+entry point or edge into it.
 
 ![A second entry point opens another region](./vector-db/05-nsw-explore-6.svg)
 
-Continue popping the nearest candidate and updating `W`. Even after many vertices have been visited, `W` retains only the
-best search-width candidates found so far.
+`W` retains only the nearest vertices found within the current width.
 
 ![The result frontier keeps the nearest visited vertices](./vector-db/05-nsw-explore-7.svg)
 
-Once `W` is full, compare the nearest pending candidate with its worst result. If the pending candidate is farther away,
-no queued path can improve the current frontier, so the search stops.
+When `W` is full and the nearest pending candidate is **strictly worse** than `W.worst`, this bounded NSW search stops.
 
 ![The nearest pending candidate is worse than the full result frontier](./vector-db/05-nsw-explore-8.svg)
 
+The strict comparison matters. A candidate equal to `W.worst` must still be expanded. This stopping rule limits work; it
+does not prove that every unseen path is worse, because a worse intermediate vertex could lead to a closer vertex later.
+
 ```text
-C = entry points as a min-heap by distance
-W = unique entry points as a bounded max-heap by distance
-visited = unique entry points
+C = valid unique entry points as a min-heap by distance
+W = the same points as a bounded max-heap by distance
+visited = the same row offsets
 
 while C is not empty:
     candidate = C.pop_nearest()
-    if W is full and candidate is worse than W.worst:
+    if W is full and candidate is strictly worse than W.worst:
         break
 
     for neighbor in candidate.neighbors:
-        if neighbor is already visited:
+        if neighbor is outside allowed_rows or already visited:
             continue
         mark neighbor visited
+        measure its distance once
         if W is not full or neighbor is better than W.worst:
             C.push(neighbor)
             W.push(neighbor)
@@ -88,132 +113,147 @@ while C is not empty:
 return W from nearest to farthest
 ```
 
-**Prediction:** If the graph has two disconnected components and every entry point is in the first component, can this
-search return a vertex from the second? Explain why changing the heap width cannot create a missing edge.
+Implement `search_layer` in `graph.rs`. Clamp `ef` to at least one and at most `allowed_rows`; return no rows when
+none are allowed. Ignore duplicate or out-of-range entry points. During insertion, `allowed_rows = r` means only
+previous rows `0..r` exist.
 
-## Insert into the Graph
+Run only this checkpoint's supplied test:
 
-Insert rows one at a time. To place a new vector, search the existing graph with width `ef_construction` and select its
-nearest `max_connections` candidates.
+```sh
+cargo test -p vector-core-starter \
+  graph_tests::search_layer_respects_bounds_and_expands_equal_frontier -- --exact
+```
+
+Before the implementation it reaches the Chapter 3 traversal TODO. Afterward it checks allowed rows, disconnected
+components, duplicate and invalid entry points, nearest-first uniqueness, and the strict-worse stopping boundary.
+
+**Prediction:** If every entry point is in one of two disconnected components, why can increasing `ef` not return a row
+from the other component?
+
+## Checkpoint 2: Keep a Bounded Neighbor List
+
+Rows are inserted one at a time. Search the graph built so far with width `ef_construction`, then choose at most
+`max_connections` neighbors for the new row.
 
 ![Choose the new vector's nearest graph neighbors](./vector-db/05-nsw-insert-1.svg)
 
-Add reciprocal edges between the new vertex and each selected neighbor. Some endpoints may now exceed the degree cap.
+Adding reciprocal edges can push an existing endpoint over the degree cap.
 
 ![New reciprocal edges can exceed the degree cap](./vector-db/05-nsw-insert-2.svg)
 
-For every overfull endpoint, sort its neighbors by distance from that endpoint and retain only the closest configured
-number. Distance ties use row offset so equal inputs produce the same graph.
+Implement `prune_neighbors` in `graph.rs`. Deduplicate the supplied neighbor rows, order them by distance from the
+owner, break distance ties by row offset, and truncate to `max_connections`.
 
 ![Choose the connections that survive pruning](./vector-db/05-nsw-insert-3.svg)
 
-Remove every rejected edge from both endpoints. The final graph has no self-edges or duplicate edges, every remaining
-edge is reciprocal, and each vertex stays within the degree cap.
+Run the private helper test:
+
+```sh
+cargo test -p vector-core-starter \
+  graph_tests::prune_neighbors_is_deterministic_and_bounded -- --exact
+```
+
+Its direct fixture is self-free and isolates deduplication, ordering, tie-breaking, and the cap. The graph builder—not
+this synthetic helper input—owns the invariant that no adjacency list contains its own row.
+
+## Checkpoint 3: Build a Reciprocal Graph
+
+Implement `NswIndex::try_new` in `nsw.rs`.
+
+Validate stored vectors for the selected metric before building. The graph budget must satisfy:
+
+- `max_connections > 0`;
+- `ef_construction >= max_connections`; and
+- `ef_search > 0`.
+
+Add the first row without searching. For each later row `r`, search only `0..r`, add reciprocal edges to the selected
+neighbors, and prune every affected endpoint. If pruning removes `a -> b`, also remove `b -> a`.
 
 ![Pruning leaves a bounded reciprocal graph](./vector-db/05-nsw-insert-4.svg)
 
-## Build NSW in Rust
-
-You will modify:
-
-```text
-rust/vector-starter/core/src/graph.rs
-rust/vector-starter/core/src/nsw.rs
-```
-
-The starter already exposes `NswConfig`, `NswIndex`, the shared `Neighbor` ordering, and bounded `TopK` helpers. Keep the
-public APIs, tests, metric behavior, and Chapter 1 DataFusion matcher unchanged.
-
-### Correctness Requirements
-
-Your graph budget must satisfy `max_connections > 0`,
-`ef_construction >= max_connections`, and `ef_search > 0`. A zero
-`max_connections` produces isolated nodes. Search widens an `ef_search`
-smaller than `k` to `ef_search.max(k)`; it can still return fewer than `k`
-only when the reachable graph contains too few rows.
-
-One layer search must compute each visited row's query distance at most
-once. Recomputing the same immutable metric operands wastes work; repeated
-calls do not acquire different rounding merely because they are repeated.
-
-Two frontiers drive the search: `C` expands the nearest pending
-candidate while bounded `W` tracks the worst retained result. Confusing
-these roles can discard a candidate that would have led to a better path.
-
-Traversal stops only when `W` is full and the nearest pending candidate
-is worse than `W`'s worst member. Stopping earlier can miss a closer
-neighbor. This is the course's bounded approximate-search rule, not a proof
-that later exploration could never reach a closer row through a currently
-worse candidate.
-
-Adjacency lists must contain no duplicates or self-edges. Every edge
-must appear at both endpoints with degree at most `max_connections`.
-
-All result and pruning ties use row offset after distance. Without a
-deterministic tie-break, two runs with identical data and seed can
-produce different result sets.
-
-### Checkpoint 1: Search a Supplied Layer
-
-Implement `search_layer` in `graph.rs`. Respect `allowed_rows` while building: when row `r` is inserted, only rows
-`0..r` exist in the searchable graph. Ignore duplicate or out-of-range entry points, and return nearest-first results.
-
-Use `ef.max(1)` as the frontier width. A larger `ef` explores and retains more candidates; it may improve recall but does
-not make a disconnected graph connected.
-
-### Checkpoint 2: Connect and Prune
-
-Implement `prune_neighbors`. Remove duplicates, order neighbors by their distance from the owner, break ties by row
-offset, and truncate to `max_connections`.
-
-Then implement `NswIndex::try_new`. Validate the dataset and configuration, add the first row without searching, and
-insert each later row through the existing graph. When pruning rejects an edge, remove it from both endpoints so I5 still
-holds.
-
-### Checkpoint 3: Query and Compare with Exact Search
-
-Implement `search_with_ef`. Validate the query and search from the graph entry point with width `ef_search.max(k)`, then
-return at most the nearest `k` results.
-
-Run the focused graph test:
+The completed graph must be deterministic, duplicate-free, self-free, reciprocal, and within the configured degree cap.
+Run its focused construction test:
 
 ```sh
-cd rust
-cargo test -p vector-core-starter --test indexes nsw_high_ef_matches_exact_search_on_connected_fixture
+cargo test -p vector-core-starter --test indexes \
+  nsw_rejects_invalid_build_configuration_and_builds_a_bounded_reciprocal_graph -- --exact
 ```
 
-The fixture checks a connected graph at a high search width, exact top-k overlap, reciprocal edges, and the degree cap.
-It does not claim exact recall for every dataset or smaller search width.
+This test owns stored-vector and configuration validation plus the built-graph invariants. It does not require
+`search_with_ef`.
 
-### Checkpoint 4: Use NSW from SQL
+## Checkpoint 4: Query with a Width Budget
 
-Run the Chapter 3 SQLLogicTest:
+Implement `NswIndex::search_with_ef`.
+
+Validate the query for dimension, finite values, and the selected metric. Reject a zero search width. Search from the
+graph entry point with `ef_search.max(k)`, return at most `k` rows, and keep them nearest-first.
+
+The `.max(k)` floor separates the requested result count from the caller's exploration hint: asking for five rows with
+`ef_search = 1` still needs a result frontier that can hold five rows.
+
+Run the query test:
 
 ```sh
-cargo test -p vector-datafusion-starter --test sqllogictest day3_nsw_sql
+cargo test -p vector-core-starter --test indexes \
+  nsw_search_validates_widens_and_matches_exact_on_connected_fixture -- --exact
 ```
 
-The SQL text and optimizer rule remain unchanged. Only the selected core index changes:
+It checks query validation, zero width, the `ef_search.max(k)` floor, ordering, and one connected high-width fixture that
+matches `FlatIndex`. That equality is an observation about this fixture, not a claim that NSW is exact for arbitrary
+data, widths, or disconnected graphs.
+
+## Return to the Same SQL Product
+
+Now run the supplied, TODO-free comparison:
+
+```sh
+cargo run -p vector-datafusion-starter --example nsw_sql
+```
+
+It executes the same five-vector cosine query twice. The first plan contains:
 
 ```text
-SortExec: TopK(fetch=5), ...
-  VectorIndexScanExec: index=nsw, metric=Euclidean, query_dim=3, fetch=Some(5), ordered=false
+VectorIndexScanExec: index=ivf_flat, metric=Cosine, query_dim=3, fetch=Some(3), ordered=false
 ```
 
-The NSW graph chooses candidate row offsets. DataFusion's bounded sort still owns final SQL ordering, and unsupported query
-shapes still use the exact scan.
+The second contains:
+
+```text
+VectorIndexScanExec: index=nsw, metric=Cosine, query_dim=3, fetch=Some(3), ordered=false
+```
+
+Both retain the supplied `SortExec` and show the same three rows:
+
+```text
+(1, one)
+(2, two)
+(3, three)
+```
+
+The example demonstrates the Chapter 2 → Chapter 3 handoff through the existing attachment, matcher, source-row lookup,
+and final sort. Equal rows here do not establish general recall, work, or performance.
+
+Keep the separate five-result SQL fixture green:
+
+```sh
+cargo test -p vector-datafusion-starter --test sqllogictest day3_nsw_sql -- --exact
+```
+
+That SQLLogicTest uses a different eight-row fixture and `LIMIT 5`. It verifies `index=nsw`, the supplied final sort,
+and its own five expected rows. Unsupported SQL shapes continue to use the supplied exact path.
 
 ## Chapter 3 Review
 
-After the focused core test and SQLLogicTest pass, choose one insertion and one query and explain:
+Choose one insertion and one query and explain:
 
-- why candidate and result frontiers need opposite heap orderings;
-- which comparison permits early stopping;
-- how a rejected edge is removed from both adjacency lists;
-- how `ef_search` changes work and recall without changing SQL; and
+- why `C` and `W` need opposite heap orderings;
+- why the stopping comparison is strict;
+- how a rejected edge is removed from both endpoints;
+- why `ef_search.max(k)` is necessary; and
 - why a disconnected component remains unreachable without an entry point or edge into it.
 
-Keep this chapter focused on one immutable graph layer. Hierarchy, deletion, concurrent mutation, persistence, and
-sophisticated neighbor-diversification heuristics remain outside this checkpoint.
+Keep this chapter to one immutable graph layer. Hierarchy, deletion, concurrent mutation, persistence, filtered pushdown,
+general DDL/catalog behavior, benchmarking, and neighbor-diversification heuristics belong outside this checkpoint.
 
 {{#include copyright.md}}

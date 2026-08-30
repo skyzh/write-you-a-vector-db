@@ -3,6 +3,8 @@
 mod dataset;
 mod flat;
 mod graph;
+#[cfg(test)]
+mod graph_tests;
 mod hnsw;
 mod ivf;
 mod metric;
