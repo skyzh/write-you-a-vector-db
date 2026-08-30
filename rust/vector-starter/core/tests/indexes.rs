@@ -477,7 +477,71 @@ fn ivf_pq_full_scan_and_rerank_matches_exact_search() {
 }
 
 #[test]
-fn nsw_high_ef_matches_exact_search_on_connected_fixture() {
+fn nsw_rejects_invalid_build_configuration_and_builds_a_bounded_reciprocal_graph() {
+    let invalid_configs = [
+        NswConfig {
+            max_connections: 0,
+            ef_construction: 8,
+            ef_search: 8,
+        },
+        NswConfig {
+            max_connections: 4,
+            ef_construction: 3,
+            ef_search: 8,
+        },
+        NswConfig {
+            max_connections: 4,
+            ef_construction: 8,
+            ef_search: 0,
+        },
+    ];
+    for config in invalid_configs {
+        assert!(matches!(
+            NswIndex::try_new(line_dataset(24), Metric::Euclidean, config),
+            Err(VectorError::InvalidConfig(_))
+        ));
+    }
+
+    let zero_norm_dataset = Dataset::try_new(vec![vec![1.0, 0.0], vec![0.0, 0.0]]).unwrap();
+    assert_eq!(
+        NswIndex::try_new(
+            zero_norm_dataset,
+            Metric::Cosine,
+            NswConfig {
+                max_connections: 2,
+                ef_construction: 4,
+                ef_search: 4,
+            },
+        )
+        .unwrap_err(),
+        VectorError::ZeroNorm { vector: 1 }
+    );
+
+    let config = NswConfig {
+        max_connections: 4,
+        ef_construction: 12,
+        ef_search: 8,
+    };
+    let left = NswIndex::try_new(line_dataset(32), Metric::Euclidean, config).unwrap();
+    let right = NswIndex::try_new(line_dataset(32), Metric::Euclidean, config).unwrap();
+    assert_eq!(left.adjacency(), right.adjacency());
+
+    for (row, neighbors) in left.adjacency().iter().enumerate() {
+        assert!(neighbors.len() <= config.max_connections);
+        let unique = neighbors
+            .iter()
+            .copied()
+            .collect::<std::collections::HashSet<_>>();
+        assert_eq!(unique.len(), neighbors.len());
+        assert!(!neighbors.contains(&row));
+        for neighbor in neighbors {
+            assert!(left.adjacency()[*neighbor].contains(&row));
+        }
+    }
+}
+
+#[test]
+fn nsw_search_validates_widens_and_matches_exact_on_connected_fixture() {
     let dataset = line_dataset(64);
     let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();
     let nsw = NswIndex::try_new(
@@ -491,15 +555,48 @@ fn nsw_high_ef_matches_exact_search_on_connected_fixture() {
     )
     .unwrap();
     let query = [17.4, 4.0];
+
+    assert_eq!(
+        nsw.search_with_ef(&[17.4], 5, 8).unwrap_err(),
+        VectorError::DimensionMismatch {
+            expected: 2,
+            actual: 1,
+        }
+    );
+    assert_eq!(
+        nsw.search_with_ef(&[17.4, f32::NAN], 5, 8).unwrap_err(),
+        VectorError::NonFiniteValue {
+            vector: 64,
+            dimension: 1,
+        }
+    );
+    assert!(matches!(
+        nsw.search_with_ef(&query, 5, 0),
+        Err(VectorError::InvalidConfig(_))
+    ));
+
+    let widened = nsw.search_with_ef(&query, 5, 1).unwrap();
+    assert_eq!(widened.len(), 5);
+    assert!(widened.windows(2).all(|pair| pair[0] < pair[1]));
+
     let expected = exact.search(&query, 10).unwrap();
     let actual = nsw.search_with_ef(&query, 10, 64).unwrap();
-    assert_eq!(recall_at_k(&expected, &actual, 10), 1.0);
-    assert!(nsw.adjacency().iter().all(|neighbors| neighbors.len() <= 8));
-    for (row, neighbors) in nsw.adjacency().iter().enumerate() {
-        for neighbor in neighbors {
-            assert!(nsw.adjacency()[*neighbor].contains(&row));
-        }
-    }
+    assert_eq!(actual, expected);
+
+    let cosine = NswIndex::try_new(
+        Dataset::try_new(vec![vec![1.0, 0.0], vec![0.0, 1.0], vec![-1.0, 0.0]]).unwrap(),
+        Metric::Cosine,
+        NswConfig {
+            max_connections: 2,
+            ef_construction: 4,
+            ef_search: 4,
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        cosine.search_with_ef(&[0.0, 0.0], 1, 4).unwrap_err(),
+        VectorError::ZeroNorm { vector: 3 }
+    );
 }
 
 #[test]
