@@ -717,4 +717,28 @@ fn hnsw_search_validates_widens_and_recovers_neighbors() {
     let expected = exact.search(&query, 10).unwrap();
     let actual = index.search_with_ef(&query, 10, 96).unwrap();
     assert_eq!(recall_at_k(&expected, &actual, 10), 1.0);
+
+    let descent_dataset = Dataset::try_new(
+        (0..24)
+            .map(|value| vec![value as f32, (value % 3) as f32 + 1.0])
+            .collect(),
+    )
+    .unwrap();
+    let descent_index = HnswIndex::try_new(
+        descent_dataset,
+        Metric::Euclidean,
+        HnswConfig {
+            max_connections: 2,
+            ef_construction: 8,
+            ef_search: 1,
+            max_level: 8,
+            seed: 1,
+        },
+    )
+    .unwrap();
+    assert!(descent_index.top_level() > 0);
+    assert_eq!(
+        descent_index.search_with_ef(&[2.1, 3.25], 1, 1).unwrap()[0].row,
+        2
+    );
 }
