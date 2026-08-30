@@ -638,6 +638,23 @@ fn hnsw_rejects_invalid_configuration_and_builds_seeded_nested_layers() {
         ));
     }
 
+    let zero_norm_dataset = Dataset::try_new(vec![vec![1.0, 0.0], vec![0.0, 0.0]]).unwrap();
+    assert_eq!(
+        HnswIndex::try_new(
+            zero_norm_dataset,
+            Metric::Cosine,
+            HnswConfig {
+                max_connections: 1,
+                ef_construction: 2,
+                ef_search: 1,
+                max_level: 1,
+                seed: 99,
+            },
+        )
+        .unwrap_err(),
+        VectorError::ZeroNorm { vector: 1 }
+    );
+
     let config = HnswConfig {
         max_connections: 8,
         ef_construction: 40,
