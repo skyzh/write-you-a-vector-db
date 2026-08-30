@@ -23,6 +23,9 @@ fn search_layer_respects_bounds_and_expands_equal_frontier() {
     assert_eq!(rows(&bounded), [0, 1, 2]);
     assert!(bounded.windows(2).all(|pair| pair[0] < pair[1]));
 
+    let reachable = search_layer(&dataset, Metric::Euclidean, &[0.0], &adjacency, &[2], 10, 5);
+    assert_eq!(rows(&reachable), [0, 1, 2]);
+
     let narrow = search_layer(&dataset, Metric::Euclidean, &[0.0], &adjacency, &[2], 1, 3);
     assert_eq!(rows(&narrow), [0]);
 }
