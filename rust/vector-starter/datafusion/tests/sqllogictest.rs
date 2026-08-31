@@ -1,29 +1,17 @@
 use std::path::Path;
-use std::sync::Arc;
 use std::time::Duration;
 
 use async_trait::async_trait;
-use datafusion::arrow::array::{
-    ArrayRef, BooleanArray, FixedSizeListArray, Float32Array, Float64Array, Int32Array,
-    StringArray, UInt32Array,
-};
-use datafusion::arrow::datatypes::{DataType, Field, Schema, SchemaRef};
+use datafusion::arrow::datatypes::{DataType, SchemaRef};
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::arrow::util::display::array_value_to_string;
 use datafusion::common::DataFusionError;
-use datafusion::datasource::MemTable;
-use datafusion::execution::config::SessionConfig;
-use datafusion::execution::context::SessionContext;
-use datafusion::physical_plan::collect;
 use sqllogictest::{AsyncDB, DBOutput, DefaultColumnType, Runner};
 use vector_core::{HnswConfig, IndexConfig, IvfFlatConfig, Metric, NswConfig};
-use vector_datafusion_starter::{
-    VectorIndexAttachment, VectorRow, vector_mem_table, with_vector_indexes,
-    with_vector_search_options,
-};
+use vector_datafusion_starter::{VectorSqlOutput, VectorSqlSession};
 
 struct DataFusionDb {
-    context: SessionContext,
+    session: VectorSqlSession,
 }
 
 #[async_trait]
@@ -32,23 +20,25 @@ impl AsyncDB for DataFusionDb {
     type ColumnType = DefaultColumnType;
 
     async fn run(&mut self, sql: &str) -> Result<DBOutput<Self::ColumnType>, Self::Error> {
-        let frame = self.context.sql(sql).await?;
-        let task_context = Arc::new(frame.task_ctx());
-        let plan = frame.create_physical_plan().await?;
-        let schema = plan.schema();
-        let batches = collect(plan, task_context).await?;
-
-        if is_explain(sql) {
-            return Ok(DBOutput::Rows {
+        match self.session.execute(sql).await? {
+            VectorSqlOutput::Query(batches) if is_explain(sql) => Ok(DBOutput::Rows {
                 types: vec![DefaultColumnType::Text],
                 rows: vector_plan_rows(&batches)?,
-            });
+            }),
+            VectorSqlOutput::Query(batches) => {
+                let types = batches
+                    .first()
+                    .map(RecordBatch::schema)
+                    .map(|schema| column_types(&schema))
+                    .unwrap_or_default();
+                Ok(DBOutput::Rows {
+                    types,
+                    rows: string_rows(&batches)?,
+                })
+            }
+            VectorSqlOutput::StatementComplete(count) => Ok(DBOutput::StatementComplete(count)),
+            VectorSqlOutput::CreatedIndex(_) => Ok(DBOutput::StatementComplete(0)),
         }
-
-        Ok(DBOutput::Rows {
-            types: column_types(&schema),
-            rows: string_rows(&batches)?,
-        })
     }
 
     async fn shutdown(&mut self) {}
@@ -135,97 +125,9 @@ fn string_rows(batches: &[RecordBatch]) -> Result<Vec<Vec<String>>, DataFusionEr
     Ok(rows)
 }
 
-fn rows() -> Vec<VectorRow> {
-    (0..8)
-        .map(|id| VectorRow::new(id, vec![id as f32 * 1.25, 1.0, 1.0], format!("point-{id}")))
-        .collect()
-}
-
-fn vector_array<const N: usize>(vectors: &[[f32; N]]) -> ArrayRef {
-    let item = Arc::new(Field::new("item", DataType::Float32, false));
-    Arc::new(
-        FixedSizeListArray::try_new(
-            item,
-            i32::try_from(N).unwrap(),
-            Arc::new(Float32Array::from(
-                vectors
-                    .iter()
-                    .flat_map(|vector| vector.iter().copied())
-                    .collect::<Vec<_>>(),
-            )),
-            None,
-        )
-        .unwrap(),
-    )
-}
-
-fn rich_schema_batch() -> RecordBatch {
-    let item = Arc::new(Field::new("item", DataType::Float32, false));
-    let schema = Arc::new(Schema::new(vec![
-        Field::new("doc_key", DataType::Utf8, false),
-        Field::new("tenant_id", DataType::UInt32, false),
-        Field::new("price", DataType::Float64, false),
-        Field::new("inventory", DataType::Int32, false),
-        Field::new(
-            "text_embedding",
-            DataType::FixedSizeList(Arc::clone(&item), 3),
-            false,
-        ),
-        Field::new("image_embedding", DataType::FixedSizeList(item, 3), false),
-        Field::new("active", DataType::Boolean, false),
-    ]));
-    RecordBatch::try_new(
-        schema,
-        vec![
-            Arc::new(StringArray::from(vec!["alpha", "beta", "gamma", "delta"])),
-            Arc::new(UInt32Array::from(vec![7, 8, 9, 10])),
-            Arc::new(Float64Array::from(vec![10.5, 20.25, 30.75, 40.0])),
-            Arc::new(Int32Array::from(vec![4, 3, 2, 1])),
-            vector_array(&[
-                [1.0, 0.0, 0.0],
-                [0.9, 0.1, 0.0],
-                [0.0, 1.0, 0.0],
-                [-1.0, 0.0, 0.0],
-            ]),
-            vector_array(&[
-                [-1.0, 0.0, 0.0],
-                [0.0, 1.0, 0.0],
-                [0.9, 0.1, 0.0],
-                [1.0, 0.0, 0.0],
-            ]),
-            Arc::new(BooleanArray::from(vec![true, false, true, false])),
-        ],
-    )
-    .unwrap()
-}
-
 async fn database(config: IndexConfig) -> Result<DataFusionDb, DataFusionError> {
-    let base = SessionContext::new_with_config(with_vector_search_options(SessionConfig::new()));
-    let table = vector_mem_table(rows())?;
-    base.register_table("points", table.clone())?;
-    let points_attachment = VectorIndexAttachment::try_new(
-        &base,
-        "points",
-        &table,
-        "embedding",
-        Metric::Euclidean,
-        config,
-    )
-    .await?;
-    let batch = rich_schema_batch();
-    let documents = Arc::new(MemTable::try_new(batch.schema(), vec![vec![batch]])?);
-    base.register_table("documents", documents.clone())?;
-    let documents_attachment = VectorIndexAttachment::try_new(
-        &base,
-        "documents",
-        &documents,
-        "text_embedding",
-        Metric::Euclidean,
-        IndexConfig::Flat,
-    )
-    .await?;
     Ok(DataFusionDb {
-        context: with_vector_indexes(&base, vec![points_attachment, documents_attachment]),
+        session: VectorSqlSession::new(Metric::Euclidean, config),
     })
 }
 

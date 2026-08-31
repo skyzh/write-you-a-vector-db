@@ -1,4 +1,8 @@
 #![allow(dead_code, unused_imports)]
+mod sql;
+
+pub use sql::{VectorSqlOutput, VectorSqlSession};
+
 use std::fmt::{self, Formatter};
 use std::future::Future;
 use std::pin::pin;

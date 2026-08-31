@@ -1,10 +1,68 @@
+statement ok
+CREATE TABLE points (
+    id BIGINT NOT NULL,
+    embedding REAL[3] NOT NULL,
+    payload VARCHAR NOT NULL
+);
+
+statement count 8
+INSERT INTO points VALUES
+    (0, [0.0, 1.0, 1.0], 'point-0'),
+    (1, [1.25, 1.0, 1.0], 'point-1'),
+    (2, [2.5, 1.0, 1.0], 'point-2'),
+    (3, [3.75, 1.0, 1.0], 'point-3'),
+    (4, [5.0, 1.0, 1.0], 'point-4'),
+    (5, [6.25, 1.0, 1.0], 'point-5'),
+    (6, [7.5, 1.0, 1.0], 'point-6'),
+    (7, [8.75, 1.0, 1.0], 'point-7');
+
+statement ok
+CREATE TABLE documents (
+    doc_key VARCHAR NOT NULL,
+    tenant_id INTEGER UNSIGNED NOT NULL,
+    price DOUBLE NOT NULL,
+    inventory INTEGER NOT NULL,
+    text_embedding REAL[3] NOT NULL,
+    image_embedding REAL[3] NOT NULL,
+    active BOOLEAN NOT NULL
+);
+
+statement count 4
+INSERT INTO documents VALUES
+    ('alpha', 7, 10.5, 4, [1.0, 0.0, 0.0], [-1.0, 0.0, 0.0], true),
+    ('beta', 8, 20.25, 3, [0.9, 0.1, 0.0], [0.0, 1.0, 0.0], false),
+    ('gamma', 9, 30.75, 2, [0.0, 1.0, 0.0], [0.9, 0.1, 0.0], true),
+    ('delta', 10, 40.0, 1, [-1.0, 0.0, 0.0], [1.0, 0.0, 0.0], false);
+
+# Before either attachment, DataFusion owns the exact scans.
+query T
+EXPLAIN SELECT id, payload FROM points
+ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 3;
+----
+SortExec: TopK(fetch=3), expr=[array_distance(CAST(embedding@2 AS List(Float64)), [1.0, 1.0, 1.0]) ASC NULLS LAST], preserve_partitioning=[false]
+DataSourceExec: partitions=1, partition_sizes=[1]
+
+query IT
+SELECT id, payload FROM points
+ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 3;
+----
+1 point-1
+0 point-0
+2 point-2
+
+statement ok
+CREATE INDEX any_points_name ON points USING flat (embedding);
+
+statement ok
+CREATE INDEX selected_text_name ON documents USING flat (text_embedding);
+
 # Assert physical operators, not only query results. The runner extracts the
 # sort and vector scan lines from DataFusion's multiline EXPLAIN result.
 query T
 EXPLAIN SELECT id, payload FROM points
 ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 3;
 ----
-SortExec: TopK(fetch=3), expr=[array_distance(CAST(embedding@2 AS List(non-null Float64)), [1.0, 1.0, 1.0]) ASC NULLS LAST], preserve_partitioning=[false]
+SortExec: TopK(fetch=3), expr=[array_distance(CAST(embedding@2 AS List(Float64)), [1.0, 1.0, 1.0]) ASC NULLS LAST], preserve_partitioning=[false]
 VectorIndexScanExec: index=flat, metric=Euclidean, query_dim=3, fetch=Some(3), ordered=false
 
 # The selected text vector owns the index even though the table has another
@@ -13,7 +71,7 @@ query T
 EXPLAIN SELECT price, doc_key, active, tenant_id, inventory FROM documents
 ORDER BY array_distance(text_embedding, [1.0, 0.0, 0.0]) LIMIT 2;
 ----
-SortExec: TopK(fetch=2), expr=[array_distance(CAST(text_embedding@5 AS List(non-null Float64)), [1.0, 0.0, 0.0]) ASC NULLS LAST], preserve_partitioning=[false]
+SortExec: TopK(fetch=2), expr=[array_distance(CAST(text_embedding@5 AS List(Float64)), [1.0, 0.0, 0.0]) ASC NULLS LAST], preserve_partitioning=[false]
 VectorIndexScanExec: index=flat, metric=Euclidean, query_dim=3, fetch=Some(2), ordered=false
 
 query FTTII
@@ -29,7 +87,7 @@ query T
 EXPLAIN SELECT price, doc_key, active, tenant_id, inventory FROM documents
 ORDER BY array_distance(image_embedding, [1.0, 0.0, 0.0]) LIMIT 2;
 ----
-SortExec: TopK(fetch=2), expr=[array_distance(CAST(image_embedding@5 AS List(non-null Float64)), [1.0, 0.0, 0.0]) ASC NULLS LAST], preserve_partitioning=[false]
+SortExec: TopK(fetch=2), expr=[array_distance(CAST(image_embedding@5 AS List(Float64)), [1.0, 0.0, 0.0]) ASC NULLS LAST], preserve_partitioning=[false]
 DataSourceExec: partitions=1, partition_sizes=[1]
 
 query FTTII
@@ -52,7 +110,7 @@ query T
 EXPLAIN SELECT id FROM points WHERE id >= 4
 ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 2;
 ----
-SortExec: TopK(fetch=2), expr=[array_distance(CAST(embedding@1 AS List(non-null Float64)), [1.0, 1.0, 1.0]) ASC NULLS LAST], preserve_partitioning=[false]
+SortExec: TopK(fetch=2), expr=[array_distance(CAST(embedding@1 AS List(Float64)), [1.0, 1.0, 1.0]) ASC NULLS LAST], preserve_partitioning=[false]
 FilterExec: id@0 >= 4
 DataSourceExec: partitions=1, partition_sizes=[1]
 
@@ -83,5 +141,5 @@ query T
 EXPLAIN SELECT id, payload FROM points
 ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 3;
 ----
-SortExec: TopK(fetch=3), expr=[array_distance(CAST(embedding@2 AS List(non-null Float64)), [1.0, 1.0, 1.0]) ASC NULLS LAST], preserve_partitioning=[false]
+SortExec: TopK(fetch=3), expr=[array_distance(CAST(embedding@2 AS List(Float64)), [1.0, 1.0, 1.0]) ASC NULLS LAST], preserve_partitioning=[false]
 VectorIndexScanExec: index=flat, metric=Euclidean, query_dim=3, fetch=Some(3), ordered=false
