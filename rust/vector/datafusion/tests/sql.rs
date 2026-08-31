@@ -1024,7 +1024,12 @@ async fn user_ids_are_not_engine_row_identity() {
 
 #[test]
 fn reference_adapter_has_no_custom_snapshot_table_provider() {
-    let source = include_str!("../src/lib.rs");
+    let source = concat!(
+        include_str!("../src/lib.rs"),
+        include_str!("../src/table.rs"),
+        include_str!("../src/attachment.rs"),
+        include_str!("../src/optimizer.rs"),
+    );
     assert!(!source.contains("trait SnapshotTable"));
     assert!(!source.contains("InMemorySnapshotTable"));
     assert!(!source.contains("struct VectorTable"));
