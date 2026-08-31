@@ -8,10 +8,10 @@
 > explicitly attached vector index, and a conservative DataFusion optimizer
 > rule.
 
-In the [product tour](./rust-00-sql-shell.md), you ran the supplied shell before and after creating an index. The SQL and
-nearest rows stayed fixed while the physical leaf changed from `DataSourceExec` to `VectorIndexScanExec`. This chapter
-opens that path: you will build the Arrow table, bind one selected vector field to an index, and make the optimizer choose
-the new scan only when the query is safe.
+In the [product tour](./rust-00-sql-shell.md), you began with an empty session, created and populated `points`, then ran the
+supplied shell before and after attaching an index to `embedding`. The SQL and nearest rows stayed fixed while the physical
+leaf changed from `DataSourceExec` to `VectorIndexScanExec`. This chapter opens that path: you will build the Arrow table,
+bind one selected vector field to an index, and make the optimizer choose the new scan only when the query is safe.
 
 Your first query uses the course's small three-column table:
 
@@ -49,7 +49,7 @@ these boundaries separate as you work through the chapter:
 
 | What you observed | What is supplied | What you implement |
 | --- | --- | --- |
-| Ordinary SQL scans `points`, while the fixed `CREATE INDEX` bridge changes only the physical leaf. | The shell, DDL bridge, metric math, exact `FlatIndex`, and shared attachment/lookup scaffolding. | Checkpoint 1 validates the core `Dataset`. |
+| Ordinary SQL creates and fills `points`, then scans it; the supplied `CREATE INDEX` bridge changes only the physical leaf. | The shell, bounded DDL bridge, metric math, exact `FlatIndex`, and shared attachment/lookup scaffolding. | Checkpoint 1 validates the core `Dataset`. |
 | Both plans return the same rows and keep DataFusion's final sort. | Examples and tests that expose the plan and results. | Checkpoint 2 builds the introductory Arrow `MemTable`. |
 | The indexed leaf is chosen only for the configured vector field and safe query shape. | The public attachment and optimizer interfaces. | Checkpoints 3–5 attach one field, match a safe top-k, then search and fetch source rows. |
 
@@ -138,6 +138,9 @@ let attachment = VectorIndexAttachment::try_new(
 .await?;
 let context = with_vector_indexes(&context, vec![attachment]);
 ```
+
+The supplied SQL session resolves each accepted `CREATE INDEX` target into this same attachment constructor. The bridge is
+already implemented; your Chapter 1 work is the attachment and execution path it calls.
 
 The rich Chapter 1 test table deliberately puts ordinary scalar fields around
 two vector fields:
@@ -271,10 +274,9 @@ cargo test -p vector-datafusion-starter --test sql ordered_session_mode_allows_s
 cargo test -p vector-datafusion-starter --test sqllogictest day1_table_and_optimizer_sql
 ```
 
-The SQLLogicTest checks the simple table plus both rich-schema paths: selected
-`text_embedding` reaches `VectorIndexScanExec`, while
-`image_embedding` stays on `DataSourceExec` and returns its different
-ranking.
+The SQLLogicTest starts from an empty session: it creates and inserts the simple `points` table and a rich `documents`
+table, then attaches indexes to the selected columns. `text_embedding` reaches `VectorIndexScanExec`, while
+`image_embedding` stays on `DataSourceExec` and returns its different ranking.
 
 ## Chapter 1 Review
 
@@ -285,11 +287,13 @@ After the core tests, `sql.rs`, and the Chapter 1 SQLLogicTest pass, explain:
 - how an index dataset ordinal resolves to a projected source row;
 - why the same-shaped image-vector query cannot use the text-vector index;
 - where DataFusion performs exact fallback and final ordering; and
+- why the supplied session rejects changes to an indexed table instead of letting its attachment become stale; and
 - how later approximate indexes reuse this boundary without weakening it.
 
 IVFFlat implementation, filtered pushdown, joins, general DDL/catalog semantics,
 persistence, and disk row lookup remain outside this chapter. The product tour's
-single supplied `CREATE INDEX` command is only a fixed shell bridge into the
-attachment path you implemented here.
+supplied bridge resolves an eligible in-memory table and selected vector column into the attachment path you implemented
+here. It can hold multiple distinct attachments, but it rejects mutation of an indexed table and does not provide
+persistence, automatic rebuilding, online maintenance, or a general catalog lifecycle.
 
 {{#include copyright.md}}

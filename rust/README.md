@@ -23,10 +23,11 @@ Before implementing Chapter 1, launch the supplied product shell:
 cargo run -p vector-datafusion --example sql
 ```
 
-It loads the small `points` table and accepts one SQL statement per line. Follow
-the product-tour chapter to compare the same query and `EXPLAIN` before and after
-the shell's single fixed `CREATE INDEX` command. You do not need to inspect or
-modify the completed reference example.
+The shell starts with an empty session and accepts one SQL statement per line.
+Follow the product-tour chapter to create and populate an ordinary in-memory
+table, compare a query and `EXPLAIN`, attach an index with names chosen in SQL,
+then run the identical query again. You do not need to inspect or modify the
+completed reference example.
 
 Check the untouched starter without executing TODOs:
 

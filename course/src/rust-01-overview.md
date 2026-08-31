@@ -9,9 +9,10 @@ and separate reference solutions.
 
 </div>
 
-Start with a supplied product tour: launch a small SQL shell, query its in-memory `points` table, create one fixed IVFFlat
-index, and watch `EXPLAIN` change without changing the nearest rows. Across the six implementation chapters that follow,
-you will connect that table to DataFusion, implement the optimizer rule that selects a safe vector-index scan, build
+Start with a supplied product tour: launch an empty SQL session, create and populate an in-memory `points` table, attach an
+IVFFlat index to its selected vector column, and watch `EXPLAIN` change without changing the nearest rows. Across the six
+implementation chapters that follow, you will connect that table to DataFusion, implement the optimizer rule that selects
+a safe vector-index scan, build
 IVFFlat behind that rule, navigate a proximity graph with NSW, add HNSW hierarchy, compress residual candidate scoring
 with IVF-PQ, and compare all five indexes on one Euclidean workload. The first five chapters return to runnable SQL so you
 can inspect how the same product path changes as the index becomes more capable. The final chapter measures recall and
@@ -24,11 +25,11 @@ ORDER BY cosine_distance(embedding, [0.1, 0.2, 0.3])
 LIMIT 10;
 ```
 
-The [product tour](./rust-00-sql-shell.md) runs a concrete query of this shape through the supplied completed system before
-you edit anything. DataFusion's vector distance expression, bounded sort, and `LIMIT` return an exact result; after the
-fixed `CREATE INDEX` command, that unchanged SQL reaches the course's vector-index scan. Chapter 1 then asks you to build
-the safe table, attachment, and planner path behind that observation. Later, you will add IVFFlat as your own candidate
-selector behind the same interface.
+The [product tour](./rust-00-sql-shell.md) creates and fills the table, then runs a concrete query of this shape through the
+supplied completed system before you edit anything. DataFusion's vector distance expression, bounded sort, and `LIMIT`
+return an exact result; after you create a named index on the selected vector column, that unchanged SQL reaches the
+course's vector-index scan. Chapter 1 then asks you to build the safe table, attachment, and planner path behind that
+observation. Later, you will add IVFFlat as your own candidate selector behind the same interface.
 
 ## Where to Write Your Code
 
@@ -140,7 +141,7 @@ planner/EXPLAIN test for IVF-PQ; Chapter 6 brings every index into one fixed com
 
 | Chapter | Estimate | Before | After |
 | --- | ---: | --- | --- |
-| [Product tour](./rust-00-sql-shell.md) | 10–15 minutes | The course has not yet shown a running database interface. | The supplied shell loads `points`, runs nearest-neighbor SQL, creates one fixed IVFFlat index, and makes the plan change observable. |
+| [Product tour](./rust-00-sql-shell.md) | 10–15 minutes | The course has not yet shown a running database interface. | Starting from an empty session, you create and populate a table, run nearest-neighbor SQL, attach an IVFFlat index to a selected vector column, and make the plan change observable. |
 | [1 — DataFusion table and optimizer](./rust-02-datafusion.md) | 3–4 hours | Vectors are Rust structs and DataFusion has no vector access path. | Rows become ordinary Arrow `MemTable` data; one attachment owns a selected vector field; a conservative physical rule selects its compatible index scan and preserves exact fallback. |
 | [2 — IVFFlat](./rust-03-ivfflat.md) | 4–5 hours | A flat index handles matched SQL top-k queries exactly. | Seeded k-means, inverted lists, and `probes` create a measured recall/work tradeoff behind the same SQL query. |
 | [3 — NSW](./rust-04-nsw.md) | 4–5 hours | Candidate selection comes from centroid partitions. | Best-first traversal and bounded reciprocal graph insertion expose `ef_search` as a second recall/work tradeoff behind the same SQL query. |
@@ -171,8 +172,9 @@ After Chapter 6, you should be able to explain:
 
 These chapters use an immutable in-memory collection and a readable Euclidean residual IVF-PQ implementation, but not
 bit packing or optimized kernels. Online updates or deletes, index persistence, crash recovery, concurrent mutation,
-filtered ANN, GPU kernels, distributed execution, general DDL/catalog semantics, and a network service remain outside
-this implementation. The supplied shell's one fixed `CREATE INDEX` command is a course-owned bridge to the existing
-attachment path, not a general DDL subsystem.
+filtered ANN, GPU kernels, distributed execution, general catalog semantics, and a network service remain outside this
+implementation. The supplied shell's bounded `CREATE INDEX` bridge resolves eligible named or qualified in-memory tables,
+supports multiple distinct attachments, and rejects writes that would stale an indexed snapshot; it is not a persistence,
+online-maintenance, or general catalog subsystem.
 
 {{#include copyright.md}}

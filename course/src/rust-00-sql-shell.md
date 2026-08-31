@@ -2,8 +2,9 @@
 
 {{#include rust-in-progress.md}}
 
-Before you implement the table adapter or optimizer, use the supplied system once. You will run one nearest-neighbor query,
-create one vector index, and see the physical plan change while the SQL result stays the same.
+Before you implement the table adapter or optimizer, use the supplied system once. You will create and populate an
+ordinary in-memory table, run one nearest-neighbor query, attach an index to its vector column, and see the physical plan
+change while the SQL result stays the same.
 
 This tour uses the completed `vector-datafusion` example. You do not need to read or modify its source. Your own work begins
 in Chapter 1.
@@ -16,18 +17,14 @@ For an interactive run, start from the `rust/` directory:
 cargo run -p vector-datafusion --example sql
 ```
 
-The shell creates and registers a small in-memory table when it starts:
-
-```text
-points(id UInt64, payload Utf8, embedding FixedSizeList<Float32, 3>)
-```
-
-It then accepts one SQL statement per input line. For a repeatable first run from the repository root, paste the whole
-transcript below into your terminal instead of entering the statements interactively:
+The shell starts with an empty session and accepts one SQL statement per input line. For a repeatable first run from the
+repository root, paste the whole transcript below into your terminal instead of entering the statements interactively:
 
 ```sh
 cd rust
 cargo run -p vector-datafusion --example sql <<'SQL'
+CREATE TABLE points (id BIGINT NOT NULL, payload VARCHAR NOT NULL, embedding REAL[3] NOT NULL)
+INSERT INTO points VALUES (1, 'one', [1.0, 0.0, 0.0]), (2, 'two', [0.9, 0.1, 0.0]), (3, 'three', [0.0, 1.0, 0.0]), (4, 'four', [-1.0, 0.0, 0.0]), (5, 'five', [0.0, 0.0, 1.0])
 EXPLAIN SELECT id, payload FROM points ORDER BY cosine_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 3
 SELECT id, payload FROM points ORDER BY cosine_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 3
 CREATE INDEX points_embedding_idx ON points USING ivfflat (embedding)
@@ -35,6 +32,8 @@ EXPLAIN SELECT id, payload FROM points ORDER BY cosine_distance(embedding, [1.0,
 SELECT id, payload FROM points ORDER BY cosine_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 3
 SQL
 ```
+
+Before you run it, predict which rows should be nearest and why creating an index must not change them.
 
 ## Observe the Stable Query and Changing Plan
 
@@ -53,8 +52,8 @@ The first query returns these rows:
 3  three
 ```
 
-The `CREATE INDEX` statement builds the course's fixed cosine IVFFlat index and attaches it to `points.embedding`. The
-second `EXPLAIN` reaches the course-owned scan:
+The `CREATE INDEX` statement builds the session's cosine IVFFlat index and attaches it to the vector column you selected.
+The second `EXPLAIN` reaches the course-owned scan:
 
 ```text
 SortExec: TopK(fetch=3), ...
@@ -67,14 +66,24 @@ DataFusion's final sort; it does not change the query contract.
 ## Know What This Command Means
 
 DataFusion parses and logically plans `CREATE INDEX`, but the pinned version does not provide a physical executor that can
-build this course's index. The supplied shell therefore owns exactly one command:
+build this course's index. The supplied shell therefore owns a bounded bridge from that statement to the course's existing
+attachment path. The session is configured for cosine IVFFlat, while the statement supplies the index name, resolved table,
+and selected column:
 
 ```sql
 CREATE INDEX points_embedding_idx ON points USING ivfflat (embedding)
 ```
 
-It accepts that fixed index name, table, column, and index kind once per shell session. It does not implement an index
-catalog, persistence, `DROP INDEX`, arbitrary table or column selection, options, or general DDL semantics.
+The name may be any unused index name, and the table may be bare or schema/catalog qualified. The bridge can attach indexes
+to multiple distinct table/column pairs in one session. Each target must be a registered in-memory `MemTable`, and its
+selected column must be a non-null `REAL[N]` vector with positive width. Duplicate names or attachments, missing tables or
+columns, providers other than `MemTable`, nullable fields, vector fields with the wrong physical type or zero width, and an
+index kind different from the session configuration are rejected before an attachment is installed.
+
+An attachment is an immutable snapshot. After a table is indexed, `INSERT`, `ALTER TABLE`, and `DROP TABLE` against that
+table are rejected instead of making the index stale. Writes to unrelated tables remain legal, as does `INSERT ... SELECT`
+that reads indexed data into another table. The bridge does not add index persistence, `DROP INDEX`, automatic rebuilding,
+or a general catalog lifecycle.
 
 That narrow boundary keeps the first experience concrete without turning the course into a parser or catalog project.
 Next, [Chapter 1](./rust-02-datafusion.md) opens the path you just used: you will build the Arrow table, attach one selected
