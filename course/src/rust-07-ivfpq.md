@@ -199,6 +199,39 @@ Do not describe the ratio between full-precision vector bytes and code-plus-code
 The final chapter prints the exact accounting beside the shared five-index benchmark, where its scope can be read with
 the workload and search configuration.
 
+## Return to the SQL Product
+
+Run the self-contained Chapter 5 SQLLogicTest:
+
+```sh
+cargo test -p vector-datafusion-starter --test sqllogictest day5_ivf_pq_sql -- --exact
+```
+
+The fixture creates and fills its own eight-row table. Before it attaches the index, the plan contains:
+
+```text
+DataSourceExec: partitions=1, partition_sizes=[1]
+```
+
+After `CREATE INDEX ... USING ivfpq`, the same bounded top-k query contains:
+
+```text
+VectorIndexScanExec: index=ivf_pq, metric=Euclidean, query_dim=3, fetch=Some(5), ordered=false
+```
+
+and returns:
+
+```text
+1 point-1
+0 point-0
+2 point-2
+3 point-3
+4 point-4
+```
+
+This fixture verifies one deterministic handoff from an exact scan to the supplied IVF-PQ SQL adapter. It does not
+establish external-corpus recall, latency, memory use, or general exactness.
+
 ## Chapter 5 Review
 
 After the IVF-PQ core tests and DataFusion plan check pass, explain:

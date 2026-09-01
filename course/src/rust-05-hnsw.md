@@ -221,13 +221,17 @@ Run the checks that stop before Chapter 5's IVF-PQ work:
 
 ```sh
 cargo test -p vector-core-starter --lib
-cargo test -p vector-core-starter --test indexes -- --skip ivf_pq
+cargo test -p vector-core-starter --test indexes -- \
+  --skip ivf_pq \
+  --skip randomized_indexes_preserve_invariants_across_seed_trajectories
 cargo test -p vector-datafusion-starter --test sql -- --skip ivf_pq
-cargo test -p vector-datafusion-starter --test sqllogictest
+cargo test -p vector-datafusion-starter --test sqllogictest -- \
+  --skip day5_ivf_pq_sql
 ```
 
-The unfiltered starter packages intentionally include Chapter 5 tests whose `pq.rs` TODOs are still unfinished. Skipping
-those named IVF-PQ tests here keeps this gate cumulative through HNSW without treating future work as a Chapter 4 failure.
+The starter packages also contain the Chapter 5 IVF-PQ tests and a later five-index invariant test. Those tests construct
+the still-unfinished index in `pq.rs`. The named exclusions keep this gate cumulative through HNSW without treating
+future work as a Chapter 4 failure.
 
 ## Chapter 4 Review
 

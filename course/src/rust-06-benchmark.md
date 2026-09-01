@@ -59,6 +59,16 @@ starter's example test is expected to stop at a Chapter 6 `todo!()` until you fi
 cargo test -p vector-core-starter --example recall
 ```
 
+The repository separately protects that untouched starting shape:
+
+```sh
+cargo test -p vector-core-starter --example recall \
+  tests::starter_keeps_exactly_four_chapter_six_ownership_points -- --exact
+```
+
+That source-level gate requires the four Chapter 6 TODOs and the supplied runner and percentile-helper scaffolding. It is
+a check on the raw starter distributed by the repository, not a completion requirement for your edited example.
+
 ## Acquire and Validate SIFT1M
 
 Obtain SIFT1M from the [TexMex ANN corpus](http://corpus-texmex.irisa.fr/) and follow the terms published there. The
@@ -147,14 +157,17 @@ ceil(p / 100 * n) - 1
 ```
 
 Do not replace it with interpolation or a floor fraction of `n - 1`; that would change the report contract. Once all
-four ownership points are complete, the cumulative example test should pass:
+four ownership points are complete, run the five behavioral example tests:
 
 ```sh
-cargo test -p vector-core-starter --example recall
+cargo test -p vector-core-starter --example recall -- \
+  --skip starter_keeps_exactly_four_chapter_six_ownership_points
 ```
 
-This gate pins the four learner-owned points, fixed inventory and configurations, full-versus-smoke truth selection,
-result validation, rank-prefix averaging, report order, and full-mode IVF-PQ accounting.
+This gate pins the completed constructors and percentile selection, fixed inventory and configurations,
+full-versus-smoke truth selection, result validation, rank-prefix averaging, report order, and full-mode IVF-PQ
+accounting. It excludes only the raw-starter shape check above, because a completed example no longer contains those
+TODOs.
 
 ## Read the Supplied Measurement Loop
 
