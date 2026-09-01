@@ -24,12 +24,12 @@ The second plan contains `index=nsw`, and both indexes return:
 (3, three)
 ```
 
-This chapter keeps the table, query, SQL matcher, source-row lookup, and final `SortExec` fixed. You will change the core
-candidate path: instead of starting every query in one graph that contains every row, HNSW first makes coarse moves
-through sparse upper layers and then reuses Chapter 3's bounded search in the all-row layer-zero graph.
+This chapter keeps the SQL matcher, source-row lookup, and final `SortExec` fixed. You will change the core candidate
+path: instead of starting every query in one graph that contains every row, HNSW first makes coarse moves through sparse
+upper layers and then reuses Chapter 3's bounded search in the all-row layer-zero graph.
 
-**Prediction:** When you return to this query with HNSW, which plan field should change? Why can the three rows stay the
-same even though the route that proposes them changes?
+**Prediction:** In a before-and-after SQL comparison whose table and query are unchanged, which plan field should change?
+Why must the returned rows still satisfy the same SQL ordering contract even though the route proposing them changes?
 
 The cumulative starter leaves exactly three Chapter 4 units unfinished:
 
@@ -137,9 +137,14 @@ cargo test -p vector-core-starter --test indexes \
   hnsw_rejects_invalid_configuration_and_builds_seeded_nested_layers -- --exact
 ```
 
-It checks invalid budgets, the exact seed-99 level prefix, the top level, nested membership, degree caps, and the absence
-of duplicate or self-edges. It also checks every retained edge at both endpoints. Forcing every sampled level to zero or
-injecting a self-edge fails here rather than being hidden by a later recall result.
+It checks invalid budgets, same-implementation repeatability, nested membership, degree caps, and the absence of duplicate
+or self-edges. It also checks every retained edge at both endpoints. A correct deterministic implementation may consume
+randomness differently from the reference and therefore produce another valid level sequence and top layer; the tests do
+not require the reference implementation's prefix. Forcing every sampled level to zero or injecting a self-edge still
+fails here rather than being hidden by a later recall result.
+
+**Prediction:** If a deterministic level sampler changes its RNG consumption order, which graph invariants and repeated
+build observations must remain true even though the sampled level prefix may change?
 
 ## Checkpoint 3: Search from the Top Layer
 
@@ -180,38 +185,35 @@ datasets or search budgets.
 
 ## Return to the SQL Product
 
-Run the supplied comparison that includes Flat, IVFFlat, and HNSW:
+Run the self-contained Chapter 4 SQLLogicTest:
 
 ```sh
-cargo run -p vector-datafusion-starter --example sql
+cargo test -p vector-datafusion-starter --test sqllogictest day4_hnsw_sql -- --exact
 ```
 
-The HNSW section contains:
+The fixture creates and populates its own table, checks the exact plan, attaches an HNSW index, and checks the changed
+plan. Its indexed plan contains:
 
 ```text
-VectorIndexScanExec: index=hnsw, metric=Cosine, query_dim=3, fetch=Some(3), ordered=false
+VectorIndexScanExec: index=hnsw, metric=Euclidean, query_dim=3, fetch=Some(5), ordered=false
 ```
 
-and returns the same three rows you predicted:
+and its five-row Euclidean query returns:
 
 ```text
-(1, one)
-(2, two)
-(3, three)
+1 point-1
+0 point-0
+2 point-2
+3 point-3
+4 point-4
 ```
 
 This small comparison shows the product handoff, not a performance or general-recall result. HNSW proposes core dataset
 ordinals; the supplied adapter resolves them to source rows, and the supplied `SortExec` still owns final SQL ordering.
 Unsupported SQL shapes continue to use the exact scan.
 
-Keep the separate five-result Chapter 4 SQL fixture green:
-
-```sh
-cargo test -p vector-datafusion-starter --test sqllogictest day4_hnsw_sql -- --exact
-```
-
-That fixture uses Euclidean distance and `LIMIT 5`; it verifies `index=hnsw`, the supplied final sort, and its own expected
-rows. It is intentionally different from the five-row cosine example above.
+The fixture uses Euclidean distance and `LIMIT 5`; it verifies `index=hnsw`, the supplied final sort, and the expected
+rows without depending on mutable interactive-shell state.
 
 ## Check the Course Through Chapter 4
 

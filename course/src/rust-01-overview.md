@@ -5,7 +5,8 @@
 <div class="warning">
 
 **Course status:** All six required chapters are ready to implement. The repository includes starter code, focused tests,
-and separate reference solutions.
+and separate reference solutions. Chapter 6 uses a local copy of the external SIFT1M corpus; hosted tests do not download
+or run it.
 
 </div>
 
@@ -14,9 +15,9 @@ IVFFlat index to its selected vector column, and watch `EXPLAIN` change without 
 implementation chapters that follow, you will connect that table to DataFusion, implement the optimizer rule that selects
 a safe vector-index scan, build
 IVFFlat behind that rule, navigate a proximity graph with NSW, add HNSW hierarchy, compress residual candidate scoring
-with IVF-PQ, and compare all five indexes on one Euclidean workload. The first five chapters return to runnable SQL so you
-can inspect how the same product path changes as the index becomes more capable. The final chapter measures recall and
-latency directly under one shared contract.
+with IVF-PQ, and compare all five indexes on SIFT1M. The first five chapters return to runnable SQL so you can inspect how
+the same product path changes as the index becomes more capable. The final chapter measures first-neighbor rank recall
+and latency directly under one shared Euclidean, `k = 100` contract.
 
 ```sql
 SELECT id, payload
@@ -120,9 +121,10 @@ The DataFusion crate owns Arrow conversion, SQL-pattern matching, plan propertie
 crate owns dimensions, metrics, exact-search results, candidate selection, and deterministic result order. Later index
 implementations will not import DataFusion.
 
-This separation gives Chapters 1–4 two useful views of each checkpoint: small Rust tests isolate the algorithm, while
-SQLLogicTests show that the Chapter 1 optimizer can reach it. Chapter 5 keeps the focused core tests and uses a focused
-planner/EXPLAIN test for IVF-PQ; Chapter 6 brings every index into one fixed comparison.
+This separation gives Chapters 1–5 two useful views of each checkpoint: small Rust tests isolate the algorithm, while
+self-contained SQLLogicTests show that the Chapter 1 optimizer can reach it. Chapter 5 also keeps a focused
+planner/EXPLAIN test for IVF-PQ; Chapter 6 brings every index into one fixed full-SIFT1M comparison and an explicitly
+non-parity smoke mode.
 
 ## System Contract
 
@@ -147,11 +149,12 @@ planner/EXPLAIN test for IVF-PQ; Chapter 6 brings every index into one fixed com
 | [3 — NSW](./rust-04-nsw.md) | 4–5 hours | Candidate selection comes from centroid partitions. | Best-first traversal and bounded reciprocal graph insertion expose `ef_search` as a second recall/work tradeoff behind the same SQL query. |
 | [4 — HNSW](./rust-05-hnsw.md) | 4–5 hours | Every graph query starts in one complete layer. | Seeded sparse layers route greedily into layer-zero beam search while preserving the same SQL and recall contracts. |
 | [5 — IVF-PQ](./rust-07-ivfpq.md) | 3–4 hours | HNSW completes the course's full-precision index set. | Residual PQ codes provide lookup-table candidate scoring, exact reranking, and explicit search-representation accounting. |
-| [6 — Five-index benchmark](./rust-06-benchmark.md) | 1–2 hours | Each index has been exercised separately. | Flat, IVFFlat, NSW, HNSW, and IVF-PQ share one reproducible Euclidean build, recall, and latency measurement contract. |
+| [6 — Five-index SIFT1M benchmark](./rust-06-benchmark.md) | 1–2 hours plus the external run | Each index has been exercised separately. | Flat, IVFFlat, NSW, HNSW, and IVF-PQ share one full-SIFT1M Euclidean, `k = 100`, first-neighbor rank-recall, and latency contract. |
 
 Chapter 1 gives you an exact end-to-end query whose rows and physical plan you can inspect. Chapters 2–5 keep that SQL
 interface and safety rule in place while changing how candidate rows are selected. Chapter 6 then compares all five
-indexes without changing the data, queries, Euclidean metric, or `k`.
+indexes without changing the SIFT1M data, queries, Euclidean metric, or `k = 100`; its smaller mode is labeled non-parity
+because it recomputes truth over a 10,000-row subset.
 
 After Chapter 6, you should be able to explain:
 
@@ -166,7 +169,8 @@ After Chapter 6, you should be able to explain:
 - why HNSW uses greedy upper layers and a layer-zero beam;
 - how seeded promotion makes comparisons reproducible;
 - why IVF-PQ separates coarse centroids, residual codebooks, approximate scoring, and exact reranking; and
-- how exact ground truth, balanced warm-up, and one shared workload make recall and latency comparisons fair.
+- how supplied or recomputed exact first-neighbor truth, cyclic warm-up and timing order, and one shared workload make
+  rank recall and latency interpretable together.
 
 ## Scope
 
@@ -175,6 +179,7 @@ bit packing or optimized kernels. Online updates or deletes, index persistence, 
 filtered ANN, GPU kernels, distributed execution, general catalog semantics, and a network service remain outside this
 implementation. The supplied shell's bounded `CREATE INDEX` bridge resolves eligible named or qualified in-memory tables,
 supports multiple distinct attachments, and rejects writes that would stale an indexed snapshot; it is not a persistence,
-online-maintenance, or general catalog subsystem.
+online-maintenance, or general catalog subsystem. The final chapter also assumes a locally acquired SIFT1M directory;
+the repository supplies parsers and tiny corruption fixtures, not the external corpus or benchmark results.
 
 {{#include copyright.md}}

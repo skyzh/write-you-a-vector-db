@@ -97,13 +97,16 @@ For a tiny build with six rows and two partitions, the initial state is:
 
 ```text
 dataset rows:     0 1 2 3 4 5
-seeded centroids: row 4, row 1
+seeded centroids: two distinct shuffled row offsets
 assignments:      unknown until the first assignment pass
 ```
 
-The selected rows depend on the seed, but a second build with the same data, metric, configuration, and seed must choose
-the same centroids and later produce the same list sizes. A nondeterministic build would make its recall results
-irreproducible.
+The selected rows depend on both the seed and how your implementation consumes deterministic randomness. A second build
+with the same implementation, data, metric, configuration, and seed must reproduce its centroids, lists, and results;
+it does not need to copy the reference implementation's centroid identities.
+
+**Prediction:** If another correct implementation consumes the seeded generator in a different deterministic order,
+which properties must still hold even though its centroid row offsets can differ?
 
 Before the index exists, all points belong to one unpartitioned dataset, so an exact query compares its target with every
 point.
@@ -256,7 +259,8 @@ and explain:
 - how a dataset row flows from assignment to a probed list to `TopK`;
 - why empty and zero-mean cosine clusters need different recovery logic;
 - why probing every list is an exactness test; and
-- how Chapter 1's optimizer rule reaches a new index without changing its SQL safety contract.
+- how Chapter 1's optimizer rule reaches a new index without changing its SQL safety contract; and
+- which same-implementation properties a seed fixes without fixing the reference implementation's centroid identities.
 
 Keep this checkpoint focused on in-memory IVFFlat. Persistent postings, online centroid retraining, product quantization,
 cross-index timing, and reproducible latency targets remain outside this chapter.

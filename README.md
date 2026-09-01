@@ -21,17 +21,19 @@ contracts, query planning, and execution boundary that make SQL vector search wo
 The [Rust course](https://skyzh.github.io/write-you-a-vector-db/rust-01-overview) has six required chapters: an
 Arrow-backed in-memory table and safe DataFusion optimizer rule, IVFFlat, NSW, HNSW, residual IVF-PQ, and a final shared
 recall and latency benchmark. The implementation chapters include starter code, focused tests, and separate completed
-reference crates. Chapters 1–4 include SQLLogicTests; Chapter 5 includes a focused SQL planner/EXPLAIN test.
+reference crates. Chapters 1–5 include self-contained SQLLogicTests; Chapter 5 also includes a focused planner/EXPLAIN
+test.
 
-The final benchmark compares Flat, IVFFlat, NSW, HNSW, and IVF-PQ on one shared Euclidean workload. It reports build
-time, recall, p50 and p99 search latency, plus the IVF-PQ search-representation accounting.
+The final benchmark compares Flat, IVFFlat, NSW, HNSW, and IVF-PQ on the external SIFT1M corpus. All five indexes share
+the same Euclidean queries and `k = 100`. The report couples build and search time with first-neighbor rank recall at
+1, 10, and 100, p50 and p99 search latency, and explicit IVF-PQ search-representation accounting.
 
 Run the completed reference with:
 
 ```shell
 cd rust
 cargo test -p vector-core -p vector-datafusion
-cargo run --release -p vector-core --example recall
+cargo run --release -p vector-core --example recall -- /absolute/path/to/sift1M
 ```
 
 The original [C++/BusTub edition](https://skyzh.github.io/write-you-a-vector-db/cpp-01-overview) is deprecated and

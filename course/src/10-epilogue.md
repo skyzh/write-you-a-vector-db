@@ -1,8 +1,8 @@
 # Where to Go Next
 
 The Rust course builds an immutable in-memory collection, exact fallback, IVFFlat, NSW, HNSW, residual IVF-PQ, SQL query
-support, and a shared five-index recall and latency benchmark. A teaching system still leaves plenty of room to explore
-the storage, query-processing, and serving concerns of a production vector database.
+support, and a shared five-index SIFT1M rank-recall and latency benchmark. A teaching system still leaves plenty of room
+to explore the storage, query-processing, and serving concerns of a production vector database.
 
 ## One SQL Query, Many Layers
 
@@ -50,7 +50,8 @@ Once that system works, several extensions make good independent projects.
 - Vectorize exact distance calculations with portable SIMD.
 - Batch queries to improve cache reuse and throughput without hiding tail latency.
 - Compare CPU and GPU search only after including transfer, queueing, and batching costs.
-- Profile real embedding dimensions and datasets instead of relying on tiny synthetic vectors.
+- Compare SIFT1M observations with embedding distributions, dimensions, and hardware from the workload you actually
+  intend to serve.
 
 For any extension, use exact search as the baseline, state the workload, and report correctness together with performance.
 A vector index is useful only when its speedup is attached to a result-quality and lifecycle contract.
@@ -70,8 +71,8 @@ course continues the same investigation with a small in-memory system whose laye
 ## Feedback
 
 The six Rust chapters include starter code, executable references, focused tests, SQL plan checks for the implementation
-chapters, required residual IVF-PQ, and a final benchmark across all five indexes.
-Feedback about the scope, ordering, datasets, or architecture is welcome.
+chapters, required residual IVF-PQ, and a final SIFT1M benchmark across all five indexes. Feedback about the scope,
+ordering, external-data workflow, or architecture is welcome.
 
 [![Join skyzh's Discord Server](discord-badge.svg)](https://skyzh.dev/join/discord)
 

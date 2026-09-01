@@ -9,8 +9,9 @@ answer SQL top-k queries through DataFusion and make the tradeoff between recall
 <div class="warning">
 
 **Course status:** All six chapters are ready to implement: an in-memory Arrow table and DataFusion optimizer rule,
-followed by IVFFlat, NSW, HNSW, residual IVF-PQ, and a shared five-index recall and latency benchmark. The repository
-includes starter code, focused tests, and separate completed references.
+followed by IVFFlat, NSW, HNSW, residual IVF-PQ, and a five-index SIFT1M rank-recall and latency benchmark. The repository
+includes starter code, focused tests, and separate completed references. Chapter 6 uses corpus files that you acquire
+locally; hosted tests do not download or run the external dataset.
 
 </div>
 
@@ -37,7 +38,8 @@ The six Rust chapters build:
 3. An NSW proximity graph with bounded reciprocal edges and adjustable search width.
 4. An HNSW hierarchy that routes through sparse upper layers before searching the complete graph.
 5. An IVF-PQ index that compresses residual candidate scoring and reranks a shortlist with exact distances.
-6. A benchmark that compares Flat, IVFFlat, NSW, HNSW, and IVF-PQ on the same deterministic Euclidean workload.
+6. A benchmark that compares Flat, IVFFlat, NSW, HNSW, and IVF-PQ on SIFT1M under the same Euclidean queries and
+   `k = 100`, with an explicit non-parity smoke mode for quicker local feedback.
 
 At its core, this is a regular Rust library. You will build a DataFusion adapter that recognizes a safe SQL top-k query and
 routes it to a vector index. The collection and indexes stay independent of Arrow and the query engine, so you can explore
@@ -82,8 +84,8 @@ with focused tests and a short reflection on what you observed.
 
 Chapter 1 makes the table and optimizer rule runnable. Chapter 2 compares IVFFlat with exact search, Chapter 3 follows
 graph edges with NSW, and Chapter 4 adds sparse HNSW layers. Chapter 5 adds residual IVF-PQ behind the same collection and
-SQL boundary. Chapter 6 compares all five indexes under one fixed Euclidean measurement contract, so the reported recall
-and latency fields describe the same data, queries, metric, and `k`.
+SQL boundary. Chapter 6 compares all five indexes under one fixed SIFT1M measurement contract, so the reported rank
+recall and latency fields describe the same data, queries, Euclidean metric, and `k = 100`.
 
 ## Community
 
