@@ -433,6 +433,88 @@ mod tests {
             (pq.subquantizers, pq.codebook_size, pq.rerank, pq.seed),
             (4, 16, 100, 7)
         );
+
+        let dataset = Dataset::try_new(vec![
+            vec![1.0, 0.0, 0.0, 0.0],
+            vec![0.0, 1.0, 0.0, 0.0],
+            vec![0.0, 0.0, 1.0, 0.0],
+            vec![0.0, 0.0, 0.0, 1.0],
+            vec![1.0, 1.0, 0.0, 0.0],
+            vec![0.0, 1.0, 1.0, 0.0],
+            vec![0.0, 0.0, 1.0, 1.0],
+            vec![1.0, 0.0, 0.0, 1.0],
+        ])
+        .unwrap();
+
+        let nsw_config = NswConfig {
+            max_connections: 2,
+            ef_construction: 3,
+            ef_search: 4,
+        };
+        let nsw = build_nsw(dataset.clone(), Metric::Dot, nsw_config).unwrap();
+        assert_eq!(nsw.kind(), "nsw");
+        assert_eq!(nsw.dataset().vectors(), dataset.vectors());
+        assert_eq!(nsw.metric(), Metric::Dot);
+        assert!(
+            build_nsw(
+                dataset.clone(),
+                Metric::Dot,
+                NswConfig {
+                    max_connections: 0,
+                    ..nsw_config
+                },
+            )
+            .is_err()
+        );
+
+        let hnsw_config = HnswConfig {
+            max_connections: 2,
+            ef_construction: 3,
+            ef_search: 4,
+            max_level: 3,
+            seed: 19,
+        };
+        let hnsw = build_hnsw(dataset.clone(), Metric::Cosine, hnsw_config).unwrap();
+        assert_eq!(hnsw.kind(), "hnsw");
+        assert_eq!(hnsw.dataset().vectors(), dataset.vectors());
+        assert_eq!(hnsw.metric(), Metric::Cosine);
+        assert!(
+            build_hnsw(
+                dataset.clone(),
+                Metric::Cosine,
+                HnswConfig {
+                    ef_search: 0,
+                    ..hnsw_config
+                },
+            )
+            .is_err()
+        );
+
+        let ivf_pq_config = IvfPqConfig {
+            partitions: 2,
+            probes: 1,
+            iterations: 2,
+            subquantizers: 2,
+            codebook_size: 2,
+            rerank: 3,
+            seed: 23,
+        };
+        let ivf_pq = build_ivf_pq(dataset.clone(), Metric::Euclidean, ivf_pq_config).unwrap();
+        assert_eq!(ivf_pq.kind(), "ivf_pq");
+        assert_eq!(ivf_pq.dataset().vectors(), dataset.vectors());
+        assert_eq!(ivf_pq.metric(), Metric::Euclidean);
+        assert!(
+            build_ivf_pq(
+                dataset.clone(),
+                Metric::Euclidean,
+                IvfPqConfig {
+                    subquantizers: 3,
+                    ..ivf_pq_config
+                },
+            )
+            .is_err()
+        );
+        assert!(build_ivf_pq(dataset, Metric::Dot, ivf_pq_config).is_err());
     }
 
     #[test]
