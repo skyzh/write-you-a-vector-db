@@ -1,5 +1,5 @@
 [package]
-name = "vector-core"
+name = "vector-benchmark-support"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
@@ -7,6 +7,3 @@ rust-version.workspace = true
 
 [lints]
 workspace = true
-
-[dev-dependencies]
-vector-benchmark-support.workspace = true

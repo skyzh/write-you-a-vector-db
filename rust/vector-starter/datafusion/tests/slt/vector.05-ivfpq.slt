@@ -1,0 +1,44 @@
+statement ok
+CREATE TABLE points (
+    id BIGINT NOT NULL,
+    embedding REAL[3] NOT NULL,
+    payload VARCHAR NOT NULL
+);
+
+statement count 8
+INSERT INTO points VALUES
+    (0, [0.0, 1.0, 1.0], 'point-0'),
+    (1, [1.25, 1.0, 1.0], 'point-1'),
+    (2, [2.5, 1.0, 1.0], 'point-2'),
+    (3, [3.75, 1.0, 1.0], 'point-3'),
+    (4, [5.0, 1.0, 1.0], 'point-4'),
+    (5, [6.25, 1.0, 1.0], 'point-5'),
+    (6, [7.5, 1.0, 1.0], 'point-6'),
+    (7, [8.75, 1.0, 1.0], 'point-7');
+
+query T
+EXPLAIN SELECT id, payload FROM points
+ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 5;
+----
+SortExec: TopK(fetch=5), expr=[array_distance(CAST(embedding@2 AS List(Float64)), [1.0, 1.0, 1.0]) ASC NULLS LAST], preserve_partitioning=[false]
+DataSourceExec: partitions=1, partition_sizes=[1]
+
+statement ok
+CREATE INDEX arbitrary_ivf_pq_name ON points USING ivfpq (embedding);
+
+query T
+EXPLAIN SELECT id, payload FROM points
+ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 5;
+----
+SortExec: TopK(fetch=5), expr=[array_distance(CAST(embedding@2 AS List(Float64)), [1.0, 1.0, 1.0]) ASC NULLS LAST], preserve_partitioning=[false]
+VectorIndexScanExec: index=ivf_pq, metric=Euclidean, query_dim=3, fetch=Some(5), ordered=false
+
+query IT
+SELECT id, payload FROM points
+ORDER BY array_distance(embedding, [1.0, 1.0, 1.0]) LIMIT 5;
+----
+1 point-1
+0 point-0
+2 point-2
+3 point-3
+4 point-4

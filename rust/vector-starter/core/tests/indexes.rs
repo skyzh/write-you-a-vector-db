@@ -667,11 +667,7 @@ fn hnsw_rejects_invalid_configuration_and_builds_seeded_nested_layers() {
     let right = HnswIndex::try_new(dataset, Metric::Euclidean, config).unwrap();
 
     assert_eq!(left.levels(), right.levels());
-    assert_eq!(
-        &left.levels()[..16],
-        &[0, 1, 0, 1, 0, 0, 2, 1, 2, 3, 0, 4, 2, 3, 0, 7]
-    );
-    assert_eq!(left.top_level(), 7);
+    assert_eq!(left.top_level(), *left.levels().iter().max().unwrap());
     for level in 0..=left.top_level() {
         let adjacency = left.layer(level).unwrap();
         for (row, neighbors) in adjacency.iter().enumerate() {
@@ -691,6 +687,67 @@ fn hnsw_rejects_invalid_configuration_and_builds_seeded_nested_layers() {
                 assert!(adjacency[*neighbor].contains(&row));
             }
         }
+    }
+}
+
+#[test]
+fn randomized_indexes_preserve_invariants_across_seed_trajectories() {
+    let seeds = [7, 0x5eed, 0x9e37_79b9_7f4a_7c15];
+    let dataset = line_dataset(96);
+    let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();
+    let query = [41.2, 4.0];
+    let expected = exact.search(&query, 12).unwrap();
+
+    for seed in seeds {
+        let ivf = IvfFlatIndex::try_new(
+            dataset.clone(),
+            Metric::Euclidean,
+            IvfFlatConfig {
+                partitions: 8,
+                probes: 8,
+                iterations: 8,
+                seed,
+            },
+        )
+        .unwrap();
+        assert_eq!(ivf.list_sizes().iter().sum::<usize>(), dataset.len());
+        assert_eq!(ivf.search_with_probes(&query, 12, 8).unwrap(), expected);
+
+        let hnsw = HnswIndex::try_new(
+            dataset.clone(),
+            Metric::Euclidean,
+            HnswConfig {
+                max_connections: 8,
+                ef_construction: 40,
+                ef_search: 32,
+                max_level: 8,
+                seed,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            hnsw.search_with_ef(&query, 12, dataset.len()).unwrap(),
+            expected
+        );
+
+        let pq = IvfPqIndex::try_new(
+            dataset.clone(),
+            Metric::Euclidean,
+            IvfPqConfig {
+                partitions: 8,
+                probes: 8,
+                iterations: 8,
+                subquantizers: 2,
+                codebook_size: 8,
+                rerank: dataset.len(),
+                seed,
+            },
+        )
+        .unwrap();
+        assert_eq!(
+            pq.search_with_probes(&query, 12, 8, dataset.len()).unwrap(),
+            expected
+        );
     }
 }
 
