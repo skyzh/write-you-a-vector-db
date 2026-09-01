@@ -365,9 +365,7 @@ fn index_kind(index: &IndexConfig) -> DataFusionResult<&'static str> {
         IndexConfig::IvfFlat(_) => Ok("ivfflat"),
         IndexConfig::Nsw(_) => Ok("nsw"),
         IndexConfig::Hnsw(_) => Ok("hnsw"),
-        IndexConfig::IvfPq(_) => Err(DataFusionError::Plan(
-            "the vector SQL session supports flat, ivfflat, nsw, and hnsw indexes".into(),
-        )),
+        IndexConfig::IvfPq(_) => Ok("ivfpq"),
     }
 }
 

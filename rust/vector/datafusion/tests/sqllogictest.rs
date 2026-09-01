@@ -7,7 +7,7 @@ use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::arrow::util::display::array_value_to_string;
 use datafusion::common::DataFusionError;
 use sqllogictest::{AsyncDB, DBOutput, DefaultColumnType, Runner};
-use vector_core::{HnswConfig, IndexConfig, IvfFlatConfig, Metric, NswConfig};
+use vector_core::{HnswConfig, IndexConfig, IvfFlatConfig, IvfPqConfig, Metric, NswConfig};
 use vector_datafusion::{VectorSqlOutput, VectorSqlSession};
 
 struct DataFusionDb {
@@ -186,6 +186,23 @@ async fn day4_hnsw_sql() {
             ef_construction: 8,
             ef_search: 8,
             max_level: 4,
+            seed: 7,
+        }),
+    )
+    .await;
+}
+
+#[tokio::test]
+async fn day5_ivf_pq_sql() {
+    run_case(
+        "vector.05-ivfpq.slt",
+        IndexConfig::IvfPq(IvfPqConfig {
+            partitions: 2,
+            probes: 2,
+            iterations: 4,
+            subquantizers: 1,
+            codebook_size: 4,
+            rerank: 8,
             seed: 7,
         }),
     )

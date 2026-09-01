@@ -8,7 +8,7 @@
   - [Navigate a Proximity Graph with NSW](./rust-04-nsw.md)
   - [Add Hierarchy with HNSW](./rust-05-hnsw.md)
   - [Compress IVFFlat with Product Quantization](./rust-07-ivfpq.md)
-  - [Benchmark Five Indexes](./rust-06-benchmark.md)
+  - [Benchmark Five Indexes on SIFT1M](./rust-06-benchmark.md)
 - [Where to Go Next](./10-epilogue.md)
 
 ---

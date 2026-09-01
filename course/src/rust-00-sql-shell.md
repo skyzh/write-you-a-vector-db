@@ -52,6 +52,9 @@ The first query returns these rows:
 3  three
 ```
 
+**Prediction:** The next command attaches an index, but the following `SELECT` is byte-for-byte identical. Which physical
+plan leaf should change, and which three rows must not?
+
 The `CREATE INDEX` statement builds the session's cosine IVFFlat index and attaches it to the vector column you selected.
 The second `EXPLAIN` reaches the course-owned scan:
 
@@ -80,10 +83,16 @@ selected column must be a non-null `REAL[N]` vector with positive width. Duplica
 columns, providers other than `MemTable`, nullable fields, vector fields with the wrong physical type or zero width, and an
 index kind different from the session configuration are rejected before an attachment is installed.
 
+**Prediction:** Suppose the session also contains another eligible table with a different vector field. Which table,
+column, and index names must the bridge resolve from the SQL statement rather than hard-code from this `points` example?
+
 An attachment is an immutable snapshot. After a table is indexed, `INSERT`, `ALTER TABLE`, and `DROP TABLE` against that
 table are rejected instead of making the index stale. Writes to unrelated tables remain legal, as does `INSERT ... SELECT`
 that reads indexed data into another table. The bridge does not add index persistence, `DROP INDEX`, automatic rebuilding,
 or a general catalog lifecycle.
+
+**Prediction:** Why must a later `INSERT` into the indexed table be rejected unless the table update and a rebuilt index
+can become visible atomically?
 
 That narrow boundary keeps the first experience concrete without turning the course into a parser or catalog project.
 Next, [Chapter 1](./rust-02-datafusion.md) opens the path you just used: you will build the Arrow table, attach one selected

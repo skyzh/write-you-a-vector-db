@@ -2585,12 +2585,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "vector-benchmark-support"
+version = "0.1.0"
+
+[[package]]
 name = "vector-core"
 version = "0.1.0"
+dependencies = [
+ "vector-benchmark-support",
+]
 
 [[package]]
 name = "vector-core-starter"
 version = "0.1.0"
+dependencies = [
+ "vector-benchmark-support",
+]
 
 [[package]]
 name = "vector-datafusion"

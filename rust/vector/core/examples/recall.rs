@@ -1,95 +1,72 @@
+use std::collections::HashSet;
+use std::error::Error;
 use std::time::{Duration, Instant};
 
+use vector_benchmark_support::{
+    Cli, Mode, RankRecall, TimedRun, Truth, load_sift1m, parse_cli, percentile, rank_recall,
+    run_balanced,
+};
 use vector_core::{
     Dataset, FlatIndex, HnswConfig, HnswIndex, IvfFlatConfig, IvfFlatIndex, IvfPqConfig,
-    IvfPqIndex, Metric, Neighbor, NswConfig, NswIndex, VectorIndex, recall_at_k,
+    IvfPqIndex, Metric, Neighbor, NswConfig, NswIndex, VectorIndex,
 };
 
-const ROWS: usize = 2_000;
-const DIMENSIONS: usize = 16;
-const QUERIES: usize = 100;
-const K: usize = 10;
+const K: usize = 100;
 const INDEX_COUNT: usize = 5;
-const QUERY_STRIDE: usize = 17;
-const QUERY_OFFSET: usize = 3;
+const WARM_QUERY_COUNT: usize = 20;
 const INDEX_NAMES: [&str; INDEX_COUNT] = ["flat", "ivf_flat", "nsw", "hnsw", "ivf_pq"];
+const INDEX_CONFIGS: [&str; INDEX_COUNT] = [
+    "exact",
+    "partitions=32,probes=6,iterations=12,seed=7",
+    "max_connections=12,ef_construction=64,ef_search=40",
+    "max_connections=12,ef_construction=64,ef_search=40,max_level=12,seed=7",
+    "partitions=32,probes=6,iterations=12,subquantizers=4,codebook_size=16,rerank=100,seed=7",
+];
 
 struct Workload {
+    mode: Mode,
+    truth: Truth,
     dataset: Dataset,
     queries: Vec<Vec<f32>>,
-    metric: Metric,
-    k: usize,
-}
-
-impl Workload {
-    fn fixed() -> vector_core::Result<Self> {
-        let dataset = Dataset::try_new(
-            (0..ROWS)
-                .map(|row| {
-                    (0..DIMENSIONS)
-                        .map(|dimension| sample(row as u64, dimension as u64))
-                        .collect()
-                })
-                .collect(),
-        )?;
-        let queries = (0..QUERIES)
-            .map(|query| {
-                (0..DIMENSIONS)
-                    .map(|dimension| {
-                        sample(
-                            (ROWS + query * QUERY_STRIDE + QUERY_OFFSET) as u64,
-                            dimension as u64,
-                        )
-                    })
-                    .collect::<Vec<_>>()
-            })
-            .collect::<Vec<_>>();
-        Ok(Self {
-            dataset,
-            queries,
-            metric: Metric::Euclidean,
-            k: K,
-        })
-    }
+    exact_first: Vec<usize>,
 }
 
 struct BuiltIndex {
     name: &'static str,
+    config: &'static str,
     index: Box<dyn VectorIndex>,
     build_time: Duration,
 }
 
-#[derive(Debug)]
-struct TimedRun {
-    latencies: Vec<Duration>,
-    results: Vec<Vec<Neighbor>>,
-}
-
 #[derive(Debug, Clone, Copy)]
 struct Measurement {
-    recall: f64,
+    search_time: Duration,
+    recall: RankRecall,
     p50: Duration,
     p99: Duration,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 struct PqAccounting {
-    codes_bytes: usize,
-    codebooks_bytes: usize,
-    full_vectors_bytes: usize,
+    codes_bytes: u64,
+    codebooks_bytes: u64,
+    full_vectors_bytes: u64,
 }
 
 impl PqAccounting {
     fn from_index(index: &IvfPqIndex) -> Self {
         Self {
-            codes_bytes: index.encoded_bytes(),
-            codebooks_bytes: index.codebook_bytes(),
-            full_vectors_bytes: index.full_precision_bytes(),
+            codes_bytes: u64::try_from(index.encoded_bytes()).expect("codes fit in u64"),
+            codebooks_bytes: u64::try_from(index.codebook_bytes()).expect("codebooks fit in u64"),
+            full_vectors_bytes: u64::try_from(index.full_precision_bytes())
+                .expect("vectors fit in u64"),
         }
     }
 
-    fn search_bytes(self) -> usize {
-        self.codes_bytes + self.codebooks_bytes
+    fn search_bytes(self) -> u64 {
+        self.codes_bytes
+            .checked_add(self.codebooks_bytes)
+            .expect("IVF-PQ search representation byte count overflow")
     }
 
     fn compression(self) -> f64 {
@@ -97,83 +74,127 @@ impl PqAccounting {
     }
 }
 
-fn main() -> vector_core::Result<()> {
-    let workload = Workload::fixed()?;
+fn main() {
+    let cli = match parse_cli(std::env::args_os().skip(1)) {
+        Ok(cli) => cli,
+        Err(error) => {
+            eprintln!("{error}");
+            std::process::exit(error.exit_code());
+        }
+    };
+    if let Err(error) = run(cli) {
+        eprintln!("{error}");
+        std::process::exit(1);
+    }
+}
 
-    let dataset = workload.dataset.clone();
-    let metric = workload.metric;
-    let started = Instant::now();
-    let flat = FlatIndex::try_new(dataset, metric)?;
-    let flat_build = started.elapsed();
-    let ground_truth = workload
-        .queries
+fn run(cli: Cli) -> Result<(), Box<dyn Error>> {
+    let sift = load_sift1m(&cli)?;
+    let mode = sift.mode;
+    let supplied_first = sift
+        .supplied_ground_truth
         .iter()
-        .map(|query| flat.search(query, workload.k))
-        .collect::<vector_core::Result<Vec<_>>>()?;
+        .map(|row| row[0])
+        .collect::<Vec<_>>();
+    let dataset = Dataset::try_new(sift.base)?;
+    let queries = sift.queries;
 
-    let dataset = workload.dataset.clone();
-    let metric = workload.metric;
-    let config = ivf_flat_config();
+    let dataset_for_flat = dataset.clone();
     let started = Instant::now();
-    let ivf_flat = IvfFlatIndex::try_new(dataset, metric, config)?;
+    let flat = FlatIndex::try_new(dataset_for_flat, Metric::Euclidean)?;
+    let flat_build = started.elapsed();
+    let (truth, exact_first) = select_exact_truth(mode, supplied_first, || {
+        queries
+            .iter()
+            .map(|query| flat.search(query, K).map(|rows| rows[0].row))
+            .collect::<vector_core::Result<Vec<_>>>()
+    })?;
+
+    let dataset_for_ivf_flat = dataset.clone();
+    let ivf_flat_config = ivf_flat_config();
+    let started = Instant::now();
+    let ivf_flat = IvfFlatIndex::try_new(dataset_for_ivf_flat, Metric::Euclidean, ivf_flat_config)?;
     let ivf_flat_build = started.elapsed();
 
-    let dataset = workload.dataset.clone();
-    let metric = workload.metric;
-    let config = nsw_config();
+    let dataset_for_nsw = dataset.clone();
+    let nsw_config = nsw_config();
     let started = Instant::now();
-    let nsw = NswIndex::try_new(dataset, metric, config)?;
+    let nsw = NswIndex::try_new(dataset_for_nsw, Metric::Euclidean, nsw_config)?;
     let nsw_build = started.elapsed();
 
-    let dataset = workload.dataset.clone();
-    let metric = workload.metric;
-    let config = hnsw_config();
+    let dataset_for_hnsw = dataset.clone();
+    let hnsw_config = hnsw_config();
     let started = Instant::now();
-    let hnsw = HnswIndex::try_new(dataset, metric, config)?;
+    let hnsw = HnswIndex::try_new(dataset_for_hnsw, Metric::Euclidean, hnsw_config)?;
     let hnsw_build = started.elapsed();
 
-    let dataset = workload.dataset.clone();
-    let metric = workload.metric;
-    let config = ivf_pq_config();
+    let dataset_for_ivf_pq = dataset.clone();
+    let ivf_pq_config = ivf_pq_config();
     let started = Instant::now();
-    let ivf_pq = IvfPqIndex::try_new(dataset, metric, config)?;
+    let ivf_pq = IvfPqIndex::try_new(dataset_for_ivf_pq, Metric::Euclidean, ivf_pq_config)?;
     let ivf_pq_build = started.elapsed();
     let accounting = PqAccounting::from_index(&ivf_pq);
 
     let indexes = vec![
         BuiltIndex {
-            name: "flat",
+            name: INDEX_NAMES[0],
+            config: INDEX_CONFIGS[0],
             index: Box::new(flat),
             build_time: flat_build,
         },
         BuiltIndex {
-            name: "ivf_flat",
+            name: INDEX_NAMES[1],
+            config: INDEX_CONFIGS[1],
             index: Box::new(ivf_flat),
             build_time: ivf_flat_build,
         },
         BuiltIndex {
-            name: "nsw",
+            name: INDEX_NAMES[2],
+            config: INDEX_CONFIGS[2],
             index: Box::new(nsw),
             build_time: nsw_build,
         },
         BuiltIndex {
-            name: "hnsw",
+            name: INDEX_NAMES[3],
+            config: INDEX_CONFIGS[3],
             index: Box::new(hnsw),
             build_time: hnsw_build,
         },
         BuiltIndex {
-            name: "ivf_pq",
+            name: INDEX_NAMES[4],
+            config: INDEX_CONFIGS[4],
             index: Box::new(ivf_pq),
             build_time: ivf_pq_build,
         },
     ];
-
-    warm_up(&indexes, &workload)?;
-    let timed_runs = measure(&indexes, &workload)?;
-    for line in format_report(&workload, &indexes, &timed_runs, &ground_truth, accounting) {
+    let runs = run_balanced(
+        &queries,
+        INDEX_COUNT,
+        WARM_QUERY_COUNT.min(queries.len()),
+        |index, query| indexes[index].index.search(query, K),
+    )?;
+    let workload = Workload {
+        mode,
+        truth,
+        dataset,
+        queries,
+        exact_first,
+    };
+    for line in format_report(&workload, &indexes, &runs, accounting)? {
         println!("{line}");
     }
     Ok(())
+}
+
+fn select_exact_truth<E>(
+    mode: Mode,
+    supplied_first: Vec<usize>,
+    recompute: impl FnOnce() -> Result<Vec<usize>, E>,
+) -> Result<(Truth, Vec<usize>), E> {
+    match mode {
+        Mode::Full => Ok((Truth::SuppliedSift1m, supplied_first)),
+        Mode::Smoke => Ok((Truth::RecomputedFlatSelectedBase, recompute()?)),
+    }
 }
 
 fn ivf_flat_config() -> IvfFlatConfig {
@@ -215,109 +236,149 @@ fn ivf_pq_config() -> IvfPqConfig {
     }
 }
 
-fn warm_up(indexes: &[BuiltIndex], workload: &Workload) -> vector_core::Result<()> {
-    assert_eq!(indexes.len(), INDEX_COUNT);
-    for (query_ordinal, query) in workload.queries.iter().enumerate() {
-        for offset in 0..INDEX_COUNT {
-            let index = &indexes[(query_ordinal + offset) % INDEX_COUNT];
-            std::hint::black_box(index.index.search(query, workload.k)?);
-        }
+fn summarize(
+    run: &TimedRun<Vec<Neighbor>>,
+    exact_first: &[usize],
+    base_rows: usize,
+) -> Result<Measurement, Box<dyn Error>> {
+    if run.results.len() != exact_first.len() || run.latencies.len() != exact_first.len() {
+        return Err("search result count does not match query count".into());
     }
-    Ok(())
-}
-
-fn measure(indexes: &[BuiltIndex], workload: &Workload) -> vector_core::Result<Vec<TimedRun>> {
-    assert_eq!(indexes.len(), INDEX_COUNT);
-    let mut runs = (0..INDEX_COUNT)
-        .map(|_| TimedRun {
-            latencies: Vec::with_capacity(workload.queries.len()),
-            results: Vec::with_capacity(workload.queries.len()),
-        })
-        .collect::<Vec<_>>();
-
-    for (query_ordinal, query) in workload.queries.iter().enumerate() {
-        for offset in 0..INDEX_COUNT {
-            let index_ordinal = (query_ordinal + offset) % INDEX_COUNT;
-            let started = Instant::now();
-            let result = indexes[index_ordinal].index.search(query, workload.k)?;
-            let elapsed = started.elapsed();
-            runs[index_ordinal].latencies.push(elapsed);
-            runs[index_ordinal]
-                .results
-                .push(std::hint::black_box(result));
-        }
+    let mut total = RankRecall {
+        r1: 0.0,
+        r10: 0.0,
+        r100: 0.0,
+    };
+    for (neighbors, exact) in run.results.iter().zip(exact_first) {
+        validate_neighbors(neighbors, base_rows, K)?;
+        let rows = neighbors
+            .iter()
+            .map(|neighbor| neighbor.row)
+            .collect::<Vec<_>>();
+        let recall = rank_recall(&rows, *exact);
+        total.r1 += recall.r1;
+        total.r10 += recall.r10;
+        total.r100 += recall.r100;
     }
-    Ok(runs)
-}
-
-fn summarize(run: &TimedRun, ground_truth: &[Vec<Neighbor>], k: usize) -> Measurement {
-    assert_eq!(run.results.len(), ground_truth.len());
-    assert_eq!(run.latencies.len(), ground_truth.len());
-    let recall = run
-        .results
-        .iter()
-        .zip(ground_truth)
-        .map(|(actual, expected)| recall_at_k(expected, actual, k))
-        .sum::<f64>()
-        / ground_truth.len() as f64;
-    assert!(recall.is_finite());
-    assert!((0.0..=1.0).contains(&recall));
-
+    let queries = exact_first.len() as f64;
+    let recall = RankRecall {
+        r1: total.r1 / queries,
+        r10: total.r10 / queries,
+        r100: total.r100 / queries,
+    };
+    if !(0.0..=recall.r10).contains(&recall.r1) || !(recall.r10..=1.0).contains(&recall.r100) {
+        return Err("rank recall is not finite and monotonic".into());
+    }
     let mut latencies = run.latencies.clone();
     latencies.sort_unstable();
-    let p50 = percentile(&latencies, 50);
-    let p99 = percentile(&latencies, 99);
-    assert!(p99 >= p50);
-    Measurement { recall, p50, p99 }
+    let (p50, p99) = report_percentiles(&latencies);
+    Ok(Measurement {
+        search_time: run.latencies.iter().sum(),
+        recall,
+        p50,
+        p99,
+    })
+}
+
+fn report_percentiles(sorted: &[Duration]) -> (Duration, Duration) {
+    (percentile(sorted, 50), percentile(sorted, 99))
+}
+
+fn validate_neighbors(
+    neighbors: &[Neighbor],
+    base_rows: usize,
+    k: usize,
+) -> Result<(), Box<dyn Error>> {
+    if neighbors.len() != k.min(base_rows) {
+        return Err("search returned the wrong result count".into());
+    }
+    if neighbors
+        .iter()
+        .any(|neighbor| neighbor.row >= base_rows || !neighbor.distance.is_finite())
+    {
+        return Err("search returned an invalid row or distance".into());
+    }
+    if neighbors.windows(2).any(|pair| pair[0] > pair[1]) {
+        return Err("search results are not in public Neighbor order".into());
+    }
+    let unique = neighbors
+        .iter()
+        .map(|neighbor| neighbor.row)
+        .collect::<HashSet<_>>();
+    if unique.len() != neighbors.len() {
+        return Err("search returned a duplicate row".into());
+    }
+    Ok(())
 }
 
 fn format_report(
     workload: &Workload,
     indexes: &[BuiltIndex],
-    timed_runs: &[TimedRun],
-    ground_truth: &[Vec<Neighbor>],
+    runs: &[TimedRun<Vec<Neighbor>>],
     accounting: PqAccounting,
-) -> Vec<String> {
-    assert_eq!(indexes.len(), INDEX_COUNT);
-    assert_eq!(timed_runs.len(), INDEX_COUNT);
-    assert_eq!(ground_truth.len(), workload.queries.len());
-
-    let mut lines = indexes
-        .iter()
-        .zip(timed_runs)
-        .enumerate()
-        .map(|(ordinal, (index, run))| {
-            assert_eq!(index.name, INDEX_NAMES[ordinal]);
-            assert_eq!(index.index.kind(), index.name);
-            assert_eq!(index.index.metric(), workload.metric);
-            assert_eq!(index.index.dataset().vectors(), workload.dataset.vectors());
-            let measurement = summarize(run, ground_truth, workload.k);
-            if ordinal == 0 {
-                assert_eq!(measurement.recall, 1.0);
-            }
-            format_row(index.name, workload, index.build_time, measurement)
-        })
-        .collect::<Vec<_>>();
-    lines.push(format_accounting(accounting));
-    lines
-}
-
-fn format_row(
-    name: &str,
-    workload: &Workload,
-    build_time: Duration,
-    measurement: Measurement,
-) -> String {
-    format!(
-        "{name}: rows={}, dimensions={}, queries={}, metric=euclidean, k={}, build_ms={:.2}, recall={:.3}, p50_us={:.1}, p99_us={:.1}",
+) -> Result<Vec<String>, Box<dyn Error>> {
+    if indexes.len() != INDEX_COUNT || runs.len() != INDEX_COUNT {
+        return Err("benchmark index inventory is incomplete".into());
+    }
+    let mut lines = vec![format!(
+        "workload: mode={}, parity={}, rows={}, dimensions={}, queries={}, metric=euclidean, k={K}, truth={}",
+        workload.mode.mode_label(),
+        workload.mode.parity_label(),
         workload.dataset.len(),
         workload.dataset.dimension(),
         workload.queries.len(),
-        workload.k,
-        build_time.as_secs_f64() * 1_000.0,
-        measurement.recall,
-        measurement.p50.as_secs_f64() * 1_000_000.0,
-        measurement.p99.as_secs_f64() * 1_000_000.0,
+        workload.truth.label(),
+    )];
+    for (ordinal, (index, run)) in indexes.iter().zip(runs).enumerate() {
+        if index.name != INDEX_NAMES[ordinal]
+            || index.config != INDEX_CONFIGS[ordinal]
+            || index.index.kind() != index.name
+            || index.index.dataset().vectors() != workload.dataset.vectors()
+        {
+            return Err("benchmark index inventory drifted".into());
+        }
+        let measurement = summarize(run, &workload.exact_first, workload.dataset.len())?;
+        if ordinal == 0
+            && measurement.recall
+                != (RankRecall {
+                    r1: 1.0,
+                    r10: 1.0,
+                    r100: 1.0,
+                })
+        {
+            return Err("Flat disagrees with the selected exact truth".into());
+        }
+        lines.push(format_row(index, workload.queries.len(), measurement));
+    }
+    if workload.mode == Mode::Full
+        && accounting
+            != (PqAccounting {
+                codes_bytes: 4_000_000,
+                codebooks_bytes: 8_192,
+                full_vectors_bytes: 512_000_000,
+            })
+    {
+        return Err("full SIFT1M IVF-PQ accounting drifted".into());
+    }
+    lines.push(format_accounting(accounting));
+    Ok(lines)
+}
+
+fn format_row(index: &BuiltIndex, query_count: usize, measurement: Measurement) -> String {
+    let search_seconds = measurement.search_time.as_secs_f64();
+    let qps = query_count as f64 / search_seconds;
+    format!(
+        "{}: config={}, build_s={:.3}, search_s={:.3}, qps={:.1}, r@1={:.4}, r@10={:.4}, r@100={:.4}, p50_ms={:.3}, p99_ms={:.3}",
+        index.name,
+        index.config,
+        index.build_time.as_secs_f64(),
+        search_seconds,
+        qps,
+        measurement.recall.r1,
+        measurement.recall.r10,
+        measurement.recall.r100,
+        measurement.p50.as_secs_f64() * 1_000.0,
+        measurement.p99.as_secs_f64() * 1_000.0,
     )
 }
 
@@ -332,416 +393,99 @@ fn format_accounting(accounting: PqAccounting) -> String {
     )
 }
 
-fn percentile(sorted: &[Duration], percent: usize) -> Duration {
-    assert!(!sorted.is_empty());
-    assert!(percent <= 100);
-    let rank = (percent * sorted.len()).div_ceil(100).saturating_sub(1);
-    sorted[rank.min(sorted.len() - 1)]
-}
-
-fn sample(row: u64, dimension: u64) -> f32 {
-    let mut value = row
-        .wrapping_mul(0x9e37_79b9)
-        .wrapping_add(dimension.wrapping_mul(0x85eb_ca6b));
-    value ^= value >> 16;
-    value = value.wrapping_mul(0x7feb_352d);
-    value ^= value >> 15;
-    let unit = (value & 0xffff) as f32 / 65_535.0;
-    unit * 2.0 - 1.0
-}
-
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-    use std::sync::{Arc, Mutex};
-
     use super::*;
-
-    fn assert_build_boundary(
-        source: &str,
-        elapsed_marker: &str,
-        constructor_marker: &str,
-        config_marker: Option<&str>,
-    ) {
-        let end = source.find(elapsed_marker).unwrap();
-        let prefix = &source[..end];
-        let constructor = prefix.rfind(constructor_marker).unwrap();
-        let timer = prefix[..constructor]
-            .rfind("let started = Instant::now();")
-            .unwrap();
-        let dataset = prefix[..timer]
-            .rfind("let dataset = workload.dataset.clone();")
-            .unwrap();
-        let metric = prefix[..timer]
-            .rfind("let metric = workload.metric;")
-            .unwrap();
-        assert!(dataset < metric);
-        if let Some(config_marker) = config_marker {
-            let config = prefix[..timer].rfind(config_marker).unwrap();
-            assert!(metric < config);
-        }
-
-        let timed = &source[timer..end];
-        assert_eq!(timed.matches("let ").count(), 2);
-        assert_eq!(timed.matches("try_new(").count(), 1);
-        assert!(timed.contains(constructor_marker));
-        assert!(!timed.contains("workload.metric"));
-        assert!(!timed.contains("_config()"));
-    }
-
-    #[test]
-    fn build_timers_include_only_constructor_work() {
-        let source = include_str!("recall.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .unwrap();
-        assert_build_boundary(
-            source,
-            "let flat_build = started.elapsed();",
-            "FlatIndex::try_new(dataset, metric)",
-            None,
-        );
-        assert_build_boundary(
-            source,
-            "let ivf_flat_build = started.elapsed();",
-            "IvfFlatIndex::try_new(dataset, metric, config)",
-            Some("let config = ivf_flat_config();"),
-        );
-        assert_build_boundary(
-            source,
-            "let nsw_build = started.elapsed();",
-            "NswIndex::try_new(dataset, metric, config)",
-            Some("let config = nsw_config();"),
-        );
-        assert_build_boundary(
-            source,
-            "let hnsw_build = started.elapsed();",
-            "HnswIndex::try_new(dataset, metric, config)",
-            Some("let config = hnsw_config();"),
-        );
-        assert_build_boundary(
-            source,
-            "let ivf_pq_build = started.elapsed();",
-            "IvfPqIndex::try_new(dataset, metric, config)",
-            Some("let config = ivf_pq_config();"),
-        );
-    }
-
-    #[test]
-    fn contract_source_rejects_known_shortcuts() {
-        let source = include_str!("recall.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .unwrap();
-        let summarize = source
-            .split("fn summarize(")
-            .nth(1)
-            .unwrap()
-            .split("fn format_report(")
-            .next()
-            .unwrap();
-        assert!(summarize.contains(".zip(ground_truth)"));
-        assert!(summarize.contains("/ ground_truth.len() as f64"));
-        assert!(!summarize.contains("ground_truth[0]"));
-
-        let report = source
-            .split("fn format_report(")
-            .nth(1)
-            .unwrap()
-            .split("fn format_row(")
-            .next()
-            .unwrap();
-        assert!(!report.contains(".take(4)"));
-        assert!(report.contains("lines.push(format_accounting(accounting));"));
-
-        let percentile = source
-            .split("fn percentile(")
-            .nth(1)
-            .unwrap()
-            .split("fn sample(")
-            .next()
-            .unwrap();
-        assert!(!percentile.contains(".len()) / 100"));
-        assert!(!percentile.contains(".len() - 1) / 100"));
-    }
 
     #[test]
     fn inventory_and_configs_match_the_frozen_matrix() {
         assert_eq!(INDEX_NAMES, ["flat", "ivf_flat", "nsw", "hnsw", "ivf_pq"]);
-
-        let ivf_flat = ivf_flat_config();
+        assert_eq!(ivf_flat_config().seed, 7);
+        assert_eq!(nsw_config().ef_search, 40);
+        assert_eq!((hnsw_config().max_level, hnsw_config().seed), (12, 7));
+        let pq = ivf_pq_config();
         assert_eq!(
-            (
-                ivf_flat.partitions,
-                ivf_flat.probes,
-                ivf_flat.iterations,
-                ivf_flat.seed,
-            ),
-            (32, 6, 12, 7)
-        );
-        let nsw = nsw_config();
-        assert_eq!(
-            (nsw.max_connections, nsw.ef_construction, nsw.ef_search,),
-            (12, 64, 40)
-        );
-        let hnsw = hnsw_config();
-        assert_eq!(
-            (
-                hnsw.max_connections,
-                hnsw.ef_construction,
-                hnsw.ef_search,
-                hnsw.max_level,
-                hnsw.seed,
-            ),
-            (12, 64, 40, 12, 7)
-        );
-        let ivf_pq = ivf_pq_config();
-        assert_eq!(
-            (
-                ivf_pq.partitions,
-                ivf_pq.probes,
-                ivf_pq.iterations,
-                ivf_pq.subquantizers,
-                ivf_pq.codebook_size,
-                ivf_pq.rerank,
-                ivf_pq.seed,
-            ),
-            (32, 6, 12, 4, 16, 100, 7)
+            (pq.subquantizers, pq.codebook_size, pq.rerank, pq.seed),
+            (4, 16, 100, 7)
         );
     }
 
     #[test]
-    fn query_domains_pin_stride_offset_uniqueness_and_disjointness() {
-        assert_eq!(QUERY_STRIDE, 17);
-        assert_eq!(QUERY_OFFSET, 3);
-        let dataset_domains = (0..ROWS).collect::<HashSet<_>>();
-        let query_domains = (0..QUERIES)
-            .map(|query| ROWS + query * QUERY_STRIDE + QUERY_OFFSET)
-            .collect::<HashSet<_>>();
-        assert_eq!(query_domains.len(), QUERIES);
-        assert!(dataset_domains.is_disjoint(&query_domains));
+    fn smoke_truth_is_recomputed_on_the_selected_base() {
+        let (truth, exact) =
+            select_exact_truth(Mode::Smoke, vec![99], || Ok::<_, &'static str>(vec![7])).unwrap();
+        assert_eq!(truth, Truth::RecomputedFlatSelectedBase);
+        assert_eq!(exact, [7]);
+
+        let (truth, exact) = select_exact_truth(Mode::Full, vec![99], || {
+            Err::<Vec<usize>, _>("full mode must not recompute")
+        })
+        .unwrap();
+        assert_eq!(truth, Truth::SuppliedSift1m);
+        assert_eq!(exact, [99]);
     }
 
     #[test]
-    fn workload_is_shared_deterministic_and_disjoint() {
-        let left = Workload::fixed().unwrap();
-        let right = Workload::fixed().unwrap();
-
-        assert_eq!(left.dataset.vectors(), right.dataset.vectors());
-        assert_eq!(left.queries, right.queries);
-        assert_eq!(left.dataset.len(), ROWS);
-        assert_eq!(left.dataset.dimension(), DIMENSIONS);
-        assert_eq!(left.queries.len(), QUERIES);
-        assert_eq!(left.metric, Metric::Euclidean);
-        assert_eq!(left.k, K);
-        for row in 0..ROWS {
-            for dimension in 0..DIMENSIONS {
-                assert_eq!(
-                    left.dataset.vector(row)[dimension],
-                    sample(row as u64, dimension as u64)
-                );
-            }
-        }
-        for (query, vector) in left.queries.iter().enumerate() {
-            let domain = ROWS + query * QUERY_STRIDE + QUERY_OFFSET;
-            assert!(domain >= ROWS);
-            for dimension in 0..DIMENSIONS {
-                assert_eq!(vector[dimension], sample(domain as u64, dimension as u64));
-            }
-        }
-    }
-
-    #[derive(Debug)]
-    struct RecordingIndex {
-        name: &'static str,
-        dataset: Dataset,
-        trace: Arc<Mutex<Vec<(&'static str, usize)>>>,
-    }
-
-    impl VectorIndex for RecordingIndex {
-        fn kind(&self) -> &'static str {
-            self.name
-        }
-
-        fn dataset(&self) -> &Dataset {
-            &self.dataset
-        }
-
-        fn metric(&self) -> Metric {
-            Metric::Euclidean
-        }
-
-        fn search(&self, query: &[f32], _k: usize) -> vector_core::Result<Vec<Neighbor>> {
-            self.trace
-                .lock()
-                .unwrap()
-                .push((self.name, query[0] as usize));
-            Ok(vec![Neighbor {
-                row: query[0] as usize,
-                distance: 0.0,
-            }])
-        }
-    }
-
-    fn recording_fixture() -> (
-        Workload,
-        Vec<BuiltIndex>,
-        Arc<Mutex<Vec<(&'static str, usize)>>>,
-    ) {
-        let dataset = Dataset::try_new(vec![vec![0.0]]).unwrap();
-        let queries = (0..QUERIES)
-            .map(|query| vec![query as f32])
-            .collect::<Vec<_>>();
-        let workload = Workload {
-            dataset: dataset.clone(),
-            queries,
-            metric: Metric::Euclidean,
-            k: 1,
-        };
-        let trace = Arc::new(Mutex::new(Vec::new()));
-        let indexes = INDEX_NAMES
-            .iter()
-            .map(|name| BuiltIndex {
-                name,
-                index: Box::new(RecordingIndex {
-                    name,
-                    dataset: dataset.clone(),
-                    trace: Arc::clone(&trace),
-                }),
-                build_time: Duration::ZERO,
-            })
-            .collect();
-        (workload, indexes, trace)
-    }
-
-    fn assert_balanced_trace(trace: &[(&'static str, usize)]) {
-        assert_eq!(trace.len(), QUERIES * INDEX_COUNT);
-        let mut position_counts = [[0_usize; INDEX_COUNT]; INDEX_COUNT];
-        for (query, calls) in trace.chunks_exact(INDEX_COUNT).enumerate() {
-            for (position, (name, observed_query)) in calls.iter().enumerate() {
-                let expected_index = (query + position) % INDEX_COUNT;
-                assert_eq!(*name, INDEX_NAMES[expected_index]);
-                assert_eq!(*observed_query, query);
-                position_counts[expected_index][position] += 1;
-            }
-        }
-        assert!(
-            position_counts
-                .iter()
-                .flatten()
-                .all(|count| *count == QUERIES / INDEX_COUNT)
-        );
-    }
-
-    #[test]
-    fn warm_and_timed_phases_use_the_balanced_cyclic_trace() {
-        let (workload, indexes, trace) = recording_fixture();
-
-        warm_up(&indexes, &workload).unwrap();
-        assert_balanced_trace(&trace.lock().unwrap());
-        trace.lock().unwrap().clear();
-
-        let runs = measure(&indexes, &workload).unwrap();
-        assert_balanced_trace(&trace.lock().unwrap());
-        assert!(
-            runs.iter()
-                .all(|run| run.latencies.len() == QUERIES && run.results.len() == QUERIES)
-        );
-    }
-
-    #[test]
-    fn nearest_rank_percentile_selects_expected_samples() {
-        let samples = (1..=100).map(Duration::from_micros).collect::<Vec<_>>();
-        let six_samples = (1..=6).map(Duration::from_micros).collect::<Vec<_>>();
-
-        assert_eq!(percentile(&samples, 0), Duration::from_micros(1));
-        assert_eq!(percentile(&samples, 50), Duration::from_micros(50));
-        assert_eq!(percentile(&samples, 99), Duration::from_micros(99));
-        assert_eq!(percentile(&samples, 100), Duration::from_micros(100));
-        assert_eq!(percentile(&six_samples, 34), Duration::from_micros(3));
-    }
-
-    fn neighbors(rows: &[usize]) -> Vec<Neighbor> {
-        rows.iter()
-            .map(|row| Neighbor {
-                row: *row,
-                distance: *row as f32,
-            })
-            .collect()
-    }
-
-    #[test]
-    fn summarize_uses_arithmetic_mean_recall() {
-        let ground_truth = vec![neighbors(&[1, 2]), neighbors(&[3, 4]), neighbors(&[5, 6])];
-        let run = TimedRun {
-            latencies: vec![
-                Duration::from_micros(2),
-                Duration::from_micros(5),
-                Duration::from_micros(8),
-            ],
-            results: vec![neighbors(&[1, 2]), neighbors(&[3, 9]), neighbors(&[7, 8])],
-        };
-
-        let measurement = summarize(&run, &ground_truth, 2);
-        assert_eq!(measurement.recall, 0.5);
-        assert!(measurement.recall.is_finite());
-        assert!((0.0..=1.0).contains(&measurement.recall));
-        assert!(measurement.p99 >= measurement.p50);
-    }
-
-    #[test]
-    fn formatting_has_five_shared_rows_and_one_accounting_line() {
-        let (workload, indexes, _) = recording_fixture();
-        let ground_truth = workload
-            .queries
-            .iter()
-            .map(|query| {
-                vec![Neighbor {
-                    row: query[0] as usize,
-                    distance: 0.0,
-                }]
-            })
-            .collect::<Vec<_>>();
-        let timed_runs = (0..INDEX_COUNT)
-            .map(|_| TimedRun {
-                latencies: vec![Duration::from_micros(12); QUERIES],
-                results: ground_truth.clone(),
-            })
-            .collect::<Vec<_>>();
+    fn full_accounting_matches_the_fixed_search_representation() {
         let accounting = PqAccounting {
-            codes_bytes: 8_000,
-            codebooks_bytes: 1_024,
-            full_vectors_bytes: 128_000,
+            codes_bytes: 4_000_000,
+            codebooks_bytes: 8_192,
+            full_vectors_bytes: 512_000_000,
         };
-        let lines = format_report(&workload, &indexes, &timed_runs, &ground_truth, accounting);
-
-        assert_eq!(lines.len(), INDEX_COUNT + 1);
-        for (ordinal, row) in lines[..INDEX_COUNT].iter().enumerate() {
-            assert_eq!(
-                row,
-                &format!(
-                    "{}: rows=1, dimensions=1, queries=100, metric=euclidean, k=1, build_ms=0.00, recall=1.000, p50_us=12.0, p99_us=12.0",
-                    INDEX_NAMES[ordinal]
-                )
-            );
-        }
-        assert_eq!(
-            lines[INDEX_COUNT],
-            "ivf_pq search representation: codes_bytes=8000, codebooks_bytes=1024, search_bytes=9024, full_vectors_bytes=128000, compression=14.2x"
-        );
+        assert_eq!(accounting.search_bytes(), 4_008_192);
+        assert_eq!(format!("{:.1}", accounting.compression()), "127.7");
+        assert!(format_accounting(accounting).contains("search representation"));
     }
 
     #[test]
-    fn ivf_pq_accounting_matches_the_frozen_workload() {
-        let workload = Workload::fixed().unwrap();
-        let index =
-            IvfPqIndex::try_new(workload.dataset, Metric::Euclidean, ivf_pq_config()).unwrap();
-        let accounting = PqAccounting::from_index(&index);
+    fn result_validation_requires_complete_unique_public_order() {
+        let valid = (0..100)
+            .map(|row| Neighbor {
+                row,
+                distance: row as f32,
+            })
+            .collect::<Vec<_>>();
+        assert!(validate_neighbors(&valid, 10_000, 100).is_ok());
+        assert!(validate_neighbors(&valid[..99], 10_000, 100).is_err());
+        let mut duplicate = valid.clone();
+        duplicate[99].row = 98;
+        duplicate[99].distance = 98.0;
+        assert!(validate_neighbors(&duplicate, 10_000, 100).is_err());
+    }
 
-        assert_eq!(accounting.codes_bytes, 8_000);
-        assert_eq!(accounting.codebooks_bytes, 1_024);
-        assert_eq!(accounting.search_bytes(), 9_024);
-        assert_eq!(accounting.full_vectors_bytes, 128_000);
-        assert_eq!(format!("{:.1}", accounting.compression()), "14.2");
+    #[test]
+    fn summary_uses_rank_prefixes_and_validates_query_shape() {
+        let neighbors = (0..100)
+            .map(|row| Neighbor {
+                row,
+                distance: row as f32,
+            })
+            .collect::<Vec<_>>();
+        let run = TimedRun {
+            latencies: vec![Duration::from_millis(1), Duration::from_millis(2)],
+            results: vec![neighbors.clone(), neighbors],
+        };
+        let measurement = summarize(&run, &[0, 5], 10_000).unwrap();
+        assert_eq!(measurement.search_time, Duration::from_millis(3));
+        assert_eq!(
+            measurement.recall,
+            RankRecall {
+                r1: 0.5,
+                r10: 1.0,
+                r100: 1.0,
+            }
+        );
+        assert_eq!(measurement.p50, Duration::from_millis(1));
+        assert_eq!(measurement.p99, Duration::from_millis(2));
+        assert!(summarize(&run, &[0], 10_000).is_err());
+    }
+
+    #[test]
+    fn report_percentiles_use_supplied_nearest_rank_helper() {
+        let samples = (1..=100).map(Duration::from_micros).collect::<Vec<_>>();
+        assert_eq!(
+            report_percentiles(&samples),
+            (Duration::from_micros(50), Duration::from_micros(99))
+        );
     }
 }
