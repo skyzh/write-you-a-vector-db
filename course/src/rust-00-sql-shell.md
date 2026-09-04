@@ -17,18 +17,19 @@ For an interactive run, start from the repository root:
 cargo run -p vector-datafusion --example sql
 ```
 
-The shell starts with an empty session and accepts one SQL statement per input line. For a repeatable first run from the
-repository root, paste the whole transcript below into your terminal instead of entering the statements interactively:
+The supplied DataFusion CLI starts with an empty course session and accepts semicolon-terminated SQL, including statements
+that span multiple lines. For a repeatable first run from the repository root, paste the whole transcript below into your
+terminal instead of entering the statements interactively:
 
 ```sh
 cargo run -p vector-datafusion --example sql <<'SQL'
-CREATE TABLE points (id BIGINT NOT NULL, payload VARCHAR NOT NULL, embedding REAL[3] NOT NULL)
-INSERT INTO points VALUES (1, 'one', [1.0, 0.0, 0.0]), (2, 'two', [0.9, 0.1, 0.0]), (3, 'three', [0.0, 1.0, 0.0]), (4, 'four', [-1.0, 0.0, 0.0]), (5, 'five', [0.0, 0.0, 1.0])
-EXPLAIN SELECT id, payload FROM points ORDER BY cosine_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 3
-SELECT id, payload FROM points ORDER BY cosine_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 3
-CREATE INDEX points_embedding_idx ON points USING ivfflat (embedding)
-EXPLAIN SELECT id, payload FROM points ORDER BY cosine_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 3
-SELECT id, payload FROM points ORDER BY cosine_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 3
+CREATE TABLE points (id BIGINT NOT NULL, payload VARCHAR NOT NULL, embedding REAL[3] NOT NULL);
+INSERT INTO points VALUES (1, 'one', [1.0, 0.0, 0.0]), (2, 'two', [0.9, 0.1, 0.0]), (3, 'three', [0.0, 1.0, 0.0]), (4, 'four', [-1.0, 0.0, 0.0]), (5, 'five', [0.0, 0.0, 1.0]);
+EXPLAIN SELECT id, payload FROM points ORDER BY cosine_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 3;
+SELECT id, payload FROM points ORDER BY cosine_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 3;
+CREATE INDEX points_embedding_idx ON points USING ivfflat (embedding);
+EXPLAIN SELECT id, payload FROM points ORDER BY cosine_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 3;
+SELECT id, payload FROM points ORDER BY cosine_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 3;
 SQL
 ```
 

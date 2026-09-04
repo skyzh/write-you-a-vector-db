@@ -2,15 +2,17 @@ use std::any::Any;
 use std::collections::HashSet;
 use std::sync::Arc;
 
-use datafusion::arrow::array::{Array, UInt64Array};
+use datafusion::arrow::array::{Array, StringArray, UInt64Array};
 use datafusion::arrow::datatypes::DataType;
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::common::{
     DataFusionError, ResolvedTableReference, Result as DataFusionResult, TableReference,
 };
+use datafusion::dataframe::DataFrame;
 use datafusion::datasource::{MemTable, TableProvider};
 use datafusion::execution::config::SessionConfig;
 use datafusion::execution::context::SessionContext;
+use datafusion::logical_expr::{CreateIndex as LogicalCreateIndex, DdlStatement, LogicalPlan};
 use datafusion::sql::parser::{DFParser, Statement};
 use datafusion::sql::sqlparser::ast::{
     CreateIndex, Expr, Ident, IndexType, ObjectName, ObjectNamePart, ObjectType,
@@ -86,6 +88,64 @@ impl VectorSqlSession {
         }
     }
 
+    /// Return the DataFusion context used to plan CLI statements.
+    ///
+    /// The returned clone shares this session's catalog and runtime state. A
+    /// CLI should plan through this context, then pass the resulting plan to
+    /// [`Self::execute_cli_plan`] so the course's vector-index bridge remains
+    /// active.
+    pub fn cli_session_context(&self) -> SessionContext {
+        self.base.clone()
+    }
+
+    /// Validate SQL before the CLI converts it into a logical plan.
+    ///
+    /// DataFusion's logical `CreateIndex` deliberately omits some SQL syntax,
+    /// including `INCLUDE` columns and partial-index predicates. The CLI calls
+    /// this boundary first so unsupported modifiers cannot disappear before
+    /// the course's plain-index contract is checked.
+    pub fn validate_cli_sql(&self, sql: &str) -> DataFusionResult<()> {
+        for statement in DFParser::parse_sql(sql)? {
+            if let Statement::Statement(statement) = statement
+                && let SqlStatement::CreateIndex(create) = *statement
+            {
+                validate_plain_create_index(&create)?;
+                validate_index_column(&create, self.ident_normalization())?;
+            }
+        }
+        Ok(())
+    }
+
+    /// Execute one logical plan produced by [`Self::cli_session_context`].
+    ///
+    /// This is the thin integration boundary used by DataFusion CLI. Ordinary
+    /// plans remain DataFusion-owned; only the course's bounded vector
+    /// `CREATE INDEX` bridge and stale-index protection are added here.
+    pub async fn execute_cli_plan(&mut self, plan: LogicalPlan) -> DataFusionResult<DataFrame> {
+        match &plan {
+            LogicalPlan::Ddl(DdlStatement::CreateIndex(create)) => {
+                let name = self.create_logical_index(create.clone()).await?;
+                let message = Arc::new(StringArray::from(vec![format!(
+                    "created vector index {name}"
+                )])) as Arc<dyn Array>;
+                self.base
+                    .read_batch(RecordBatch::try_from_iter([("result", message)])?)
+            }
+            LogicalPlan::Dml(statement) => {
+                self.reject_indexed_table(&statement.table_name)?;
+                self.execute_statement_plan(plan).await
+            }
+            LogicalPlan::Ddl(DdlStatement::DropTable(drop)) => {
+                self.reject_indexed_table(&drop.name)?;
+                self.execute_statement_plan(plan).await
+            }
+            LogicalPlan::Ddl(_) | LogicalPlan::Statement(_) | LogicalPlan::Copy(_) => {
+                self.execute_statement_plan(plan).await
+            }
+            _ => self.context.execute_logical_plan(plan).await,
+        }
+    }
+
     async fn query(&self, sql: &str) -> DataFusionResult<VectorSqlOutput> {
         Ok(VectorSqlOutput::Query(
             self.context.sql(sql).await?.collect().await?,
@@ -97,6 +157,17 @@ impl VectorSqlSession {
         let affected = statement_count(&batches)?;
         self.rebuild_context();
         Ok(VectorSqlOutput::StatementComplete(affected))
+    }
+
+    async fn execute_statement_plan(&mut self, plan: LogicalPlan) -> DataFusionResult<DataFrame> {
+        let batches = self
+            .base
+            .execute_logical_plan(plan)
+            .await?
+            .collect()
+            .await?;
+        self.rebuild_context();
+        self.base.read_batches(batches)
     }
 
     async fn create_index(
@@ -148,6 +219,88 @@ impl VectorSqlSession {
             )));
         }
 
+        self.attach_index(name.clone(), table, column).await?;
+        Ok(VectorSqlOutput::CreatedIndex(name))
+    }
+
+    async fn create_logical_index(
+        &mut self,
+        create: LogicalCreateIndex,
+    ) -> DataFusionResult<String> {
+        if create.unique
+            || create.if_not_exists
+            || create
+                .columns
+                .iter()
+                .any(|sort| !sort.asc || sort.nulls_first)
+        {
+            return Err(DataFusionError::Plan(
+                "the vector SQL session supports only plain CREATE INDEX ... USING <kind> (column)"
+                    .into(),
+            ));
+        }
+        let name = create
+            .name
+            .ok_or_else(|| DataFusionError::Plan("CREATE INDEX requires an index name".into()))?;
+        if self.indexes.iter().any(|index| index.name == name) {
+            return Err(DataFusionError::Plan(format!(
+                "vector index name '{name}' already exists"
+            )));
+        }
+        let expected_kind = index_kind(&self.index)?;
+        let actual_kind = create
+            .using
+            .ok_or_else(|| {
+                DataFusionError::Plan(format!("CREATE INDEX requires USING {expected_kind}"))
+            })?
+            .to_ascii_lowercase();
+        if actual_kind != expected_kind {
+            return Err(DataFusionError::Plan(format!(
+                "this vector SQL session requires USING {expected_kind}, got {actual_kind}"
+            )));
+        }
+        let [sort] = create.columns.as_slice() else {
+            return Err(DataFusionError::Plan(
+                "a vector index requires exactly one plain vector column".into(),
+            ));
+        };
+        let datafusion::logical_expr::Expr::Column(column) = &sort.expr else {
+            return Err(DataFusionError::Plan(
+                "a vector index requires exactly one plain vector column".into(),
+            ));
+        };
+        if column.relation.is_some() {
+            return Err(DataFusionError::Plan(
+                "a vector index requires exactly one plain vector column".into(),
+            ));
+        }
+        let table = self.resolve_table(create.table);
+        let column = column.name.clone();
+        self.attach_index(name.clone(), table, column).await?;
+        Ok(name)
+    }
+
+    async fn attach_index(
+        &mut self,
+        name: String,
+        table: ResolvedTableReference,
+        column: String,
+    ) -> DataFusionResult<()> {
+        if self.indexes.iter().any(|index| index.name == name) {
+            return Err(DataFusionError::Plan(format!(
+                "vector index name '{name}' already exists"
+            )));
+        }
+        if self
+            .indexes
+            .iter()
+            .any(|index| index.table == table && index.column == column)
+        {
+            return Err(DataFusionError::Plan(format!(
+                "vector index target '{table}.{column}' already exists"
+            )));
+        }
+
         let provider = self.base.table_provider(table.clone()).await?;
         let schema = provider.schema();
         let field = schema.field_with_name(&column).map_err(|_| {
@@ -189,13 +342,13 @@ impl VectorSqlSession {
         .await?;
 
         self.indexes.push(RegisteredIndex {
-            name: name.clone(),
+            name,
             table,
             column,
             attachment,
         });
         self.rebuild_context();
-        Ok(VectorSqlOutput::CreatedIndex(name))
+        Ok(())
     }
 
     fn reject_stale_index_mutation(
@@ -245,6 +398,16 @@ impl VectorSqlSession {
                     "mutation of indexed table '{table}' would make its vector index stale"
                 )));
             }
+        }
+        Ok(())
+    }
+
+    fn reject_indexed_table(&self, table: &TableReference) -> DataFusionResult<()> {
+        let table = self.resolve_table(table.clone());
+        if self.indexes.iter().any(|index| index.table == table) {
+            return Err(DataFusionError::Plan(format!(
+                "mutation of indexed table '{table}' would make its vector index stale"
+            )));
         }
         Ok(())
     }
@@ -478,6 +641,22 @@ mod tests {
             panic!("expected query output")
         };
         batches
+    }
+
+    async fn cli_execute(session: &mut VectorSqlSession, sql: &str) -> Vec<RecordBatch> {
+        let plan = session
+            .cli_session_context()
+            .state()
+            .create_logical_plan(sql)
+            .await
+            .unwrap();
+        session
+            .execute_cli_plan(plan)
+            .await
+            .unwrap()
+            .collect()
+            .await
+            .unwrap()
     }
 
     async fn create_points(session: &mut VectorSqlSession) {
@@ -728,27 +907,57 @@ mod tests {
         assert!(error.contains("greater than zero"), "{error}");
     }
 
-    #[test]
-    fn adapters_delegate_to_the_shared_executor() {
-        let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/sql.rs"));
-        let production = source.split("\n#[cfg(test)]").next().unwrap();
-        let example = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/examples/sql.rs"));
-        let runner = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/tests/sqllogictest.rs"
-        ));
-        if env!("CARGO_PKG_NAME") == "vector-datafusion" {
-            assert!(example.contains("session.execute(&sql)"));
-            assert!(!example.contains("DFParser"));
-        } else {
-            assert!(!example.contains("VectorSqlSession"));
-        }
-        assert!(runner.contains("self.session.execute(sql)"));
-        assert!(!runner.contains("register_table"));
-        assert!(!runner.contains("VectorIndexAttachment"));
-        assert!(production.contains("downcast_mem_table(provider, &table)?"));
-        assert!(production.contains("let DataType::FixedSizeList(item, dimension)"));
-        assert!(production.contains("if item.data_type() != &DataType::Float32 {"));
-        assert!(production.contains("if *dimension <= 0 {"));
+    #[tokio::test]
+    async fn cli_plans_preserve_query_index_and_mutation_behavior() {
+        let mut session = session();
+        let created = cli_execute(
+            &mut session,
+            "CREATE TABLE points (id BIGINT NOT NULL, payload VARCHAR NOT NULL, \
+             embedding REAL[3] NOT NULL)",
+        )
+        .await;
+        assert_eq!(statement_count(&created).unwrap(), 0);
+        let inserted = cli_execute(
+            &mut session,
+            "INSERT INTO points VALUES \
+             (1, 'one', [1.0, 0.0, 0.0]), \
+             (2, 'two', [0.9, 0.1, 0.0]), \
+             (3, 'three', [0.0, 1.0, 0.0]), \
+             (4, 'four', [-1.0, 0.0, 0.0])",
+        )
+        .await;
+        assert_eq!(statement_count(&inserted).unwrap(), 4);
+
+        let before = rows(&cli_execute(&mut session, QUERY).await);
+        let created_index = cli_execute(
+            &mut session,
+            "CREATE INDEX points_idx ON points USING ivfflat (embedding)",
+        )
+        .await;
+        assert_eq!(created_index.len(), 1);
+        assert_eq!(created_index[0].num_rows(), 1);
+        assert_eq!(
+            array_value_to_string(created_index[0].column(0).as_ref(), 0).unwrap(),
+            "created vector index points_idx"
+        );
+        assert_eq!(rows(&cli_execute(&mut session, QUERY).await), before);
+        let explain = cli_execute(&mut session, &format!("EXPLAIN {QUERY}")).await;
+        assert!(plan_text(&explain).contains("VectorIndexScanExec"));
+
+        let stale_plan = session
+            .cli_session_context()
+            .state()
+            .create_logical_plan("INSERT INTO points VALUES (5, 'five', [0.0, 0.0, 1.0])")
+            .await
+            .unwrap();
+        let stale = session
+            .execute_cli_plan(stale_plan)
+            .await
+            .unwrap_err()
+            .to_string();
+        assert!(
+            stale.contains("would make its vector index stale"),
+            "{stale}"
+        );
     }
 }

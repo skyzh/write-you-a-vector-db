@@ -49,9 +49,9 @@ Before implementing Chapter 1, launch the supplied product shell from the reposi
 cargo run -p vector-datafusion --example sql
 ```
 
-The shell starts with an empty session and accepts one SQL statement per line. The product tour creates and populates an
-in-memory table, compares a query with `EXPLAIN`, attaches an index named in SQL, and runs the same query again. You do
-not need to inspect or modify the completed reference example.
+The supplied DataFusion CLI starts with an empty course session and accepts semicolon-terminated SQL. The product tour
+creates and populates an in-memory table, compares a query with `EXPLAIN`, attaches an index named in SQL, and runs the
+same query again. You do not need to inspect or modify the completed reference example.
 
 Check the untouched starter without executing TODOs:
 
