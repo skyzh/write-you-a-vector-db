@@ -16,8 +16,10 @@ rust-version = "1.88"
 [workspace.dependencies]
 async-trait = "=0.1.91"
 datafusion = { version = "=54.1.0", default-features = false, features = ["nested_expressions", "sql"] }
+datafusion-cli = "=54.1.0"
 sqllogictest = "=0.29.1"
 tokio = { version = "=1.53.1", features = ["macros", "rt-multi-thread"] }
+url = "=2.5.8"
 vector-benchmark-support = { path = "vector-db-benchmark-support" }
 
 [workspace.lints.rust]

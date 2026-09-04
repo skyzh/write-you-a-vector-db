@@ -1,13 +1,67 @@
-use std::io::{self, BufRead};
+use std::io::{self, IsTerminal, Read};
+use std::sync::Arc;
 
-use datafusion::arrow::util::pretty::print_batches;
+use async_trait::async_trait;
 use datafusion::common::{DataFusionError, Result};
+use datafusion::dataframe::DataFrame;
+use datafusion::execution::{TaskContext, context::SessionState};
+use datafusion::logical_expr::LogicalPlan;
+use datafusion::object_store::ObjectStore;
+use datafusion::prelude::SessionContext;
+use datafusion_cli::DATAFUSION_CLI_VERSION;
+use datafusion_cli::cli_context::CliSessionContext;
+use datafusion_cli::exec::{exec_from_commands, exec_from_repl};
+use datafusion_cli::object_storage::instrumented::InstrumentedObjectStoreRegistry;
+use datafusion_cli::print_format::PrintFormat;
+use datafusion_cli::print_options::{MaxRows, PrintOptions};
+use tokio::sync::Mutex;
 use vector_core::{IndexConfig, IvfFlatConfig, Metric};
-use vector_datafusion::{VectorSqlOutput, VectorSqlSession};
+use vector_datafusion::VectorSqlSession;
+
+struct VectorCliContext {
+    planner: SessionContext,
+    session: Mutex<VectorSqlSession>,
+}
+
+impl VectorCliContext {
+    fn new(session: VectorSqlSession) -> Self {
+        Self {
+            planner: session.cli_session_context(),
+            session: Mutex::new(session),
+        }
+    }
+}
+
+#[async_trait]
+impl CliSessionContext for VectorCliContext {
+    fn task_ctx(&self) -> Arc<TaskContext> {
+        CliSessionContext::task_ctx(&self.planner)
+    }
+
+    fn session_state(&self) -> SessionState {
+        CliSessionContext::session_state(&self.planner)
+    }
+
+    fn register_object_store(
+        &self,
+        url: &url::Url,
+        object_store: Arc<dyn ObjectStore>,
+    ) -> Option<Arc<dyn ObjectStore + 'static>> {
+        CliSessionContext::register_object_store(&self.planner, url, object_store)
+    }
+
+    fn register_table_options_extension_from_scheme(&self, scheme: &str) {
+        CliSessionContext::register_table_options_extension_from_scheme(&self.planner, scheme)
+    }
+
+    async fn execute_logical_plan(&self, plan: LogicalPlan) -> Result<DataFrame> {
+        self.session.lock().await.execute_cli_plan(plan).await
+    }
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    let mut session = VectorSqlSession::new(
+    let session = VectorSqlSession::new(
         Metric::Cosine,
         IndexConfig::IvfFlat(IvfFlatConfig {
             partitions: 2,
@@ -16,17 +70,26 @@ async fn main() -> Result<()> {
             seed: 7,
         }),
     );
-    println!("Enter one SQL statement per line.");
-    for line in io::stdin().lock().lines() {
-        let sql = line.map_err(DataFusionError::IoError)?;
-        if sql.trim().is_empty() {
-            continue;
-        }
-        match session.execute(&sql).await? {
-            VectorSqlOutput::Query(batches) => print_batches(&batches)?,
-            VectorSqlOutput::StatementComplete(rows) => println!("{rows} rows affected"),
-            VectorSqlOutput::CreatedIndex(name) => println!("created vector index {name}"),
-        }
+    let context = VectorCliContext::new(session);
+    let interactive = io::stdin().is_terminal();
+    let mut print_options = PrintOptions {
+        format: PrintFormat::Automatic,
+        quiet: false,
+        maxrows: MaxRows::Unlimited,
+        color: io::stdout().is_terminal(),
+        instrumented_registry: Arc::new(InstrumentedObjectStoreRegistry::new()),
+    };
+
+    println!("DataFusion CLI v{DATAFUSION_CLI_VERSION}");
+    if interactive {
+        exec_from_repl(&context, &mut print_options)
+            .await
+            .map_err(|error| DataFusionError::External(Box::new(error)))
+    } else {
+        let mut sql = String::new();
+        io::stdin()
+            .read_to_string(&mut sql)
+            .map_err(DataFusionError::IoError)?;
+        exec_from_commands(&context, vec![sql], &print_options).await
     }
-    Ok(())
 }
