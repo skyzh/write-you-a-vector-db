@@ -11,7 +11,7 @@ in Chapter 1.
 
 ## Launch the Supplied Shell
 
-For an interactive run, start from the `rust/` directory:
+For an interactive run, start from the repository root:
 
 ```sh
 cargo run -p vector-datafusion --example sql
@@ -21,7 +21,6 @@ The shell starts with an empty session and accepts one SQL statement per input l
 repository root, paste the whole transcript below into your terminal instead of entering the statements interactively:
 
 ```sh
-cd rust
 cargo run -p vector-datafusion --example sql <<'SQL'
 CREATE TABLE points (id BIGINT NOT NULL, payload VARCHAR NOT NULL, embedding REAL[3] NOT NULL)
 INSERT INTO points VALUES (1, 'one', [1.0, 0.0, 0.0]), (2, 'two', [0.9, 0.1, 0.0]), (3, 'three', [0.0, 1.0, 0.0]), (4, 'four', [-1.0, 0.0, 0.0]), (5, 'five', [0.0, 0.0, 1.0])

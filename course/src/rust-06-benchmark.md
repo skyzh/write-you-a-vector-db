@@ -20,7 +20,7 @@ parity result.
 ## Start from the Completed Indexes
 
 Your Chapter 5 starter already contains the five index implementations. Before opening the benchmark, keep their product
-paths green from the `rust/` directory:
+paths green from the repository root:
 
 ```sh
 cargo test -p vector-datafusion-starter --test sqllogictest day1_table_and_optimizer_sql -- --exact
@@ -33,7 +33,7 @@ cargo test -p vector-datafusion-starter --test sqllogictest day5_ivf_pq_sql -- -
 Now open:
 
 ```text
-rust/vector-starter/core/examples/recall.rs
+vector-db-starter/core/examples/recall.rs
 ```
 
 The supplied `vector-benchmark-support` crate owns command-line parsing, SIFT file validation, the full and smoke mode
@@ -216,7 +216,7 @@ or parser defect that could otherwise make the report untrustworthy.
 
 ## Run Smoke, Then Full SIFT1M
 
-From `rust/`, run the completed starter in release mode with an explicit corpus directory:
+From the repository root, run the completed starter in release mode with an explicit corpus directory:
 
 ```sh
 cargo run --release -p vector-core-starter --example recall -- --smoke /absolute/path/to/sift1M

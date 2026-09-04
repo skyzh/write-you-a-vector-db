@@ -9,8 +9,8 @@
 
 ## Start from the NSW Product
 
-Chapter 3 ended with one five-row table and one cosine-distance query running through IVFFlat and NSW. From the `rust/`
-directory, run that supplied comparison again:
+Chapter 3 ended with one five-row table and one cosine-distance query running through IVFFlat and NSW. From the
+repository root, run that supplied comparison again:
 
 ```sh
 cargo run -p vector-datafusion-starter --example nsw_sql
@@ -34,9 +34,9 @@ Why must the returned rows still satisfy the same SQL ordering contract even tho
 The cumulative starter leaves exactly three Chapter 4 units unfinished:
 
 ```text
-rust/vector-starter/core/src/graph.rs        greedy_search
-rust/vector-starter/core/src/hnsw.rs         HnswIndex::try_new
-rust/vector-starter/core/src/hnsw.rs         HnswIndex::search_with_ef
+vector-db-starter/core/src/graph.rs        greedy_search
+vector-db-starter/core/src/hnsw.rs         HnswIndex::try_new
+vector-db-starter/core/src/hnsw.rs         HnswIndex::search_with_ef
 ```
 
 Chapter 3 already supplied `search_layer`, `prune_neighbors`, deterministic metric ordering, and the DataFusion boundary.

@@ -34,25 +34,24 @@ observation. Later, you will add IVFFlat as your own candidate selector behind t
 
 ## Where to Write Your Code
 
-The Cargo workspace under `rust/` separates starter and reference trees:
+The repository-root Cargo workspace separates starter and reference trees:
 
 ```text
-vector-starter/
+vector-db-starter/
   core/                      dataset, IVFFlat, NSW, HNSW, benchmark, and IVF-PQ TODOs
   datafusion/                Chapter 1 Arrow table and optimizer-rule TODOs
-vector/
+vector-db/
   core/                      completed core reference
   datafusion/                completed DataFusion reference
 ```
 
-The product tour executes one supplied example from `vector/`; you do not need to inspect or modify that implementation.
-After the tour, work in `vector-starter/` and implement its TODOs in chapter order. Keep the completed reference source
+The product tour executes one supplied example from `vector-db/`; you do not need to inspect or modify that implementation.
+After the tour, work in `vector-db-starter/` and implement its TODOs in chapter order. Keep the completed reference source
 closed while you work through the exercises, as required by the starter's `AGENTS.md` files.
 
 From the repository root, check that the untouched starter compiles:
 
 ```sh
-cd rust
 cargo check -p vector-core-starter
 cargo check -p vector-datafusion-starter
 ```

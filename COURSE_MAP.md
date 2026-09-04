@@ -8,12 +8,12 @@ compare all five indexes on the external SIFT1M workload.
 | Chapter | Capability gained | Prerequisite | Files you will change |
 | --- | --- | --- | --- |
 | Tour | Create and populate an in-memory table, run nearest-neighbor SQL, attach an IVFFlat index to a selected vector column, and observe the plan change | None | None; use the supplied `vector-datafusion` shell |
-| 1 | Validated in-memory vectors, Arrow table construction, DataFusion scan extension, and safe vector-index matching | None | `rust/vector-starter/core/src/dataset.rs` and `rust/vector-starter/datafusion/src/lib.rs` |
-| 2 | Seeded k-means, inverted lists, probe-controlled ANN, and recall measurement | Chapter 1 | `rust/vector-starter/core/src/{ivf,search}.rs` |
-| 3 | Best-first graph traversal, reciprocal bounded-degree insertion, and search-width control | Chapter 2 | `rust/vector-starter/core/src/{graph,nsw}.rs` |
-| 4 | Seeded hierarchical layers, greedy upper-layer routing, and layer-zero beam search | Chapter 3 | `rust/vector-starter/core/src/{graph,hnsw}.rs` |
-| 5 | Residual product quantization, asymmetric lookup-table scoring, exact reranking, and compressed-representation accounting | Chapter 4 | `rust/vector-starter/core/src/pq.rs` |
-| 6 | SIFT1M rank-recall and latency measurement across Flat, IVFFlat, NSW, HNSW, and IVF-PQ under one fixed Euclidean contract | Chapter 5 and a local SIFT1M copy | `rust/vector-starter/core/examples/recall.rs` |
+| 1 | Validated in-memory vectors, Arrow table construction, DataFusion scan extension, and safe vector-index matching | None | `vector-db-starter/core/src/dataset.rs` and `vector-db-starter/datafusion/src/lib.rs` |
+| 2 | Seeded k-means, inverted lists, probe-controlled ANN, and recall measurement | Chapter 1 | `vector-db-starter/core/src/{ivf,search}.rs` |
+| 3 | Best-first graph traversal, reciprocal bounded-degree insertion, and search-width control | Chapter 2 | `vector-db-starter/core/src/{graph,nsw}.rs` |
+| 4 | Seeded hierarchical layers, greedy upper-layer routing, and layer-zero beam search | Chapter 3 | `vector-db-starter/core/src/{graph,hnsw}.rs` |
+| 5 | Residual product quantization, asymmetric lookup-table scoring, exact reranking, and compressed-representation accounting | Chapter 4 | `vector-db-starter/core/src/pq.rs` |
+| 6 | SIFT1M rank-recall and latency measurement across Flat, IVFFlat, NSW, HNSW, and IVF-PQ under one fixed Euclidean contract | Chapter 5 and a local SIFT1M copy | `vector-db-starter/core/examples/recall.rs` |
 
 The matching `vector-core` and `vector-datafusion` crates contain the completed
 reference. The tour runs one supplied reference example without asking you to
