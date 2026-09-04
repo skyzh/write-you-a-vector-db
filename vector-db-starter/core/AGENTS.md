@@ -3,7 +3,7 @@
 Implement the exercises only in this directory unless the course chapter says
 otherwise.
 
-- Do not inspect `../../vector/core`, `../../vector/datafusion`, Git history,
+- Do not inspect `../../vector-db/core`, `../../vector-db/datafusion`, Git history,
   remote branches, or published solutions.
 - You may read the Rust course chapters and edit `../datafusion`
   during Chapter 1.

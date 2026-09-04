@@ -9,8 +9,8 @@
 
 ## Start from the Product You Already Have
 
-Chapter 2 ended with one five-row table and one SQL query running through IVFFlat. Run it again from the `rust/`
-directory:
+Chapter 2 ended with one five-row table and one SQL query running through IVFFlat. Run it again from the repository
+root:
 
 ```sh
 cargo run -p vector-datafusion-starter --example ivfflat_sql
@@ -31,8 +31,8 @@ bounded `SortExec` still owns final SQL ordering.
 The cumulative starter already contains these two files:
 
 ```text
-rust/vector-starter/core/src/graph.rs
-rust/vector-starter/core/src/nsw.rs
+vector-db-starter/core/src/graph.rs
+vector-db-starter/core/src/nsw.rs
 ```
 
 You own four TODOs:

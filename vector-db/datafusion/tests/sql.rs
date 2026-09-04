@@ -1040,7 +1040,7 @@ fn reference_adapter_has_no_custom_snapshot_table_provider() {
 
 #[test]
 fn starter_exposes_the_attachment_api_without_solution_bodies() {
-    let source = include_str!("../../../vector-starter/datafusion/src/lib.rs");
+    let source = include_str!("../../../vector-db-starter/datafusion/src/lib.rs");
     assert!(!source.contains("pub struct VectorTable"));
     assert!(source.contains("pub fn vector_mem_table"));
     assert!(source.contains("pub struct VectorIndexAttachment"));

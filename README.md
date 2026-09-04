@@ -28,13 +28,46 @@ The final benchmark compares Flat, IVFFlat, NSW, HNSW, and IVF-PQ on the externa
 the same Euclidean queries and `k = 100`. The report couples build and search time with first-neighbor rank recall at
 1, 10, and 100, p50 and p99 search latency, and explicit IVF-PQ search-representation accounting.
 
-Run the completed reference with:
+## Rust Workspace
+
+The repository-root Cargo workspace separates the learner starter from the completed reference:
+
+```text
+vector-db-starter/
+  core/          package: vector-core-starter
+  datafusion/    package: vector-datafusion-starter
+vector-db/
+  core/          package: vector-core
+  datafusion/    package: vector-datafusion
+vector-db-benchmark-support/
+                shared benchmark fixtures and reporting support
+```
+
+Before implementing Chapter 1, launch the supplied product shell from the repository root:
 
 ```shell
-cd rust
+cargo run -p vector-datafusion --example sql
+```
+
+The shell starts with an empty session and accepts one SQL statement per line. The product tour creates and populates an
+in-memory table, compares a query with `EXPLAIN`, attaches an index named in SQL, and runs the same query again. You do
+not need to inspect or modify the completed reference example.
+
+Check the untouched starter without executing TODOs:
+
+```shell
+cargo check -p vector-core-starter
+cargo check -p vector-datafusion-starter
+```
+
+Validate the completed reference with:
+
+```shell
 cargo test -p vector-core -p vector-datafusion
 cargo run --release -p vector-core --example recall -- /absolute/path/to/sift1M
 ```
+
+The workspace uses the stable Rust channel from `rust-toolchain.toml` and pins course dependencies in `Cargo.lock`.
 
 The original [C++/BusTub edition](https://skyzh.github.io/write-you-a-vector-db/cpp-01-overview) is deprecated and
 unmaintained. It remains online for existing readers but is no longer recommended for new learners.

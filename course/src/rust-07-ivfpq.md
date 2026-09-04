@@ -85,7 +85,7 @@ need? How many additions score one encoded row after the tables exist?
 You will modify:
 
 ```text
-rust/vector-starter/core/src/pq.rs
+vector-db-starter/core/src/pq.rs
 ```
 
 The starter already exposes `IvfPqConfig`, `IvfPqIndex`, its `VectorIndex` implementation, byte-accounting methods, and
@@ -126,7 +126,6 @@ one-list-per-row invariant from Chapter 2.
 Run the focused layout boundary:
 
 ```sh
-cd rust
 cargo test -p vector-core-starter --test indexes ivf_pq_validates_its_euclidean_code_layout
 ```
 

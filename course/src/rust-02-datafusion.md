@@ -56,8 +56,8 @@ these boundaries separate as you work through the chapter:
 You will modify:
 
 ```text
-rust/vector-starter/core/src/dataset.rs
-rust/vector-starter/datafusion/src/lib.rs
+vector-db-starter/core/src/dataset.rs
+vector-db-starter/datafusion/src/lib.rs
 ```
 
 The starter exposes the same public API as the reference but leaves the Chapter
@@ -68,7 +68,7 @@ completing the exercises.
 
 ## Checkpoint 1: Validate the In-Memory Dataset
 
-Implement the three TODOs in `vector-starter/core/src/dataset.rs`.
+Implement the three TODOs in `vector-db-starter/core/src/dataset.rs`.
 
 A dataset must be nonempty, have a fixed nonzero dimension, and contain only
 finite `f32` values. `Dataset::try_new` reads the first row to establish the
@@ -81,7 +81,6 @@ every row for equal length and finite components. Store the vectors as
 for a query. Use the existing `VectorError` variants.
 
 ```sh
-cd rust
 cargo test -p vector-core-starter --test indexes flat_search_is_deterministic_and_validates_queries
 cargo test -p vector-core-starter --test indexes cosine_rejects_zero_norm_vectors
 ```
@@ -101,7 +100,7 @@ embedding  FixedSizeList<Float32, dimension>
 ```
 
 Implement `vector_mem_table` in
-`vector-starter/datafusion/src/lib.rs`.
+`vector-db-starter/datafusion/src/lib.rs`.
 
 Build a `Dataset` from the `VectorRow` embeddings to validate their shared
 dimension. Create the three Arrow arrays in the same input order, assemble one

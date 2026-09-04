@@ -1,10 +1,10 @@
 [workspace]
 members = [
-    "vector/benchmark-support",
-    "vector/core",
-    "vector/datafusion",
-    "vector-starter/core",
-    "vector-starter/datafusion",
+    "vector-db-benchmark-support",
+    "vector-db/core",
+    "vector-db/datafusion",
+    "vector-db-starter/core",
+    "vector-db-starter/datafusion",
 ]
 resolver = "2"
 
@@ -18,7 +18,7 @@ async-trait = "=0.1.91"
 datafusion = { version = "=54.1.0", default-features = false, features = ["nested_expressions", "sql"] }
 sqllogictest = "=0.29.1"
 tokio = { version = "=1.53.1", features = ["macros", "rt-multi-thread"] }
-vector-benchmark-support = { path = "vector/benchmark-support" }
+vector-benchmark-support = { path = "vector-db-benchmark-support" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

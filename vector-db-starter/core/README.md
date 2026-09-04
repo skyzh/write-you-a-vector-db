@@ -11,4 +11,4 @@ In the six Rust chapters, you will use this crate to:
 6. compare Flat, IVFFlat, NSW, HNSW, and IVF-PQ on one Euclidean workload.
 
 Start with the existing metric math, deterministic `FlatIndex`, and top-k
-helpers. Run commands from the parent `rust/` workspace.
+helpers. Run commands from the repository-root Cargo workspace.

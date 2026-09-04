@@ -24,10 +24,9 @@ ORDER BY array_distance(embedding, [1.0, 1.0, 1.0])
 LIMIT 5;
 ```
 
-From the repository root, enter the Rust workspace and confirm the completed Chapter 1 case first:
+From the repository root, confirm the completed Chapter 1 case first:
 
 ```sh
-cd rust
 cargo test -p vector-datafusion-starter --test sqllogictest day1_table_and_optimizer_sql
 ```
 
@@ -49,9 +48,9 @@ SortExec: TopK(fetch=5), ...
 Your work is limited to three functions:
 
 ```text
-rust/vector-starter/core/src/search.rs    recall_at_k
-rust/vector-starter/core/src/ivf.rs       IvfFlatIndex::try_new
-rust/vector-starter/core/src/ivf.rs       IvfFlatIndex::search_with_probes
+vector-db-starter/core/src/search.rs    recall_at_k
+vector-db-starter/core/src/ivf.rs       IvfFlatIndex::try_new
+vector-db-starter/core/src/ivf.rs       IvfFlatIndex::search_with_probes
 ```
 
 The starter already supplies `Dataset`, `Metric`, `TopK`, `DeterministicRng`, the IVFFlat configuration and public index
