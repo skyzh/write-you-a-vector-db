@@ -1,4 +1,5 @@
-use std::io::{self, IsTerminal, Read};
+use std::fs;
+use std::io::{self, BufRead, IsTerminal, Read, Write};
 use std::sync::Arc;
 
 use async_trait::async_trait;
@@ -10,7 +11,8 @@ use datafusion::object_store::ObjectStore;
 use datafusion::prelude::SessionContext;
 use datafusion_cli::DATAFUSION_CLI_VERSION;
 use datafusion_cli::cli_context::CliSessionContext;
-use datafusion_cli::exec::{exec_from_commands, exec_from_repl};
+use datafusion_cli::command::Command;
+use datafusion_cli::exec::exec_from_commands;
 use datafusion_cli::object_storage::instrumented::InstrumentedObjectStoreRegistry;
 use datafusion_cli::print_format::PrintFormat;
 use datafusion_cli::print_options::{MaxRows, PrintOptions};
@@ -29,6 +31,11 @@ impl VectorCliContext {
             planner: session.cli_session_context(),
             session: Mutex::new(session),
         }
+    }
+
+    async fn execute_sql(&self, sql: String, print_options: &PrintOptions) -> Result<()> {
+        self.session.lock().await.validate_cli_sql(&sql)?;
+        exec_from_commands(self, vec![sql], print_options).await
     }
 }
 
@@ -59,6 +66,62 @@ impl CliSessionContext for VectorCliContext {
     }
 }
 
+async fn exec_from_validating_repl(
+    context: &VectorCliContext,
+    print_options: &mut PrintOptions,
+) -> Result<()> {
+    let stdin = io::stdin();
+    let mut input = stdin.lock();
+    let mut sql = String::new();
+
+    loop {
+        print!("{}", if sql.is_empty() { "> " } else { "... " });
+        io::stdout().flush().map_err(DataFusionError::IoError)?;
+
+        let mut line = String::new();
+        if input
+            .read_line(&mut line)
+            .map_err(DataFusionError::IoError)?
+            == 0
+        {
+            println!("\\q");
+            return Ok(());
+        }
+
+        let trimmed = line.trim();
+        if sql.is_empty() && trimmed.starts_with('\\') {
+            let command = trimmed.split_whitespace().collect::<Vec<_>>().join(" ");
+            match command[1..].parse::<Command>() {
+                Ok(Command::Quit) => return Ok(()),
+                Ok(Command::Include(Some(filename))) => match fs::read_to_string(&filename) {
+                    Ok(sql) => {
+                        if let Err(error) = context.execute_sql(sql, print_options).await {
+                            eprintln!("{error}");
+                        }
+                    }
+                    Err(error) => eprintln!("Error opening {filename:?}: {error}"),
+                },
+                Ok(command) => {
+                    if let Err(error) = command.execute(context, print_options).await {
+                        eprintln!("{error}");
+                    }
+                }
+                Err(_) => eprintln!("'{trimmed}' is not a valid command; use '\\?' for help"),
+            }
+            continue;
+        }
+
+        sql.push_str(&line);
+        if trimmed.ends_with(';')
+            && let Err(error) = context
+                .execute_sql(std::mem::take(&mut sql), print_options)
+                .await
+        {
+            eprintln!("{error}");
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let session = VectorSqlSession::new(
@@ -82,14 +145,12 @@ async fn main() -> Result<()> {
 
     println!("DataFusion CLI v{DATAFUSION_CLI_VERSION}");
     if interactive {
-        exec_from_repl(&context, &mut print_options)
-            .await
-            .map_err(|error| DataFusionError::External(Box::new(error)))
+        exec_from_validating_repl(&context, &mut print_options).await
     } else {
         let mut sql = String::new();
         io::stdin()
             .read_to_string(&mut sql)
             .map_err(DataFusionError::IoError)?;
-        exec_from_commands(&context, vec![sql], &print_options).await
+        context.execute_sql(sql, &print_options).await
     }
 }

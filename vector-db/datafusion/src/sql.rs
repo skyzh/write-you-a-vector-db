@@ -98,6 +98,24 @@ impl VectorSqlSession {
         self.base.clone()
     }
 
+    /// Validate SQL before the CLI converts it into a logical plan.
+    ///
+    /// DataFusion's logical `CreateIndex` deliberately omits some SQL syntax,
+    /// including `INCLUDE` columns and partial-index predicates. The CLI calls
+    /// this boundary first so unsupported modifiers cannot disappear before
+    /// the course's plain-index contract is checked.
+    pub fn validate_cli_sql(&self, sql: &str) -> DataFusionResult<()> {
+        for statement in DFParser::parse_sql(sql)? {
+            if let Statement::Statement(statement) = statement
+                && let SqlStatement::CreateIndex(create) = *statement
+            {
+                validate_plain_create_index(&create)?;
+                validate_index_column(&create, self.ident_normalization())?;
+            }
+        }
+        Ok(())
+    }
+
     /// Execute one logical plan produced by [`Self::cli_session_context`].
     ///
     /// This is the thin integration boundary used by DataFusion CLI. Ordinary
@@ -209,7 +227,13 @@ impl VectorSqlSession {
         &mut self,
         create: LogicalCreateIndex,
     ) -> DataFusionResult<String> {
-        if create.unique || create.if_not_exists {
+        if create.unique
+            || create.if_not_exists
+            || create
+                .columns
+                .iter()
+                .any(|sort| !sort.asc || sort.nulls_first)
+        {
             return Err(DataFusionError::Plan(
                 "the vector SQL session supports only plain CREATE INDEX ... USING <kind> (column)"
                     .into(),
