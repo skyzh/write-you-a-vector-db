@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "xtask",
     "vector-db-benchmark-support",
     "vector-db/core",
     "vector-db/datafusion",

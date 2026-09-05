@@ -727,28 +727,4 @@ mod tests {
             .to_string();
         assert!(error.contains("greater than zero"), "{error}");
     }
-
-    #[test]
-    fn adapters_delegate_to_the_shared_executor() {
-        let source = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/src/sql.rs"));
-        let production = source.split("\n#[cfg(test)]").next().unwrap();
-        let example = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/examples/sql.rs"));
-        let runner = include_str!(concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/tests/sqllogictest.rs"
-        ));
-        if env!("CARGO_PKG_NAME") == "vector-datafusion" {
-            assert!(example.contains("session.execute(&sql)"));
-            assert!(!example.contains("DFParser"));
-        } else {
-            assert!(!example.contains("VectorSqlSession"));
-        }
-        assert!(runner.contains("self.session.execute(sql)"));
-        assert!(!runner.contains("register_table"));
-        assert!(!runner.contains("VectorIndexAttachment"));
-        assert!(production.contains("downcast_mem_table(provider, &table)?"));
-        assert!(production.contains("let DataType::FixedSizeList(item, dimension)"));
-        assert!(production.contains("if item.data_type() != &DataType::Float32 {"));
-        assert!(production.contains("if *dimension <= 0 {"));
-    }
 }

@@ -146,12 +146,12 @@ async fn run_case(filename: &str, config: IndexConfig) {
 }
 
 #[tokio::test]
-async fn day1_table_and_optimizer_sql() {
+async fn day_01_table_and_optimizer_sql() {
     run_case("vector.01-index-match.slt", IndexConfig::Flat).await;
 }
 
 #[tokio::test]
-async fn day2_ivfflat_sql() {
+async fn day_02_ivfflat_sql() {
     run_case(
         "vector.02-ivfflat.slt",
         IndexConfig::IvfFlat(IvfFlatConfig {
@@ -165,7 +165,7 @@ async fn day2_ivfflat_sql() {
 }
 
 #[tokio::test]
-async fn day3_nsw_sql() {
+async fn day_03_nsw_sql() {
     run_case(
         "vector.03-nsw.slt",
         IndexConfig::Nsw(NswConfig {
@@ -178,7 +178,7 @@ async fn day3_nsw_sql() {
 }
 
 #[tokio::test]
-async fn day4_hnsw_sql() {
+async fn day_04_hnsw_sql() {
     run_case(
         "vector.04-hnsw.slt",
         IndexConfig::Hnsw(HnswConfig {
@@ -193,7 +193,7 @@ async fn day4_hnsw_sql() {
 }
 
 #[tokio::test]
-async fn day5_ivf_pq_sql() {
+async fn day_05_ivf_pq_sql() {
     run_case(
         "vector.05-ivfpq.slt",
         IndexConfig::IvfPq(IvfPqConfig {

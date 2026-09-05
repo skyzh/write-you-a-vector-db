@@ -69,6 +69,18 @@ cargo run --release -p vector-core --example recall -- /absolute/path/to/sift1M
 
 The workspace uses the stable Rust channel from `rust-toolchain.toml` and pins course dependencies in `Cargo.lock`.
 
+Each chapter ends with two day-based learner commands. The first runs only the
+new tests for that day; the second reruns every learner day through it:
+
+```shell
+cargo x test-day 1
+cargo x test-through 1
+```
+
+Replace `1` with the current day number, from 1 through 6. The Day 6 SIFT1M
+tests remain ignored unless you explicitly provide the external corpus and use
+their chapter commands.
+
 The original [C++/BusTub edition](https://skyzh.github.io/write-you-a-vector-db/cpp-01-overview) is deprecated and
 unmaintained. It remains online for existing readers but is no longer recommended for new learners.
 

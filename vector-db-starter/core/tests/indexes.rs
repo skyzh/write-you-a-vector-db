@@ -16,7 +16,7 @@ fn line_dataset(size: usize) -> Dataset {
 }
 
 #[test]
-fn flat_search_is_deterministic_and_validates_queries() {
+fn day_01_flat_search_is_deterministic_and_validates_queries() {
     assert_eq!(
         Dataset::try_new(vec![]).unwrap_err(),
         VectorError::EmptyDataset
@@ -53,7 +53,7 @@ fn flat_search_is_deterministic_and_validates_queries() {
 }
 
 #[test]
-fn cosine_rejects_zero_norm_vectors() {
+fn day_01_cosine_rejects_zero_norm_vectors() {
     let dataset = Dataset::try_new(vec![vec![1.0, 0.0], vec![0.0, 0.0]]).unwrap();
     assert!(FlatIndex::try_new(dataset, Metric::Cosine).is_err());
 
@@ -66,7 +66,7 @@ fn cosine_rejects_zero_norm_vectors() {
 }
 
 #[test]
-fn recall_reports_result_overlap() {
+fn day_02_recall_reports_result_overlap() {
     let expected = (0..4)
         .map(|row| Neighbor {
             row,
@@ -92,7 +92,7 @@ fn recall_reports_result_overlap() {
 }
 
 #[test]
-fn ivf_rejects_invalid_build_configuration() {
+fn day_02_ivf_rejects_invalid_build_configuration() {
     let invalid_configs = [
         IvfFlatConfig {
             partitions: 0,
@@ -147,7 +147,7 @@ fn ivf_rejects_invalid_build_configuration() {
 }
 
 #[test]
-fn ivf_scanning_every_partition_matches_exact_search() {
+fn day_02_ivf_scanning_every_partition_matches_exact_search() {
     let dataset = line_dataset(80);
     let exact = FlatIndex::try_new(dataset.clone(), Metric::Cosine).unwrap();
     let ivf = IvfFlatIndex::try_new(
@@ -199,7 +199,7 @@ fn ivf_scanning_every_partition_matches_exact_search() {
 }
 
 #[test]
-fn ivf_build_is_seeded() {
+fn day_02_ivf_build_is_seeded() {
     let config = IvfFlatConfig {
         partitions: 6,
         probes: 2,
@@ -213,7 +213,7 @@ fn ivf_build_is_seeded() {
 }
 
 #[test]
-fn ivf_cosine_recovers_from_a_zero_mean_cluster() {
+fn day_02_ivf_cosine_recovers_from_a_zero_mean_cluster() {
     let dataset = Dataset::try_new(vec![
         vec![1.0, 0.0],
         vec![-1.0, 0.0],
@@ -236,7 +236,7 @@ fn ivf_cosine_recovers_from_a_zero_mean_cluster() {
 }
 
 #[test]
-fn ivf_pq_validates_its_euclidean_code_layout() {
+fn day_05_ivf_pq_validates_its_euclidean_code_layout() {
     let dataset = line_dataset(32);
     let config = IvfPqConfig {
         partitions: 4,
@@ -262,7 +262,7 @@ fn ivf_pq_validates_its_euclidean_code_layout() {
 }
 
 #[test]
-fn ivf_pq_build_is_seeded_and_codes_each_row() {
+fn day_05_ivf_pq_build_is_seeded_and_codes_each_row() {
     let config = IvfPqConfig {
         partitions: 6,
         probes: 2,
@@ -292,7 +292,7 @@ fn ivf_pq_build_is_seeded_and_codes_each_row() {
 }
 
 #[test]
-fn ivf_pq_rejects_non_finite_training_residuals() {
+fn day_05_ivf_pq_rejects_non_finite_training_residuals() {
     let max = f32::MAX;
     let dataset = Dataset::try_new(vec![vec![max], vec![max], vec![-max]]).unwrap();
     let config = IvfPqConfig {
@@ -314,7 +314,7 @@ fn ivf_pq_rejects_non_finite_training_residuals() {
 }
 
 #[test]
-fn ivf_pq_query_scoring_preserves_large_finite_ordering() {
+fn day_05_ivf_pq_query_scoring_preserves_large_finite_ordering() {
     let dataset = Dataset::try_new(vec![vec![3e20], vec![2e20], vec![1e20]]).unwrap();
     let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();
     let index = IvfPqIndex::try_new(
@@ -340,7 +340,7 @@ fn ivf_pq_query_scoring_preserves_large_finite_ordering() {
 }
 
 #[test]
-fn ivf_pq_coarse_selection_preserves_large_finite_ordering() {
+fn day_05_ivf_pq_coarse_selection_preserves_large_finite_ordering() {
     let dataset = Dataset::try_new(vec![
         vec![2e38, 2e38],
         vec![2.5e38, 2.5e38],
@@ -373,7 +373,7 @@ fn ivf_pq_coarse_selection_preserves_large_finite_ordering() {
 }
 
 #[test]
-fn ivf_pq_rerank_rejects_unrepresentable_result_distances() {
+fn day_05_ivf_pq_rerank_rejects_unrepresentable_result_distances() {
     let dataset = Dataset::try_new(vec![vec![3e38, 3e38], vec![2.5e38, 2.5e38]]).unwrap();
     let index = IvfPqIndex::try_new(
         dataset,
@@ -401,7 +401,7 @@ fn ivf_pq_rerank_rejects_unrepresentable_result_distances() {
 }
 
 #[test]
-fn ivf_pq_rerank_uses_public_neighbor_ordering() {
+fn day_05_ivf_pq_rerank_uses_public_neighbor_ordering() {
     let dataset = Dataset::try_new(vec![vec![1.0, f32::EPSILON], vec![1.0, 0.0]]).unwrap();
     let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();
     let index = IvfPqIndex::try_new(
@@ -427,7 +427,7 @@ fn ivf_pq_rerank_uses_public_neighbor_ordering() {
 }
 
 #[test]
-fn ivf_pq_rerank_ignores_unrepresentable_unselected_candidates() {
+fn day_05_ivf_pq_rerank_ignores_unrepresentable_unselected_candidates() {
     let dataset = Dataset::try_new(vec![vec![1.0, 0.0], vec![3e38, 3e38]]).unwrap();
     let index = IvfPqIndex::try_new(
         dataset,
@@ -452,7 +452,7 @@ fn ivf_pq_rerank_ignores_unrepresentable_unselected_candidates() {
 }
 
 #[test]
-fn ivf_pq_full_scan_and_rerank_matches_exact_search() {
+fn day_05_ivf_pq_full_scan_and_rerank_matches_exact_search() {
     let dataset = line_dataset(80);
     let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();
     let index = IvfPqIndex::try_new(
@@ -477,7 +477,7 @@ fn ivf_pq_full_scan_and_rerank_matches_exact_search() {
 }
 
 #[test]
-fn nsw_rejects_invalid_build_configuration_and_builds_a_bounded_reciprocal_graph() {
+fn day_03_nsw_rejects_invalid_build_configuration_and_builds_a_bounded_reciprocal_graph() {
     let invalid_configs = [
         NswConfig {
             max_connections: 0,
@@ -541,7 +541,7 @@ fn nsw_rejects_invalid_build_configuration_and_builds_a_bounded_reciprocal_graph
 }
 
 #[test]
-fn nsw_search_validates_widens_and_matches_exact_on_connected_fixture() {
+fn day_03_nsw_search_validates_widens_and_matches_exact_on_connected_fixture() {
     let dataset = line_dataset(64);
     let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();
     let nsw = NswIndex::try_new(
@@ -600,7 +600,7 @@ fn nsw_search_validates_widens_and_matches_exact_on_connected_fixture() {
 }
 
 #[test]
-fn hnsw_rejects_invalid_configuration_and_builds_seeded_nested_layers() {
+fn day_04_hnsw_rejects_invalid_configuration_and_builds_seeded_nested_layers() {
     let invalid_configs = [
         HnswConfig {
             max_connections: 0,
@@ -691,7 +691,7 @@ fn hnsw_rejects_invalid_configuration_and_builds_seeded_nested_layers() {
 }
 
 #[test]
-fn randomized_indexes_preserve_invariants_across_seed_trajectories() {
+fn day_06_randomized_indexes_preserve_invariants_across_seed_trajectories() {
     let seeds = [7, 0x5eed, 0x9e37_79b9_7f4a_7c15];
     let dataset = line_dataset(96);
     let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();
@@ -752,7 +752,7 @@ fn randomized_indexes_preserve_invariants_across_seed_trajectories() {
 }
 
 #[test]
-fn hnsw_search_validates_widens_and_recovers_neighbors() {
+fn day_04_hnsw_search_validates_widens_and_recovers_neighbors() {
     let config = HnswConfig {
         max_connections: 8,
         ef_construction: 40,
