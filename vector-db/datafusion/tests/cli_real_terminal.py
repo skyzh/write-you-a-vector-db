@@ -103,6 +103,10 @@ def main() -> None:
             "SELECT * FROM definitely_missing_table; "
             "SELECT 42 AS continued_after_error;\n"
         )
+        script.write("SELECT 51 AS before_block;\n")
+        script.write("/* a multiline block comment\n")
+        script.write("contains an internal semicolon; without ending the statement */\n")
+        script.write("SELECT 52 AS after_block;\n")
         script_path = script.name
     with tempfile.NamedTemporaryFile("wb", suffix=".sql", delete=False) as invalid_script:
         invalid_script.write(b"SELECT 1;\xff\n")
@@ -134,6 +138,10 @@ def main() -> None:
         if "definitely_missing_table" not in transcript:
             raise AssertionError(f"included error was not reported; transcript:\n{transcript}")
         assert_json_value(transcript, "continued_after_error", 42)
+        assert_json_value(transcript, "before_block", 51)
+        assert_json_value(transcript, "after_block", 52)
+        if "ParserError" in transcript or "TokenizerError" in transcript:
+            raise AssertionError(f"block comment was split as SQL; transcript:\n{transcript}")
         if "stream did not contain valid UTF-8" not in transcript:
             raise AssertionError(f"decode error was not reported; transcript:\n{transcript}")
         assert_json_value(transcript, "continued_after_decode_error", 43)

@@ -197,8 +197,26 @@ pub(crate) fn split_complete_from_semicolon(sql: &str) -> (Vec<String>, String) 
     let mut current_command = String::new();
     let mut in_single_quote = false;
     let mut in_double_quote = false;
+    let mut in_block_comment = false;
+    let mut chars = sql.chars().peekable();
 
-    for c in sql.chars() {
+    while let Some(c) = chars.next() {
+        if in_block_comment {
+            current_command.push(c);
+            if c == '*' && chars.peek() == Some(&'/') {
+                current_command.push(chars.next().expect("peeked block-comment terminator"));
+                in_block_comment = false;
+            }
+            continue;
+        }
+
+        if !in_single_quote && !in_double_quote && c == '/' && chars.peek() == Some(&'*') {
+            current_command.push(c);
+            current_command.push(chars.next().expect("peeked block-comment opener"));
+            in_block_comment = true;
+            continue;
+        }
+
         if c == '\'' && !in_double_quote {
             in_single_quote = !in_single_quote;
         } else if c == '"' && !in_single_quote {
