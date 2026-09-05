@@ -1,4 +1,4 @@
-![Vector Database from Scratch — Build vector search, then use it from SQL](https://skyzh.github.io/vector-db-from-scratch/vectordb-social.png)
+![Vector Database from Scratch — Build vector search, then use it from SQL](course/src/vectordb-social.png)
 
 # Vector Database from Scratch
 
