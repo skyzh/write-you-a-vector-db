@@ -52,8 +52,8 @@ closed while you work through the exercises, as required by the starter's `AGENT
 From the repository root, check that the untouched starter compiles:
 
 ```sh
-cargo check -p vector-core-starter
-cargo check -p vector-datafusion-starter
+cargo check -p vector-db-from-scratch-core-starter
+cargo check -p vector-db-from-scratch-datafusion-starter
 ```
 
 The focused tests initially stop at `todo!` calls. Each day names the exact tests that should pass before you move on,
@@ -142,7 +142,7 @@ non-parity smoke mode.
 
 | Day | Estimate | Before | After | Learner-owned files |
 | --- | ---: | --- | --- | --- |
-| [Product tour](./rust-00-sql-shell.md) | 10–15 minutes | The course has not yet shown a running database interface. | Starting from an empty session, you create and populate a table, run nearest-neighbor SQL, attach an IVFFlat index to a selected vector column, and make the plan change observable. | None; use the supplied `vector-datafusion` shell. |
+| [Product tour](./rust-00-sql-shell.md) | 10–15 minutes | The course has not yet shown a running database interface. | Starting from an empty session, you create and populate a table, run nearest-neighbor SQL, attach an IVFFlat index to a selected vector column, and make the plan change observable. | None; use the supplied `vector-db-from-scratch-datafusion` shell. |
 | [1 — DataFusion table and optimizer](./rust-02-datafusion.md) | 3–4 hours | Vectors are Rust structs and DataFusion has no vector access path. | Rows become ordinary Arrow `MemTable` data; one attachment owns a selected vector field; a conservative physical rule selects its compatible index scan and preserves exact fallback. | `vector-db-starter/core/src/dataset.rs` and `vector-db-starter/datafusion/src/lib.rs` |
 | [2 — IVFFlat](./rust-03-ivfflat.md) | 4–5 hours | A flat index handles matched SQL top-k queries exactly. | Seeded k-means, inverted lists, and `probes` create a measured recall/work tradeoff behind the same SQL query. | `vector-db-starter/core/src/{ivf,search}.rs` |
 | [3 — NSW](./rust-04-nsw.md) | 4–5 hours | Candidate selection comes from centroid partitions. | Best-first traversal and bounded reciprocal graph insertion expose `ef_search` as a second recall/work tradeoff behind the same SQL query. | `vector-db-starter/core/src/{graph,nsw}.rs` |

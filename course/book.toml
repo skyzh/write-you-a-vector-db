@@ -2,11 +2,11 @@
 authors = ["Alex Chi Z"]
 language = "en"
 src = "src"
-title = "Write You a Vector Database"
+title = "Vector Database from Scratch"
 description = "Build a small in-memory vector database in Rust with SQL top-k, IVFFlat, graph indexes, recall measurement, and DataFusion integration."
 
 [output.html]
 mathjax-support = true
 additional-css = ["custom.css"]
-git-repository-url = "https://github.com/skyzh/write-you-a-vector-db"
-site-url = "/write-you-a-vector-db/"
+git-repository-url = "https://github.com/skyzh/vector-db-from-scratch"
+site-url = "/vector-db-from-scratch/"

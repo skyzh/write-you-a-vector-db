@@ -1,12 +1,15 @@
 [package]
-name = "vector-core"
-version = "0.1.0"
+name = "vector-db-from-scratch-core"
+version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+
+[lib]
+name = "vector_core"
 
 [lints]
 workspace = true
 
 [dev-dependencies]
-vector-benchmark-support.workspace = true
+vector-db-from-scratch-benchmark-support.workspace = true

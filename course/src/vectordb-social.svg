@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="628" viewBox="0 0 1200 628" role="img" aria-labelledby="title description">
-  <title id="title">Write You a Vector Database</title>
+  <title id="title">Vector Database from Scratch</title>
   <desc id="description">Build vector storage and indexes from scratch, then integrate them with SQL query planning and execution.</desc>
   <defs>
     <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
@@ -65,7 +65,7 @@
     <rect x="790" y="474" width="268" height="43" rx="21.5" fill="#173b36"/>
     <text x="924" y="502" text-anchor="middle" fill="#ffffff" font-family="SFMono-Regular, Consolas, Liberation Mono, monospace" font-size="17" font-weight="700">VectorIndexScan</text>
 
-    <text x="68" y="572" fill="#17201e" font-size="20" font-weight="800" letter-spacing="1.1">WRITE YOU A VECTOR DATABASE</text>
+    <text x="68" y="572" fill="#17201e" font-size="20" font-weight="800" letter-spacing="1.1">Vector Database from Scratch</text>
     <text x="1132" y="572" text-anchor="end" fill="#687571" font-size="18" font-weight="650">github.com/skyzh</text>
   </g>
 </svg>
