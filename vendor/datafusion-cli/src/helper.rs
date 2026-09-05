@@ -79,7 +79,10 @@ impl CliHelper {
     fn validate_input(&self, input: &str) -> Result<ValidationResult> {
         if input == "quit" {
             Ok(ValidationResult::Valid(None))
-        } else if let Some(sql) = input.strip_suffix(';') {
+        } else if input.starts_with('\\') {
+            // command
+            Ok(ValidationResult::Valid(None))
+        } else {
             let dialect = match dialect_from_str(self.dialect) {
                 Some(dialect) => dialect,
                 None => {
@@ -89,7 +92,10 @@ impl CliHelper {
                     ))));
                 }
             };
-            let lines = split_from_semicolon(sql, dialect.as_ref());
+            let (lines, remainder) = split_complete_from_semicolon(input, dialect.as_ref());
+            if !remainder.trim().is_empty() || lines.is_empty() {
+                return Ok(ValidationResult::Incomplete);
+            }
             for line in lines {
                 match DFParser::parse_sql_with_dialect(&line, dialect.as_ref()) {
                     Ok(statements) if statements.is_empty() => {
@@ -106,11 +112,6 @@ impl CliHelper {
                 }
             }
             Ok(ValidationResult::Valid(None))
-        } else if input.starts_with('\\') {
-            // command
-            Ok(ValidationResult::Valid(None))
-        } else {
-            Ok(ValidationResult::Incomplete)
         }
     }
 }

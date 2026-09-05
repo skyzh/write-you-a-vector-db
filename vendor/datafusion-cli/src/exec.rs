@@ -77,7 +77,7 @@ pub async fn exec_from_lines(
                 continue;
             }
             Ok(line) => {
-                query.push_str(line.trim_end());
+                query.push_str(&line);
                 query.push('\n');
                 let (statements, remainder) =
                     split_complete_from_semicolon(&query, dialect.as_ref());

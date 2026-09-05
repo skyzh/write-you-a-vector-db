@@ -97,6 +97,17 @@ def assert_json_string(transcript: str, name: str, value: str) -> None:
         raise AssertionError(f"missing JSON result for {name}; transcript:\n{transcript}")
 
 
+def assert_redirected_sql(executable: str, sql: str, marker: str, value: int) -> None:
+    result = subprocess.run(
+        [executable], input=sql, text=True, capture_output=True, check=False
+    )
+    output = result.stdout + result.stderr
+    if result.returncode != 0 or marker not in output or str(value) not in output:
+        raise AssertionError(
+            f"redirected SQL control failed for {marker}; output:\n{output}"
+        )
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         raise SystemExit(f"usage: {sys.argv[0]} PATH_TO_SQL_EXAMPLE")
@@ -147,10 +158,41 @@ def main() -> None:
         shebang_script.write("#! */\n")
         shebang_script.write("SELECT 62 AS after_shebang_marker_close;\n")
         shebang_script_path = shebang_script.name
+    preserved_literal_sql = (
+        "SELECT char_length('ab  \n"
+        "cd\t\n"
+        "efgh') AS included_literal_length;\n"
+    )
+    with tempfile.NamedTemporaryFile("w", suffix=".sql", delete=False) as literal_script:
+        literal_script.write(preserved_literal_sql)
+        literal_script_path = literal_script.name
     with tempfile.NamedTemporaryFile("wb", suffix=".sql", delete=False) as invalid_script:
         invalid_script.write(b"SELECT 1;\xff\n")
         invalid_script_path = invalid_script.name
     missing_script_path = f"{script_path}.missing"
+    interactive_multiline_sql = (
+        "/* interactive multiline comment;\n"
+        "still inside the comment;\n"
+        "*/\n"
+        "SELECT 63 AS after_interactive_multiline;\n"
+    )
+    interactive_nested_sql = (
+        "/* interactive outer comment\n"
+        "/* interactive inner comment; */\n"
+        "still inside the outer comment;\n"
+        "*/\n"
+        "SELECT 64 AS after_interactive_nested;\n"
+    )
+
+    assert_redirected_sql(
+        executable, interactive_multiline_sql, "after_interactive_multiline", 63
+    )
+    assert_redirected_sql(
+        executable, interactive_nested_sql, "after_interactive_nested", 64
+    )
+    assert_redirected_sql(
+        executable, preserved_literal_sql, "included_literal_length", 13
+    )
 
     terminal = Terminal(executable)
     try:
@@ -171,14 +213,20 @@ def main() -> None:
         terminal.wait_for_prompts(8)
         terminal.send(f"\\i {shebang_script_path}\n")
         terminal.wait_for_prompts(9)
-        terminal.send(f"\\i {invalid_script_path}\n")
+        terminal.send(f"\\i {literal_script_path}\n")
         terminal.wait_for_prompts(10)
-        terminal.send("SELECT 43 AS continued_after_decode_error;\n")
+        terminal.send(interactive_multiline_sql)
         terminal.wait_for_prompts(11)
-        terminal.send(f"\\i {missing_script_path}\n")
+        terminal.send(interactive_nested_sql)
         terminal.wait_for_prompts(12)
-        terminal.send("SELECT 44 AS continued_after_open_error;\n")
+        terminal.send(f"\\i {invalid_script_path}\n")
         terminal.wait_for_prompts(13)
+        terminal.send("SELECT 43 AS continued_after_decode_error;\n")
+        terminal.wait_for_prompts(14)
+        terminal.send(f"\\i {missing_script_path}\n")
+        terminal.wait_for_prompts(15)
+        terminal.send("SELECT 44 AS continued_after_open_error;\n")
+        terminal.wait_for_prompts(16)
         transcript = terminal.finish()
 
         if "Output format is Json." not in transcript:
@@ -202,6 +250,9 @@ def main() -> None:
         assert_json_value(transcript, "after_dollar", 60)
         assert_json_value(transcript, "after_first_line_shebang", 61)
         assert_json_value(transcript, "after_shebang_marker_close", 62)
+        assert_json_value(transcript, "included_literal_length", 13)
+        assert_json_value(transcript, "after_interactive_multiline", 63)
+        assert_json_value(transcript, "after_interactive_nested", 64)
         if "ParserError" in transcript or "TokenizerError" in transcript:
             raise AssertionError(f"block comment was split as SQL; transcript:\n{transcript}")
         if "stream did not contain valid UTF-8" not in transcript:
@@ -228,6 +279,7 @@ def main() -> None:
         os.unlink(dash_close_script_path)
         os.unlink(dollar_script_path)
         os.unlink(shebang_script_path)
+        os.unlink(literal_script_path)
         os.unlink(invalid_script_path)
 
 
