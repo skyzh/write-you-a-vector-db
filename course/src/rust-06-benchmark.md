@@ -155,8 +155,7 @@ cargo test -p vector-core-starter --example recall day_06_
 
 This gate pins the completed constructors and percentile selection, fixed inventory and configurations,
 full-versus-smoke truth selection, result validation, rank-prefix averaging, report order, and full-mode IVF-PQ
-accounting. It excludes only the raw-starter shape check above, because a completed example no longer contains those
-TODOs.
+accounting.
 
 ## Read the Supplied Measurement Loop
 
