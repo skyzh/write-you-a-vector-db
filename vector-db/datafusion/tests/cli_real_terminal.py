@@ -56,8 +56,8 @@ class Terminal:
             f"timed out waiting for prompt {count}; transcript:\n{normalized(self.output)}"
         )
 
-    def finish(self) -> str:
-        self.send("\\q\n")
+    def finish(self, command: str = "\\q") -> str:
+        self.send(f"{command}\n")
         try:
             self.process.wait(timeout=10)
         except subprocess.TimeoutExpired:
@@ -99,9 +99,15 @@ def main() -> None:
         raise SystemExit(f"SQL example does not exist: {executable}")
 
     with tempfile.NamedTemporaryFile("w", suffix=".sql", delete=False) as script:
-        script.write("SELECT * FROM definitely_missing_table;\n")
-        script.write("SELECT 42 AS continued_after_error;\n")
+        script.write(
+            "SELECT * FROM definitely_missing_table; "
+            "SELECT 42 AS continued_after_error;\n"
+        )
         script_path = script.name
+    with tempfile.NamedTemporaryFile("wb", suffix=".sql", delete=False) as invalid_script:
+        invalid_script.write(b"SELECT 1;\xff\n")
+        invalid_script_path = invalid_script.name
+    missing_script_path = f"{script_path}.missing"
 
     terminal = Terminal(executable)
     try:
@@ -111,7 +117,15 @@ def main() -> None:
         terminal.send("SELECT 1 AS format_probe;\n")
         terminal.wait_for_prompts(3)
         terminal.send(f"\\i {script_path}\n")
-        transcript = terminal.wait_for_prompts(4)
+        terminal.wait_for_prompts(4)
+        terminal.send(f"\\i {invalid_script_path}\n")
+        terminal.wait_for_prompts(5)
+        terminal.send("SELECT 43 AS continued_after_decode_error;\n")
+        terminal.wait_for_prompts(6)
+        terminal.send(f"\\i {missing_script_path}\n")
+        terminal.wait_for_prompts(7)
+        terminal.send("SELECT 44 AS continued_after_open_error;\n")
+        terminal.wait_for_prompts(8)
         transcript = terminal.finish()
 
         if "Output format is Json." not in transcript:
@@ -120,6 +134,18 @@ def main() -> None:
         if "definitely_missing_table" not in transcript:
             raise AssertionError(f"included error was not reported; transcript:\n{transcript}")
         assert_json_value(transcript, "continued_after_error", 42)
+        if "stream did not contain valid UTF-8" not in transcript:
+            raise AssertionError(f"decode error was not reported; transcript:\n{transcript}")
+        assert_json_value(transcript, "continued_after_decode_error", 43)
+        if missing_script_path not in transcript:
+            raise AssertionError(f"open error was not reported; transcript:\n{transcript}")
+        assert_json_value(transcript, "continued_after_open_error", 44)
+
+        quit_terminal = Terminal(executable)
+        quit_terminal.wait_for_prompts(1)
+        quit_transcript = quit_terminal.finish("quit")
+        if "ParserError" in quit_transcript:
+            raise AssertionError(f"bare quit was parsed as SQL; transcript:\n{quit_transcript}")
     finally:
         if terminal.process.poll() is None:
             terminal.process.kill()
@@ -127,6 +153,7 @@ def main() -> None:
         if terminal.master >= 0:
             os.close(terminal.master)
         os.unlink(script_path)
+        os.unlink(invalid_script_path)
 
 
 if __name__ == "__main__":

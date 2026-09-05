@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// This file has been modified by the Vector Database from Scratch project.
+
 use crate::print_format::PrintFormat;
 use std::fmt::{Display, Formatter};
 use std::io;

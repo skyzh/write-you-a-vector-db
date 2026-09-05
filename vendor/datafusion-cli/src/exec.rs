@@ -15,10 +15,12 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// This file has been modified by the Vector Database from Scratch project.
+
 //! Execution functions
 
 use crate::cli_context::CliSessionContext;
-use crate::helper::split_from_semicolon;
+use crate::helper::{split_complete_from_semicolon, split_from_semicolon};
 use crate::print_format::PrintFormat;
 use crate::{
     command::{Command, OutputFormat},
@@ -74,21 +76,18 @@ pub async fn exec_from_lines(
                 continue;
             }
             Ok(line) => {
-                let line = line.trim_end();
-                query.push_str(line);
-                if line.ends_with(';') {
-                    match exec_and_print(ctx, print_options, query).await {
+                query.push_str(line.trim_end());
+                query.push('\n');
+                let (statements, remainder) = split_complete_from_semicolon(&query);
+                query = remainder;
+                for statement in statements {
+                    match exec_and_print(ctx, print_options, statement).await {
                         Ok(_) => {}
                         Err(err) => eprintln!("{err}"),
                     }
-                    query = "".to_string();
-                } else {
-                    query.push('\n');
                 }
             }
-            _ => {
-                break;
-            }
+            Err(error) => return Err(DataFusionError::IoError(error)),
         }
     }
 
@@ -106,12 +105,8 @@ pub async fn exec_from_files(
     files: Vec<String>,
     print_options: &PrintOptions,
 ) -> Result<()> {
-    let files = files
-        .into_iter()
-        .map(|file_path| File::open(file_path).unwrap())
-        .collect::<Vec<_>>();
-
-    for file in files {
+    for file_path in files {
+        let file = File::open(file_path).map_err(DataFusionError::IoError)?;
         let mut reader = BufReader::new(file);
         exec_from_lines(ctx, &mut reader, print_options).await?;
     }
@@ -167,6 +162,10 @@ pub async fn exec_from_repl(
                         &line[1..]
                     );
                 }
+            }
+            Ok(line) if line == "quit" => {
+                rl.add_history_entry(line)?;
+                break;
             }
             Ok(line) => {
                 let lines = split_from_semicolon(&line);

@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// This file has been modified by the Vector Database from Scratch project.
+
 //! Functions that are query-able and searchable via the `\h` command
 
 use std::fmt;

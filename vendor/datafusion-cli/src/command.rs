@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// This file has been modified by the Vector Database from Scratch project.
+
 //! Command within CLI
 
 use crate::cli_context::CliSessionContext;

@@ -15,6 +15,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
+// This file has been modified by the Vector Database from Scratch project.
+
 //! Helper that helps with interactive editing, including multi-line parsing and validation,
 //! and auto-completion for file name during creating external table.
 
@@ -74,7 +76,9 @@ impl CliHelper {
     }
 
     fn validate_input(&self, input: &str) -> Result<ValidationResult> {
-        if let Some(sql) = input.strip_suffix(';') {
+        if input == "quit" {
+            Ok(ValidationResult::Valid(None))
+        } else if let Some(sql) = input.strip_suffix(';') {
             let dialect = match dialect_from_str(self.dialect) {
                 Some(dialect) => dialect,
                 None => {
@@ -180,6 +184,15 @@ impl Helper for CliHelper {}
 
 /// Splits a string which consists of multiple queries.
 pub(crate) fn split_from_semicolon(sql: &str) -> Vec<String> {
+    let (mut commands, remainder) = split_complete_from_semicolon(sql);
+    if !remainder.trim().is_empty() {
+        commands.push(format!("{};", remainder.trim()));
+    }
+    commands
+}
+
+/// Splits complete semicolon-terminated queries and returns any trailing fragment.
+pub(crate) fn split_complete_from_semicolon(sql: &str) -> (Vec<String>, String) {
     let mut commands = Vec::new();
     let mut current_command = String::new();
     let mut in_single_quote = false;
@@ -202,9 +215,5 @@ pub(crate) fn split_from_semicolon(sql: &str) -> Vec<String> {
         }
     }
 
-    if !current_command.trim().is_empty() {
-        commands.push(format!("{};", current_command.trim()));
-    }
-
-    commands
+    (commands, current_command)
 }
