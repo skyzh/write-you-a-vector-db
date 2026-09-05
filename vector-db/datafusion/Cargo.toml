@@ -1,14 +1,17 @@
 [package]
-name = "vector-datafusion"
-version = "0.1.0"
+name = "vector-db-from-scratch-datafusion"
+version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
 
+[lib]
+name = "vector_datafusion"
+
 [dependencies]
 async-trait.workspace = true
 datafusion.workspace = true
-vector-core = { path = "../core" }
+vector-db-from-scratch-core.workspace = true
 
 [dev-dependencies]
 datafusion-cli.workspace = true

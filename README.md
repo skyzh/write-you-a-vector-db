@@ -1,11 +1,11 @@
-![Write You a Vector Database — Build vector search, then use it from SQL](https://skyzh.github.io/write-you-a-vector-db/vectordb-social.png)
+![Vector Database from Scratch — Build vector search, then use it from SQL](https://skyzh.github.io/vector-db-from-scratch/vectordb-social.png)
 
-# Write You a Vector Database
+# Vector Database from Scratch
 
-Write You a Vector Database is a short, Rust-first systems course. Build a small in-memory vector database in Rust,
+Vector Database from Scratch is a short, Rust-first systems course. Build a small in-memory vector database in Rust,
 compare approximate results with exact search, and connect the resulting indexes to SQL through DataFusion.
 
-**[Read the course](https://skyzh.github.io/write-you-a-vector-db/)**
+**[Read the course](https://skyzh.github.io/vector-db-from-scratch/)**
 
 The course focuses on the boundary where algorithms become database features:
 
@@ -18,7 +18,7 @@ contracts, query planning, and execution boundary that make SQL vector search wo
 
 ## Course Status
 
-The [Rust course](https://skyzh.github.io/write-you-a-vector-db/rust-01-overview) has six required days: an
+The [Rust course](https://skyzh.github.io/vector-db-from-scratch/rust-01-overview) has six required days: an
 Arrow-backed in-memory table and safe DataFusion optimizer rule, IVFFlat, NSW, HNSW, residual IVF-PQ, and a final shared
 recall and latency benchmark. The implementation days include starter code, focused tests, and separate completed
 reference crates. Days 1–5 include self-contained SQLLogicTests; Day 5 also includes a focused planner/EXPLAIN
@@ -34,11 +34,11 @@ The repository-root Cargo workspace separates the learner starter from the compl
 
 ```text
 vector-db-starter/
-  core/          package: vector-core-starter
-  datafusion/    package: vector-datafusion-starter
+  core/          package: vector-db-from-scratch-core-starter
+  datafusion/    package: vector-db-from-scratch-datafusion-starter
 vector-db/
-  core/          package: vector-core
-  datafusion/    package: vector-datafusion
+  core/          package: vector-db-from-scratch-core
+  datafusion/    package: vector-db-from-scratch-datafusion
 vector-db-benchmark-support/
                 shared benchmark fixtures and reporting support
 ```
@@ -46,7 +46,7 @@ vector-db-benchmark-support/
 Before implementing Day 1, launch the supplied product shell from the repository root:
 
 ```shell
-cargo run -p vector-datafusion --example sql
+cargo run -p vector-db-from-scratch-datafusion --example sql
 ```
 
 The supplied DataFusion CLI starts with an empty course session and accepts semicolon-terminated SQL. The product tour
@@ -56,15 +56,15 @@ same query again. You do not need to inspect or modify the completed reference e
 Check the untouched starter without executing TODOs:
 
 ```shell
-cargo check -p vector-core-starter
-cargo check -p vector-datafusion-starter
+cargo check -p vector-db-from-scratch-core-starter
+cargo check -p vector-db-from-scratch-datafusion-starter
 ```
 
 Validate the completed reference with:
 
 ```shell
-cargo test -p vector-core -p vector-datafusion
-cargo run --release -p vector-core --example recall -- /absolute/path/to/sift1M
+cargo test -p vector-db-from-scratch-core -p vector-db-from-scratch-datafusion
+cargo run --release -p vector-db-from-scratch-core --example recall -- /absolute/path/to/sift1M
 ```
 
 The workspace uses the stable Rust channel from `rust-toolchain.toml` and pins course dependencies in `Cargo.lock`.
@@ -81,14 +81,14 @@ Replace `1` with the current day number, from 1 through 6. The Day 6 SIFT1M
 tests remain ignored unless you explicitly provide the external corpus and use
 the Day 6 commands.
 
-The original [C++/BusTub edition](https://skyzh.github.io/write-you-a-vector-db/cpp-01-overview) is deprecated and
+The original [C++/BusTub edition](https://skyzh.github.io/vector-db-from-scratch/cpp-01-overview) is deprecated and
 unmaintained. It remains online for existing readers but is no longer recommended for new learners.
 
 ## Community
 
-Join skyzh's Discord server to study with the write-you-a-vector-db community.
+Join skyzh's Discord server to study with the Vector Database from Scratch community.
 
-[![Join skyzh's Discord Server](https://skyzh.github.io/write-you-a-vector-db/discord-badge.svg)](https://skyzh.dev/join/discord)
+[![Join skyzh's Discord Server](https://skyzh.github.io/vector-db-from-scratch/discord-badge.svg)](https://skyzh.dev/join/discord)
 
 ## License
 

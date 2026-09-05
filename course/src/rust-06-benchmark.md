@@ -23,11 +23,11 @@ Your Day 5 starter already contains the five index implementations. Before openi
 paths green from the repository root:
 
 ```sh
-cargo test -p vector-datafusion-starter --test sqllogictest day_01_table_and_optimizer_sql -- --exact
-cargo test -p vector-datafusion-starter --test sqllogictest day_02_ivfflat_sql -- --exact
-cargo test -p vector-datafusion-starter --test sqllogictest day_03_nsw_sql -- --exact
-cargo test -p vector-datafusion-starter --test sqllogictest day_04_hnsw_sql -- --exact
-cargo test -p vector-datafusion-starter --test sqllogictest day_05_ivf_pq_sql -- --exact
+cargo test -p vector-db-from-scratch-datafusion-starter --test sqllogictest day_01_table_and_optimizer_sql -- --exact
+cargo test -p vector-db-from-scratch-datafusion-starter --test sqllogictest day_02_ivfflat_sql -- --exact
+cargo test -p vector-db-from-scratch-datafusion-starter --test sqllogictest day_03_nsw_sql -- --exact
+cargo test -p vector-db-from-scratch-datafusion-starter --test sqllogictest day_04_hnsw_sql -- --exact
+cargo test -p vector-db-from-scratch-datafusion-starter --test sqllogictest day_05_ivf_pq_sql -- --exact
 ```
 
 Now open:
@@ -36,7 +36,7 @@ Now open:
 vector-db-starter/core/examples/recall.rs
 ```
 
-The supplied `vector-benchmark-support` crate owns command-line parsing, SIFT file validation, the full and smoke mode
+The supplied `vector-db-from-scratch-benchmark-support` crate owns command-line parsing, SIFT file validation, the full and smoke mode
 sizes, cyclic warm-up and timing, rank-recall calculation, and nearest-rank percentile selection. The example already
 owns the five configurations, report layout, result validation, and IVF-PQ accounting. You complete exactly four Day 6
 ownership points:
@@ -49,14 +49,14 @@ ownership points:
 Run the support tests before changing the example:
 
 ```sh
-cargo test -p vector-benchmark-support
+cargo test -p vector-db-from-scratch-benchmark-support
 ```
 
 They use tiny little-endian fixtures and deliberately corrupted inputs, so they need no external download. The raw
 starter's example test is expected to stop at a Day 6 `todo!()` until you finish both checkpoints below:
 
 ```sh
-cargo test -p vector-core-starter --example recall
+cargo test -p vector-db-from-scratch-core-starter --example recall
 ```
 
 ## Acquire and Validate SIFT1M
@@ -129,7 +129,7 @@ time.
 Before moving to reporting, rerun the invariant gate that permits more than one deterministic RNG trajectory:
 
 ```sh
-cargo test -p vector-core-starter --test indexes \
+cargo test -p vector-db-from-scratch-core-starter --test indexes \
   day_06_randomized_indexes_preserve_invariants_across_seed_trajectories -- --exact
 ```
 
@@ -150,7 +150,7 @@ Do not replace it with interpolation or a floor fraction of `n - 1`; that would 
 four ownership points are complete, run the five behavioral example tests:
 
 ```sh
-cargo test -p vector-core-starter --example recall day_06_
+cargo test -p vector-db-from-scratch-core-starter --example recall day_06_
 ```
 
 This gate pins the completed constructors and percentile selection, fixed inventory and configurations,
@@ -207,15 +207,15 @@ or parser defect that could otherwise make the report untrustworthy.
 From the repository root, run the completed starter in release mode with an explicit corpus directory:
 
 ```sh
-cargo run --release -p vector-core-starter --example recall -- --smoke /absolute/path/to/sift1M
-cargo run --release -p vector-core-starter --example recall -- /absolute/path/to/sift1M
+cargo run --release -p vector-db-from-scratch-core-starter --example recall -- --smoke /absolute/path/to/sift1M
+cargo run --release -p vector-db-from-scratch-core-starter --example recall -- /absolute/path/to/sift1M
 ```
 
 You can compare against the completed reference without reading its source:
 
 ```sh
-cargo run --release -p vector-core --example recall -- --smoke /absolute/path/to/sift1M
-cargo run --release -p vector-core --example recall -- /absolute/path/to/sift1M
+cargo run --release -p vector-db-from-scratch-core --example recall -- --smoke /absolute/path/to/sift1M
+cargo run --release -p vector-db-from-scratch-core --example recall -- /absolute/path/to/sift1M
 ```
 
 The full run needs the extracted 525,200,000-byte corpus payload plus build products. Budget tens of minutes and several
@@ -226,7 +226,7 @@ For one narrower external-data check, the supplied ignored tests expose each ind
 
 ```sh
 SIFT1M_DIR=/absolute/path/to/sift1M \
-  cargo test -p vector-core-starter --test sift_smoke day_06_sift_ivf_pq_smoke -- --ignored --exact
+  cargo test -p vector-db-from-scratch-core-starter --test sift_smoke day_06_sift_ivf_pq_smoke -- --ignored --exact
 ```
 
 The analogous test names are `day_06_sift_flat_smoke`, `day_06_sift_ivf_flat_smoke`, `day_06_sift_nsw_smoke`, and `day_06_sift_hnsw_smoke`. These

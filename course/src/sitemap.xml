@@ -1,60 +1,60 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch</loc>
     </url>
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db/00-introduction</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch/00-introduction</loc>
     </url>
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db/10-epilogue</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch/10-epilogue</loc>
     </url>
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db/cpp-01-overview</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch/cpp-01-overview</loc>
     </url>
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db/cpp-02-setup</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch/cpp-02-setup</loc>
     </url>
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db/cpp-03-knn</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch/cpp-03-knn</loc>
     </url>
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db/cpp-04-optimizer</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch/cpp-04-optimizer</loc>
     </url>
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db/cpp-05-ivfflat</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch/cpp-05-ivfflat</loc>
     </url>
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db/cpp-06-01-nsw</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch/cpp-06-01-nsw</loc>
     </url>
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db/cpp-06-02-hnsw</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch/cpp-06-02-hnsw</loc>
     </url>
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db/cpp-07-large-dataset</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch/cpp-07-large-dataset</loc>
     </url>
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db/rust-00-sql-shell</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch/rust-00-sql-shell</loc>
     </url>
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db/rust-01-overview</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch/rust-01-overview</loc>
     </url>
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db/rust-02-datafusion</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch/rust-02-datafusion</loc>
     </url>
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db/rust-03-ivfflat</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch/rust-03-ivfflat</loc>
     </url>
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db/rust-04-nsw</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch/rust-04-nsw</loc>
     </url>
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db/rust-05-hnsw</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch/rust-05-hnsw</loc>
     </url>
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db/rust-06-benchmark</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch/rust-06-benchmark</loc>
     </url>
     <url>
-        <loc>https://skyzh.github.io/write-you-a-vector-db/rust-07-ivfpq</loc>
+        <loc>https://skyzh.github.io/vector-db-from-scratch/rust-07-ivfpq</loc>
     </url>
 </urlset>

@@ -27,13 +27,13 @@ LIMIT 5;
 From the repository root, confirm the completed Day 1 case first:
 
 ```sh
-cargo test -p vector-datafusion-starter --test sqllogictest day_01_table_and_optimizer_sql
+cargo test -p vector-db-from-scratch-datafusion-starter --test sqllogictest day_01_table_and_optimizer_sql
 ```
 
 Now run the Day 2 case before implementing IVFFlat:
 
 ```sh
-cargo test -p vector-datafusion-starter --test sqllogictest day_02_ivfflat_sql
+cargo test -p vector-db-from-scratch-datafusion-starter --test sqllogictest day_02_ivfflat_sql
 ```
 
 This second command is your product-level expected failure. It uses the same DataFusion integration with
@@ -72,7 +72,7 @@ within `k`, not always `k` itself. If exact search returns two rows for `k = 10`
 those two rows. Define recall as `1.0` when that denominator is zero; an empty request has missed nothing.
 
 ```sh
-cargo test -p vector-core-starter --test indexes day_02_recall_reports_result_overlap
+cargo test -p vector-db-from-scratch-core-starter --test indexes day_02_recall_reports_result_overlap
 ```
 
 This function gives the approximate result a correctness meaning. Timing and cross-index comparison remain separate;
@@ -85,7 +85,7 @@ Implement the validation boundary at the start of `IvfFlatIndex::try_new`. The c
 cosine builds reject zero-norm rows just as exact search does.
 
 ```sh
-cargo test -p vector-core-starter --test indexes day_02_ivf_rejects_invalid_build_configuration
+cargo test -p vector-db-from-scratch-core-starter --test indexes day_02_ivf_rejects_invalid_build_configuration
 ```
 
 Once invalid configurations fail before any training work, initialize the centroids. The starter supplies
@@ -166,8 +166,8 @@ kept it? Which already validated row can safely replace it?
 Run the deterministic-build and zero-mean cases:
 
 ```sh
-cargo test -p vector-core-starter --test indexes day_02_ivf_build_is_seeded
-cargo test -p vector-core-starter --test indexes day_02_ivf_cosine_recovers_from_a_zero_mean_cluster
+cargo test -p vector-db-from-scratch-core-starter --test indexes day_02_ivf_build_is_seeded
+cargo test -p vector-db-from-scratch-core-starter --test indexes day_02_ivf_cosine_recovers_from_a_zero_mean_cluster
 ```
 
 ## Checkpoint 4: Probe Lists at Query Time
@@ -207,7 +207,7 @@ The decisive boundary is to probe every partition. IVFFlat then visits every dat
 ordered result as `FlatIndex`, including tie order:
 
 ```sh
-cargo test -p vector-core-starter --test indexes day_02_ivf_scanning_every_partition_matches_exact_search
+cargo test -p vector-db-from-scratch-core-starter --test indexes day_02_ivf_scanning_every_partition_matches_exact_search
 ```
 
 If this fails, inspect list completeness, metric choice, heap retention, and final sorting. With every list open,
@@ -218,7 +218,7 @@ approximation is no longer an explanation.
 Return to the product-level case you ran at the start:
 
 ```sh
-cargo test -p vector-datafusion-starter --test sqllogictest day_02_ivfflat_sql
+cargo test -p vector-db-from-scratch-datafusion-starter --test sqllogictest day_02_ivfflat_sql
 ```
 
 The SQL text and the matcher you implemented on Day 1 are unchanged. DataFusion passes `LIMIT 5` through Day 1's
@@ -233,7 +233,7 @@ a claim that a smaller probe count always returns the same rows.
 Run the supplied example after the focused core and SQL tests pass:
 
 ```sh
-cargo run -p vector-datafusion-starter --example ivfflat_sql
+cargo run -p vector-db-from-scratch-datafusion-starter --example ivfflat_sql
 ```
 
 The example issues one cosine top-k over the same five-row table through a Flat attachment and then a seeded IVFFlat

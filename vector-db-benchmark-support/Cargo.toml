@@ -1,9 +1,12 @@
 [package]
-name = "vector-benchmark-support"
-version = "0.1.0"
+name = "vector-db-from-scratch-benchmark-support"
+version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+
+[lib]
+name = "vector_benchmark_support"
 
 [lints]
 workspace = true

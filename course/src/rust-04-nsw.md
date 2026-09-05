@@ -13,7 +13,7 @@ Day 2 ended with one five-row table and one SQL query running through IVFFlat. R
 root:
 
 ```sh
-cargo run -p vector-datafusion-starter --example ivfflat_sql
+cargo run -p vector-db-from-scratch-datafusion-starter --example ivfflat_sql
 ```
 
 The seeded IVFFlat plan contains `index=ivf_flat`, and its `LIMIT 3` result is:
@@ -120,7 +120,7 @@ previous rows `0..r` exist.
 Run only this checkpoint's supplied test:
 
 ```sh
-cargo test -p vector-core-starter \
+cargo test -p vector-db-from-scratch-core-starter \
   graph_tests::day_03_search_layer_respects_bounds_and_expands_equal_frontier -- --exact
 ```
 
@@ -149,7 +149,7 @@ owner, break distance ties by row offset, and truncate to `max_connections`.
 Run the crate-internal helper test:
 
 ```sh
-cargo test -p vector-core-starter \
+cargo test -p vector-db-from-scratch-core-starter \
   graph_tests::day_03_prune_neighbors_is_deterministic_and_bounded -- --exact
 ```
 
@@ -175,7 +175,7 @@ The completed graph must be deterministic, duplicate-free, self-free, reciprocal
 Run its focused construction test:
 
 ```sh
-cargo test -p vector-core-starter --test indexes \
+cargo test -p vector-db-from-scratch-core-starter --test indexes \
   day_03_nsw_rejects_invalid_build_configuration_and_builds_a_bounded_reciprocal_graph -- --exact
 ```
 
@@ -195,7 +195,7 @@ The `.max(k)` floor separates the requested result count from the caller's explo
 Run the query test:
 
 ```sh
-cargo test -p vector-core-starter --test indexes \
+cargo test -p vector-db-from-scratch-core-starter --test indexes \
   day_03_nsw_search_validates_widens_and_matches_exact_on_connected_fixture -- --exact
 ```
 
@@ -208,7 +208,7 @@ data, widths, or disconnected graphs.
 Now run the supplied, TODO-free comparison:
 
 ```sh
-cargo run -p vector-datafusion-starter --example nsw_sql
+cargo run -p vector-db-from-scratch-datafusion-starter --example nsw_sql
 ```
 
 It executes the same five-vector cosine query twice. The first plan contains:
@@ -237,7 +237,7 @@ and final sort. Equal rows here do not establish general recall, work, or perfor
 Keep the separate five-result SQL fixture green:
 
 ```sh
-cargo test -p vector-datafusion-starter --test sqllogictest day_03_nsw_sql -- --exact
+cargo test -p vector-db-from-scratch-datafusion-starter --test sqllogictest day_03_nsw_sql -- --exact
 ```
 
 That SQLLogicTest uses a different eight-row fixture and `LIMIT 5`. It verifies `index=nsw`, the supplied final sort,

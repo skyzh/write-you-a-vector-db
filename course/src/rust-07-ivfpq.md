@@ -126,7 +126,7 @@ one-list-per-row invariant from Day 2.
 Run the focused layout boundary:
 
 ```sh
-cargo test -p vector-core-starter --test indexes day_05_ivf_pq_validates_its_euclidean_code_layout
+cargo test -p vector-db-from-scratch-core-starter --test indexes day_05_ivf_pq_validates_its_euclidean_code_layout
 ```
 
 ## Checkpoint 2: Train and Encode Residual Codebooks
@@ -144,7 +144,7 @@ different deterministic seed for each subquantizer. Then encode every row with e
 subquantizer.
 
 ```sh
-cargo test -p vector-core-starter --test indexes day_05_ivf_pq_build_is_seeded_and_codes_each_row
+cargo test -p vector-db-from-scratch-core-starter --test indexes day_05_ivf_pq_build_is_seeded_and_codes_each_row
 ```
 
 The test checks deterministic training, complete list membership, code layout, and byte accounting.
@@ -168,20 +168,20 @@ to each code through both candidate stages. If discarding an unrepresentable exa
 Probe every list and rerank every row as an exactness boundary:
 
 ```sh
-cargo test -p vector-core-starter --test indexes day_05_ivf_pq_full_scan_and_rerank_matches_exact_search
+cargo test -p vector-db-from-scratch-core-starter --test indexes day_05_ivf_pq_full_scan_and_rerank_matches_exact_search
 ```
 
 Then run the complete IVF-PQ core group:
 
 ```sh
-cargo test -p vector-core-starter --test indexes day_05_ivf_pq_
+cargo test -p vector-db-from-scratch-core-starter --test indexes day_05_ivf_pq_
 ```
 
 These cases also cover large finite values, representability, and public ordering. Finally, confirm the unchanged
 Day 1 adapter can select the completed Euclidean index:
 
 ```sh
-cargo test -p vector-datafusion-starter --test sql day_05_ivf_pq_is_visible_in_explain
+cargo test -p vector-db-from-scratch-datafusion-starter --test sql day_05_ivf_pq_is_visible_in_explain
 ```
 
 The physical plan names `index=ivf_pq` while retaining the same conservative matcher and final bounded sort.
@@ -203,7 +203,7 @@ the workload and search configuration.
 Run the self-contained Day 5 SQLLogicTest:
 
 ```sh
-cargo test -p vector-datafusion-starter --test sqllogictest day_05_ivf_pq_sql -- --exact
+cargo test -p vector-db-from-scratch-datafusion-starter --test sqllogictest day_05_ivf_pq_sql -- --exact
 ```
 
 The fixture creates and fills its own eight-row table. Before it attaches the index, the plan contains:

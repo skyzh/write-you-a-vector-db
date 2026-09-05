@@ -3,6 +3,9 @@ use std::path::Path;
 use std::process::{Command, ExitCode};
 
 const LAST_DAY: u8 = 6;
+const BENCHMARK_SUPPORT_PACKAGE: &str = "vector-db-from-scratch-benchmark-support";
+const CORE_STARTER_PACKAGE: &str = "vector-db-from-scratch-core-starter";
+const DATAFUSION_STARTER_PACKAGE: &str = "vector-db-from-scratch-datafusion-starter";
 
 #[derive(Clone, Copy)]
 struct TestCommand {
@@ -13,40 +16,40 @@ struct TestCommand {
 }
 
 const DAY_01: &[TestCommand] = &[
-    integration("vector-core-starter", "indexes", "day_01_"),
-    integration("vector-datafusion-starter", "sql", "day_01_"),
-    integration("vector-datafusion-starter", "sqllogictest", "day_01_"),
+    integration(CORE_STARTER_PACKAGE, "indexes", "day_01_"),
+    integration(DATAFUSION_STARTER_PACKAGE, "sql", "day_01_"),
+    integration(DATAFUSION_STARTER_PACKAGE, "sqllogictest", "day_01_"),
 ];
 
 const DAY_02: &[TestCommand] = &[
-    integration("vector-core-starter", "indexes", "day_02_"),
-    integration("vector-datafusion-starter", "sqllogictest", "day_02_"),
+    integration(CORE_STARTER_PACKAGE, "indexes", "day_02_"),
+    integration(DATAFUSION_STARTER_PACKAGE, "sqllogictest", "day_02_"),
 ];
 
 const DAY_03: &[TestCommand] = &[
-    unit("vector-core-starter", "day_03_"),
-    integration("vector-core-starter", "indexes", "day_03_"),
-    integration("vector-datafusion-starter", "sqllogictest", "day_03_"),
+    unit(CORE_STARTER_PACKAGE, "day_03_"),
+    integration(CORE_STARTER_PACKAGE, "indexes", "day_03_"),
+    integration(DATAFUSION_STARTER_PACKAGE, "sqllogictest", "day_03_"),
 ];
 
 const DAY_04: &[TestCommand] = &[
-    unit("vector-core-starter", "day_04_"),
-    integration("vector-core-starter", "indexes", "day_04_"),
-    integration("vector-datafusion-starter", "sql", "day_04_"),
-    integration("vector-datafusion-starter", "sqllogictest", "day_04_"),
+    unit(CORE_STARTER_PACKAGE, "day_04_"),
+    integration(CORE_STARTER_PACKAGE, "indexes", "day_04_"),
+    integration(DATAFUSION_STARTER_PACKAGE, "sql", "day_04_"),
+    integration(DATAFUSION_STARTER_PACKAGE, "sqllogictest", "day_04_"),
 ];
 
 const DAY_05: &[TestCommand] = &[
-    integration("vector-core-starter", "indexes", "day_05_"),
-    integration("vector-datafusion-starter", "sql", "day_05_"),
-    integration("vector-datafusion-starter", "sqllogictest", "day_05_"),
+    integration(CORE_STARTER_PACKAGE, "indexes", "day_05_"),
+    integration(DATAFUSION_STARTER_PACKAGE, "sql", "day_05_"),
+    integration(DATAFUSION_STARTER_PACKAGE, "sqllogictest", "day_05_"),
 ];
 
 const DAY_06: &[TestCommand] = &[
-    all_tests("vector-benchmark-support"),
-    integration("vector-core-starter", "indexes", "day_06_"),
-    example("vector-core-starter", "recall", "day_06_"),
-    integration("vector-core-starter", "sift_smoke", "day_06_"),
+    all_tests(BENCHMARK_SUPPORT_PACKAGE),
+    integration(CORE_STARTER_PACKAGE, "indexes", "day_06_"),
+    example(CORE_STARTER_PACKAGE, "recall", "day_06_"),
+    integration(CORE_STARTER_PACKAGE, "sift_smoke", "day_06_"),
 ];
 
 const fn integration(

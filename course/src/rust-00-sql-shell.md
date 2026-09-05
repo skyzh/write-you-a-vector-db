@@ -6,7 +6,7 @@ Before you implement the table adapter or optimizer, use the supplied system onc
 ordinary in-memory table, run one nearest-neighbor query, attach an index to its vector column, and see the physical plan
 change while the SQL result stays the same.
 
-This tour uses the completed `vector-datafusion` example. You do not need to read or modify its source. Your own work begins
+This tour uses the completed `vector-db-from-scratch-datafusion` example. You do not need to read or modify its source. Your own work begins
 on Day 1.
 
 ## Launch the Supplied Shell
@@ -14,7 +14,7 @@ on Day 1.
 For an interactive run, start from the repository root:
 
 ```sh
-cargo run -p vector-datafusion --example sql
+cargo run -p vector-db-from-scratch-datafusion --example sql
 ```
 
 The supplied DataFusion CLI starts with an empty course session and accepts semicolon-terminated SQL, including statements
@@ -22,7 +22,7 @@ that span multiple lines. For a repeatable first run from the repository root, p
 terminal instead of entering the statements interactively:
 
 ```sh
-cargo run -p vector-datafusion --example sql <<'SQL'
+cargo run -p vector-db-from-scratch-datafusion --example sql <<'SQL'
 CREATE TABLE points (id BIGINT NOT NULL, payload VARCHAR NOT NULL, embedding REAL[3] NOT NULL);
 INSERT INTO points VALUES (1, 'one', [1.0, 0.0, 0.0]), (2, 'two', [0.9, 0.1, 0.0]), (3, 'three', [0.0, 1.0, 0.0]), (4, 'four', [-1.0, 0.0, 0.0]), (5, 'five', [0.0, 0.0, 1.0]);
 EXPLAIN SELECT id, payload FROM points ORDER BY cosine_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 3;

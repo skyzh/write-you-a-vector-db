@@ -1,15 +1,18 @@
 [package]
-name = "vector-datafusion-starter"
-version = "0.1.0"
+name = "vector-db-from-scratch-datafusion-starter"
+version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+
+[lib]
+name = "vector_datafusion_starter"
 
 [dependencies]
 async-trait.workspace = true
 datafusion.workspace = true
 tokio.workspace = true
-vector-core = { package = "vector-core-starter", path = "../core" }
+vector-core.workspace = true
 
 [dev-dependencies]
 sqllogictest.workspace = true

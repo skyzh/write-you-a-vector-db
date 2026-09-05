@@ -13,7 +13,7 @@ Day 3 ended with one five-row table and one cosine-distance query running throug
 repository root, run that supplied comparison again:
 
 ```sh
-cargo run -p vector-datafusion-starter --example nsw_sql
+cargo run -p vector-db-from-scratch-datafusion-starter --example nsw_sql
 ```
 
 The second plan contains `index=nsw`, and both indexes return:
@@ -74,7 +74,7 @@ handoff, while layer zero will retain multiple candidates for top-k output.
 Run the focused helper test:
 
 ```sh
-cargo test -p vector-core-starter --lib \
+cargo test -p vector-db-from-scratch-core-starter --lib \
   graph_tests::day_04_greedy_search_moves_on_public_tie_order_and_respects_bounds -- --exact
 ```
 
@@ -133,7 +133,7 @@ dataset ordinals; the supplied DataFusion adapter maps those ordinals through it
 Run the construction test:
 
 ```sh
-cargo test -p vector-core-starter --test indexes \
+cargo test -p vector-db-from-scratch-core-starter --test indexes \
   day_04_hnsw_rejects_invalid_configuration_and_builds_seeded_nested_layers -- --exact
 ```
 
@@ -175,7 +175,7 @@ The `.max(k)` floor separates the requested result count from the exploration hi
 Run the query test:
 
 ```sh
-cargo test -p vector-core-starter --test indexes \
+cargo test -p vector-db-from-scratch-core-starter --test indexes \
   day_04_hnsw_search_validates_widens_and_recovers_neighbors -- --exact
 ```
 
@@ -188,13 +188,13 @@ datasets or search budgets.
 First confirm that the unchanged Day 1 adapter can select the completed HNSW index:
 
 ```sh
-cargo test -p vector-datafusion-starter --test sql day_04_hnsw_is_visible_in_explain
+cargo test -p vector-db-from-scratch-datafusion-starter --test sql day_04_hnsw_is_visible_in_explain
 ```
 
 Then run the self-contained Day 4 SQLLogicTest:
 
 ```sh
-cargo test -p vector-datafusion-starter --test sqllogictest day_04_hnsw_sql -- --exact
+cargo test -p vector-db-from-scratch-datafusion-starter --test sqllogictest day_04_hnsw_sql -- --exact
 ```
 
 The fixture creates and populates its own table, checks the exact plan, attaches an HNSW index, and checks the changed

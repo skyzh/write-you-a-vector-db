@@ -16,9 +16,9 @@ generated_dir="$(mktemp -d)"
 trap 'rm -rf "$generated_dir"' EXIT
 
 # mdBook rewrites every page, so filesystem-derived lastmod values are unstable.
-static-sitemap-cli -b https://skyzh.github.io/write-you-a-vector-db -r book -f xml -o \
+static-sitemap-cli -b https://skyzh.github.io/vector-db-from-scratch -r book -f xml -o \
   | sed '/<lastmod>/d' > "$generated_dir/sitemap.xml"
-static-sitemap-cli -b https://skyzh.github.io/write-you-a-vector-db -r book -f txt -o > "$generated_dir/sitemap.txt"
+static-sitemap-cli -b https://skyzh.github.io/vector-db-from-scratch -r book -f txt -o > "$generated_dir/sitemap.txt"
 
 if [[ "$mode" == "--check" ]]; then
   stale=0

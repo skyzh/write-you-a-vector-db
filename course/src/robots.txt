@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://skyzh.github.io/write-you-a-vector-db/sitemap.xml
+Sitemap: https://skyzh.github.io/vector-db-from-scratch/sitemap.xml

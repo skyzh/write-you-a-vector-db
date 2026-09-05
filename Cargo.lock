@@ -4555,26 +4555,26 @@ dependencies = [
 ]
 
 [[package]]
-name = "vector-benchmark-support"
-version = "0.1.0"
+name = "vector-db-from-scratch-benchmark-support"
+version = "0.2.0-alpha.1"
 
 [[package]]
-name = "vector-core"
-version = "0.1.0"
+name = "vector-db-from-scratch-core"
+version = "0.2.0-alpha.1"
 dependencies = [
- "vector-benchmark-support",
+ "vector-db-from-scratch-benchmark-support",
 ]
 
 [[package]]
-name = "vector-core-starter"
-version = "0.1.0"
+name = "vector-db-from-scratch-core-starter"
+version = "0.2.0-alpha.1"
 dependencies = [
- "vector-benchmark-support",
+ "vector-db-from-scratch-benchmark-support",
 ]
 
 [[package]]
-name = "vector-datafusion"
-version = "0.1.0"
+name = "vector-db-from-scratch-datafusion"
+version = "0.2.0-alpha.1"
 dependencies = [
  "async-trait",
  "datafusion",
@@ -4582,18 +4582,18 @@ dependencies = [
  "sqllogictest",
  "tokio",
  "url",
- "vector-core",
+ "vector-db-from-scratch-core",
 ]
 
 [[package]]
-name = "vector-datafusion-starter"
-version = "0.1.0"
+name = "vector-db-from-scratch-datafusion-starter"
+version = "0.2.0-alpha.1"
 dependencies = [
  "async-trait",
  "datafusion",
  "sqllogictest",
  "tokio",
- "vector-core-starter",
+ "vector-db-from-scratch-core-starter",
 ]
 
 [[package]]
@@ -4900,7 +4900,7 @@ checksum = "66fee0b777b0f5ac1c69bb06d361268faafa61cd4682ae064a171c16c433e9e4"
 
 [[package]]
 name = "xtask"
-version = "0.1.0"
+version = "0.2.0-alpha.1"
 
 [[package]]
 name = "yoke"

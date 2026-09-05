@@ -37,7 +37,7 @@ jobs:
           path: course/book/
   deploy:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.repository == 'skyzh/write-you-a-vector-db'
+    if: github.event_name == 'push' && github.repository == 'skyzh/vector-db-from-scratch'
     # Add a dependency to the build job
     needs: build
     # Deploy to the github-pages environment

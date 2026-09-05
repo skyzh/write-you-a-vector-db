@@ -13,6 +13,7 @@ resolver = "2"
 edition = "2024"
 license = "Apache-2.0"
 rust-version = "1.88"
+version = "0.2.0-alpha.1"
 
 [workspace.dependencies]
 async-trait = "=0.1.91"
@@ -21,7 +22,9 @@ datafusion-cli = "=54.1.0"
 sqllogictest = "=0.29.1"
 tokio = { version = "=1.53.1", features = ["macros", "rt-multi-thread"] }
 url = "=2.5.8"
-vector-benchmark-support = { path = "vector-db-benchmark-support" }
+vector-db-from-scratch-benchmark-support = { path = "vector-db-benchmark-support", version = "0.2.0-alpha.1" }
+vector-db-from-scratch-core = { path = "vector-db/core", version = "0.2.0-alpha.1" }
+vector-core = { package = "vector-db-from-scratch-core-starter", path = "vector-db-starter/core", version = "0.2.0-alpha.1" }
 
 [workspace.lints.rust]
 unsafe_code = "forbid"

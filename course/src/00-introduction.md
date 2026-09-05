@@ -1,8 +1,8 @@
 # Build Vector Search Inside a SQL Database
 
-![Write You a Vector Database — Build vector search, then use it from SQL](vectordb-social.png)
+![Vector Database from Scratch — Build vector search, then use it from SQL](vectordb-social.png)
 
-Write You a Vector Database is a short hands-on course for systems and backend engineers. You will build a small in-memory
+Vector Database from Scratch is a short hands-on course for systems and backend engineers. You will build a small in-memory
 vector database in Rust, start by running exact nearest-neighbor queries, and then add approximate indexes. The system will
 answer SQL top-k queries through DataFusion and make the tradeoff between recall, latency, and memory visible.
 
@@ -89,7 +89,7 @@ recall and latency fields describe the same data, queries, Euclidean metric, and
 
 ## Community
 
-Join skyzh's Discord server to study with the write-you-a-vector-db community.
+Join skyzh's Discord server to study with the Vector Database from Scratch community.
 
 [![Join skyzh's Discord Server](discord-badge.svg)](https://skyzh.dev/join/discord)
 
