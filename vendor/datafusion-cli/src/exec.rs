@@ -71,9 +71,9 @@ pub async fn exec_from_lines(
     let dialect = dialect_from_str(dialect_name)
         .ok_or_else(|| plan_datafusion_err!("Unsupported SQL dialect: {dialect_name}"))?;
 
-    for line in reader.lines() {
+    for (line_number, line) in reader.lines().enumerate() {
         match line {
-            Ok(line) if line.starts_with("#!") => {
+            Ok(line) if line_number == 0 && line.starts_with("#!") => {
                 continue;
             }
             Ok(line) => {

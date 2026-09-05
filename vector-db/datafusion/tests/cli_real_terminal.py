@@ -140,6 +140,13 @@ def main() -> None:
         dollar_script.write("SELECT $$kept;as;text$$ AS dollar_quoted;\n")
         dollar_script.write("SELECT 60 AS after_dollar;\n")
         dollar_script_path = dollar_script.name
+    with tempfile.NamedTemporaryFile("w", suffix=".sql", delete=False) as shebang_script:
+        shebang_script.write("#!/usr/bin/env datafusion-cli\n")
+        shebang_script.write("SELECT 61 AS after_first_line_shebang;\n")
+        shebang_script.write("/* open block comment\n")
+        shebang_script.write("#! */\n")
+        shebang_script.write("SELECT 62 AS after_shebang_marker_close;\n")
+        shebang_script_path = shebang_script.name
     with tempfile.NamedTemporaryFile("wb", suffix=".sql", delete=False) as invalid_script:
         invalid_script.write(b"SELECT 1;\xff\n")
         invalid_script_path = invalid_script.name
@@ -162,14 +169,16 @@ def main() -> None:
         terminal.wait_for_prompts(7)
         terminal.send(f"\\i {dollar_script_path}\n")
         terminal.wait_for_prompts(8)
-        terminal.send(f"\\i {invalid_script_path}\n")
+        terminal.send(f"\\i {shebang_script_path}\n")
         terminal.wait_for_prompts(9)
-        terminal.send("SELECT 43 AS continued_after_decode_error;\n")
+        terminal.send(f"\\i {invalid_script_path}\n")
         terminal.wait_for_prompts(10)
-        terminal.send(f"\\i {missing_script_path}\n")
+        terminal.send("SELECT 43 AS continued_after_decode_error;\n")
         terminal.wait_for_prompts(11)
-        terminal.send("SELECT 44 AS continued_after_open_error;\n")
+        terminal.send(f"\\i {missing_script_path}\n")
         terminal.wait_for_prompts(12)
+        terminal.send("SELECT 44 AS continued_after_open_error;\n")
+        terminal.wait_for_prompts(13)
         transcript = terminal.finish()
 
         if "Output format is Json." not in transcript:
@@ -191,6 +200,8 @@ def main() -> None:
         assert_json_value(transcript, "before_dollar", 59)
         assert_json_string(transcript, "dollar_quoted", "kept;as;text")
         assert_json_value(transcript, "after_dollar", 60)
+        assert_json_value(transcript, "after_first_line_shebang", 61)
+        assert_json_value(transcript, "after_shebang_marker_close", 62)
         if "ParserError" in transcript or "TokenizerError" in transcript:
             raise AssertionError(f"block comment was split as SQL; transcript:\n{transcript}")
         if "stream did not contain valid UTF-8" not in transcript:
@@ -216,6 +227,7 @@ def main() -> None:
         os.unlink(inline_script_path)
         os.unlink(dash_close_script_path)
         os.unlink(dollar_script_path)
+        os.unlink(shebang_script_path)
         os.unlink(invalid_script_path)
 
 
