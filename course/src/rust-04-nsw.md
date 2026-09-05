@@ -121,7 +121,7 @@ Run only this checkpoint's supplied test:
 
 ```sh
 cargo test -p vector-core-starter \
-  graph_tests::search_layer_respects_bounds_and_expands_equal_frontier -- --exact
+  graph_tests::day_03_search_layer_respects_bounds_and_expands_equal_frontier -- --exact
 ```
 
 Before the implementation it reaches the Chapter 3 traversal TODO. Afterward it checks allowed rows, disconnected
@@ -150,7 +150,7 @@ Run the private helper test:
 
 ```sh
 cargo test -p vector-core-starter \
-  graph_tests::prune_neighbors_is_deterministic_and_bounded -- --exact
+  graph_tests::day_03_prune_neighbors_is_deterministic_and_bounded -- --exact
 ```
 
 Its direct fixture is self-free and isolates deduplication, ordering, tie-breaking, and the cap. The graph builder—not

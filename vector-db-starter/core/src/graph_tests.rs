@@ -6,7 +6,7 @@ fn rows(neighbors: &[crate::Neighbor]) -> Vec<usize> {
 }
 
 #[test]
-fn search_layer_respects_bounds_and_expands_equal_frontier() {
+fn day_03_search_layer_respects_bounds_and_expands_equal_frontier() {
     let dataset =
         Dataset::try_new(vec![vec![0.0], vec![1.0], vec![2.0], vec![8.0], vec![9.0]]).unwrap();
     let adjacency = vec![vec![1], vec![0, 2], vec![1], vec![4], vec![3]];
@@ -31,7 +31,7 @@ fn search_layer_respects_bounds_and_expands_equal_frontier() {
 }
 
 #[test]
-fn prune_neighbors_is_deterministic_and_bounded() {
+fn day_03_prune_neighbors_is_deterministic_and_bounded() {
     let dataset = Dataset::try_new(vec![vec![0.0], vec![-1.0], vec![1.0], vec![4.0]]).unwrap();
     let mut neighbors = vec![2, 1, 1, 3];
 
@@ -41,7 +41,7 @@ fn prune_neighbors_is_deterministic_and_bounded() {
 }
 
 #[test]
-fn greedy_search_moves_on_public_tie_order_and_respects_bounds() {
+fn day_04_greedy_search_moves_on_public_tie_order_and_respects_bounds() {
     let dataset = Dataset::try_new(vec![vec![8.0], vec![-1.0], vec![1.0], vec![0.0]]).unwrap();
     let adjacency = vec![vec![], vec![2, 3], vec![1, 3], vec![1, 2]];
 

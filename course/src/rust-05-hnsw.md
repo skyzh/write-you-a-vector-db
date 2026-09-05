@@ -75,7 +75,7 @@ Run the focused helper test:
 
 ```sh
 cargo test -p vector-core-starter --lib \
-  graph_tests::greedy_search_moves_on_public_tie_order_and_respects_bounds -- --exact
+  graph_tests::day_04_greedy_search_moves_on_public_tie_order_and_respects_bounds -- --exact
 ```
 
 Its fixture begins at row 2. An equal-distance row 1 wins by row offset, while a closer row 3 is first excluded and then

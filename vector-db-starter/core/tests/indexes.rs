@@ -691,7 +691,7 @@ fn day_04_hnsw_rejects_invalid_configuration_and_builds_seeded_nested_layers() {
 }
 
 #[test]
-fn day_04_randomized_indexes_preserve_invariants_across_seed_trajectories() {
+fn day_06_randomized_indexes_preserve_invariants_across_seed_trajectories() {
     let seeds = [7, 0x5eed, 0x9e37_79b9_7f4a_7c15];
     let dataset = line_dataset(96);
     let exact = FlatIndex::try_new(dataset.clone(), Metric::Euclidean).unwrap();

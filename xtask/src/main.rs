@@ -24,11 +24,13 @@ const DAY_02: &[TestCommand] = &[
 ];
 
 const DAY_03: &[TestCommand] = &[
+    unit("vector-core-starter", "day_03_"),
     integration("vector-core-starter", "indexes", "day_03_"),
     integration("vector-datafusion-starter", "sqllogictest", "day_03_"),
 ];
 
 const DAY_04: &[TestCommand] = &[
+    unit("vector-core-starter", "day_04_"),
     integration("vector-core-starter", "indexes", "day_04_"),
     integration("vector-datafusion-starter", "sql", "day_04_"),
     integration("vector-datafusion-starter", "sqllogictest", "day_04_"),
@@ -42,6 +44,7 @@ const DAY_05: &[TestCommand] = &[
 
 const DAY_06: &[TestCommand] = &[
     all_tests("vector-benchmark-support"),
+    integration("vector-core-starter", "indexes", "day_06_"),
     example("vector-core-starter", "recall", "day_06_"),
     integration("vector-core-starter", "sift_smoke", "day_06_"),
 ];
@@ -74,6 +77,15 @@ const fn all_tests(package: &'static str) -> TestCommand {
         target_kind: "--lib",
         target: "",
         filter: None,
+    }
+}
+
+const fn unit(package: &'static str, filter: &'static str) -> TestCommand {
+    TestCommand {
+        package,
+        target_kind: "--lib",
+        target: "",
+        filter: Some(filter),
     }
 }
 
@@ -191,6 +203,6 @@ mod tests {
             test.filter
                 .is_none_or(|filter| !filter.starts_with("day_05_"))
         }));
-        assert_eq!(through_day_four.len(), 10);
+        assert_eq!(through_day_four.len(), 12);
     }
 }
