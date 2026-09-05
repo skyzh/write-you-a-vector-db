@@ -23,11 +23,11 @@ Your Chapter 5 starter already contains the five index implementations. Before o
 paths green from the repository root:
 
 ```sh
-cargo test -p vector-datafusion-starter --test sqllogictest day1_table_and_optimizer_sql -- --exact
-cargo test -p vector-datafusion-starter --test sqllogictest day2_ivfflat_sql -- --exact
-cargo test -p vector-datafusion-starter --test sqllogictest day3_nsw_sql -- --exact
-cargo test -p vector-datafusion-starter --test sqllogictest day4_hnsw_sql -- --exact
-cargo test -p vector-datafusion-starter --test sqllogictest day5_ivf_pq_sql -- --exact
+cargo test -p vector-datafusion-starter --test sqllogictest day_01_table_and_optimizer_sql -- --exact
+cargo test -p vector-datafusion-starter --test sqllogictest day_02_ivfflat_sql -- --exact
+cargo test -p vector-datafusion-starter --test sqllogictest day_03_nsw_sql -- --exact
+cargo test -p vector-datafusion-starter --test sqllogictest day_04_hnsw_sql -- --exact
+cargo test -p vector-datafusion-starter --test sqllogictest day_05_ivf_pq_sql -- --exact
 ```
 
 Now open:
@@ -140,7 +140,7 @@ Before moving to reporting, rerun the invariant gate that permits more than one 
 
 ```sh
 cargo test -p vector-core-starter --test indexes \
-  randomized_indexes_preserve_invariants_across_seed_trajectories -- --exact
+  day_04_randomized_indexes_preserve_invariants_across_seed_trajectories -- --exact
 ```
 
 A seed promises repeatability within your implementation. It does not require your IVFFlat centroids or HNSW level
@@ -238,10 +238,10 @@ For one narrower external-data check, the supplied ignored tests expose each ind
 
 ```sh
 SIFT1M_DIR=/absolute/path/to/sift1M \
-  cargo test -p vector-core-starter --test sift_smoke sift_ivf_pq_smoke -- --ignored --exact
+  cargo test -p vector-core-starter --test sift_smoke day_06_sift_ivf_pq_smoke -- --ignored --exact
 ```
 
-The analogous test names are `sift_flat_smoke`, `sift_ivf_flat_smoke`, `sift_nsw_smoke`, and `sift_hnsw_smoke`. These
+The analogous test names are `day_06_sift_flat_smoke`, `day_06_sift_ivf_flat_smoke`, `day_06_sift_nsw_smoke`, and `day_06_sift_hnsw_smoke`. These
 tests use the fixed smoke subset. Flat must match exact rank recall; approximate indexes must return ordered unique rows,
 monotonic rank recall, same-implementation repeatability where seeded, and a broad `R@100 >= 0.05` floor. That floor is
 a bug detector, not a production-quality target.
@@ -275,6 +275,17 @@ Record observed timings and rank recall only from a run you actually performed, 
 fixed configuration. Do not infer a universal fastest index, quality ranking, or latency threshold from this chapter.
 
 ## Chapter 6 Review
+
+Run the Day 6 focused gate, then the complete cumulative course:
+
+```sh
+cargo x test-day 6
+cargo x test-through 6
+```
+
+These commands compile but do not execute the ignored external-corpus SIFT1M
+tests. Use the explicit `SIFT1M_DIR=... --ignored --exact` command above when
+you have acquired the corpus.
 
 After the release run you chose completes, explain:
 

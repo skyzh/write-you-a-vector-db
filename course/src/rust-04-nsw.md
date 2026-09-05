@@ -176,7 +176,7 @@ Run its focused construction test:
 
 ```sh
 cargo test -p vector-core-starter --test indexes \
-  nsw_rejects_invalid_build_configuration_and_builds_a_bounded_reciprocal_graph -- --exact
+  day_03_nsw_rejects_invalid_build_configuration_and_builds_a_bounded_reciprocal_graph -- --exact
 ```
 
 This test owns stored-vector and configuration validation plus the built-graph invariants. It does not require
@@ -196,7 +196,7 @@ Run the query test:
 
 ```sh
 cargo test -p vector-core-starter --test indexes \
-  nsw_search_validates_widens_and_matches_exact_on_connected_fixture -- --exact
+  day_03_nsw_search_validates_widens_and_matches_exact_on_connected_fixture -- --exact
 ```
 
 It checks query validation, zero width, the `ef_search.max(k)` floor, ordering, and one connected high-width fixture that
@@ -237,13 +237,20 @@ and final sort. Equal rows here do not establish general recall, work, or perfor
 Keep the separate five-result SQL fixture green:
 
 ```sh
-cargo test -p vector-datafusion-starter --test sqllogictest day3_nsw_sql -- --exact
+cargo test -p vector-datafusion-starter --test sqllogictest day_03_nsw_sql -- --exact
 ```
 
 That SQLLogicTest uses a different eight-row fixture and `LIMIT 5`. It verifies `index=nsw`, the supplied final sort,
 and its own five expected rows. Unsupported SQL shapes continue to use the supplied exact path.
 
 ## Chapter 3 Review
+
+Run the Day 3 focused gate, then the cumulative course through Day 3:
+
+```sh
+cargo x test-day 3
+cargo x test-through 3
+```
 
 Choose one insertion and one query and explain:
 

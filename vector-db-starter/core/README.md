@@ -12,3 +12,6 @@ In the six Rust chapters, you will use this crate to:
 
 Start with the existing metric math, deterministic `FlatIndex`, and top-k
 helpers. Run commands from the repository-root Cargo workspace.
+
+At the end of Day `N`, run `cargo x test-day N` for the new public contract and
+`cargo x test-through N` for every learner day completed so far.

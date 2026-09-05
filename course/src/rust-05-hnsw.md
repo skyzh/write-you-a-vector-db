@@ -134,7 +134,7 @@ Run the construction test:
 
 ```sh
 cargo test -p vector-core-starter --test indexes \
-  hnsw_rejects_invalid_configuration_and_builds_seeded_nested_layers -- --exact
+  day_04_hnsw_rejects_invalid_configuration_and_builds_seeded_nested_layers -- --exact
 ```
 
 It checks invalid budgets, same-implementation repeatability, nested membership, degree caps, and the absence of duplicate
@@ -176,7 +176,7 @@ Run the query test:
 
 ```sh
 cargo test -p vector-core-starter --test indexes \
-  hnsw_search_validates_widens_and_recovers_neighbors -- --exact
+  day_04_hnsw_search_validates_widens_and_recovers_neighbors -- --exact
 ```
 
 It checks query validation, zero width, result ordering, the `ef_search.max(k)` floor, and one connected high-width
@@ -188,7 +188,7 @@ datasets or search budgets.
 Run the self-contained Chapter 4 SQLLogicTest:
 
 ```sh
-cargo test -p vector-datafusion-starter --test sqllogictest day4_hnsw_sql -- --exact
+cargo test -p vector-datafusion-starter --test sqllogictest day_04_hnsw_sql -- --exact
 ```
 
 The fixture creates and populates its own table, checks the exact plan, attaches an HNSW index, and checks the changed
@@ -217,21 +217,15 @@ rows without depending on mutable interactive-shell state.
 
 ## Check the Course Through Chapter 4
 
-Run the checks that stop before Chapter 5's IVF-PQ work:
+Run the Day 4 focused gate, then the cumulative course through Day 4:
 
 ```sh
-cargo test -p vector-core-starter --lib
-cargo test -p vector-core-starter --test indexes -- \
-  --skip ivf_pq \
-  --skip randomized_indexes_preserve_invariants_across_seed_trajectories
-cargo test -p vector-datafusion-starter --test sql -- --skip ivf_pq
-cargo test -p vector-datafusion-starter --test sqllogictest -- \
-  --skip day5_ivf_pq_sql
+cargo x test-day 4
+cargo x test-through 4
 ```
 
-The starter packages also contain the Chapter 5 IVF-PQ tests and a later five-index invariant test. Those tests construct
-the still-unfinished index in `pq.rs`. The named exclusions keep this gate cumulative through HNSW without treating
-future work as a Chapter 4 failure.
+The runner selects only the tests assigned through HNSW, so unfinished Day 5
+IVF-PQ work cannot turn this Day 4 gate red.
 
 ## Chapter 4 Review
 

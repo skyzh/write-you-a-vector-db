@@ -80,7 +80,7 @@ fn assert_quality(results: &[Vec<Neighbor>], workload: &Smoke, minimum_r100: f64
 
 #[test]
 #[ignore = "requires external SIFT1M data through SIFT1M_DIR"]
-fn sift_flat_smoke() {
+fn day_06_sift_flat_smoke() {
     let workload = smoke();
     let index = FlatIndex::try_new(workload.dataset.clone(), Metric::Euclidean).unwrap();
     assert_quality(&search_all(&index, &workload), &workload, 1.0);
@@ -88,7 +88,7 @@ fn sift_flat_smoke() {
 
 #[test]
 #[ignore = "requires external SIFT1M data through SIFT1M_DIR"]
-fn sift_ivf_flat_smoke() {
+fn day_06_sift_ivf_flat_smoke() {
     let workload = smoke();
     for seed in SEEDS {
         let config = IvfFlatConfig {
@@ -110,7 +110,7 @@ fn sift_ivf_flat_smoke() {
 
 #[test]
 #[ignore = "requires external SIFT1M data through SIFT1M_DIR"]
-fn sift_nsw_smoke() {
+fn day_06_sift_nsw_smoke() {
     let workload = smoke();
     let index = NswIndex::try_new(
         workload.dataset.clone(),
@@ -128,7 +128,7 @@ fn sift_nsw_smoke() {
 
 #[test]
 #[ignore = "requires external SIFT1M data through SIFT1M_DIR"]
-fn sift_hnsw_smoke() {
+fn day_06_sift_hnsw_smoke() {
     let workload = smoke();
     for seed in SEEDS {
         let config = HnswConfig {
@@ -150,7 +150,7 @@ fn sift_hnsw_smoke() {
 
 #[test]
 #[ignore = "requires external SIFT1M data through SIFT1M_DIR"]
-fn sift_ivf_pq_smoke() {
+fn day_06_sift_ivf_pq_smoke() {
     let workload = smoke();
     for seed in SEEDS {
         let config = IvfPqConfig {

@@ -57,7 +57,7 @@ cargo check -p vector-datafusion-starter
 ```
 
 The focused tests initially stop at `todo!` calls. Each chapter names the exact tests that should pass before you move
-on.
+on, then closes with `cargo x test-day N` for that day's work and `cargo x test-through N` for the cumulative course.
 
 ## One Query, Two Plans
 

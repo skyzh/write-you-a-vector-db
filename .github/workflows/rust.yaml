@@ -21,3 +21,5 @@ jobs:
         run: cargo fmt --all -- --check
       - name: run clippy
         run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - name: check day-based learner test runner
+        run: cargo test -p xtask --locked

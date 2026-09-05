@@ -146,7 +146,7 @@ async fn explain(context: &SessionContext, sql: &str) -> String {
 }
 
 #[tokio::test]
-async fn compatible_top_k_uses_vector_index_scan_and_keeps_sort() {
+async fn day_01_compatible_top_k_uses_vector_index_scan_and_keeps_sort() {
     let context = context(Metric::Cosine, IndexConfig::Flat).await;
     let sql = "SELECT id, payload FROM points \
                ORDER BY cosine_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 2";
@@ -166,7 +166,7 @@ async fn compatible_top_k_uses_vector_index_scan_and_keeps_sort() {
 }
 
 #[tokio::test]
-async fn ordered_session_mode_allows_sort_elision() {
+async fn day_01_ordered_session_mode_allows_sort_elision() {
     let context = context(Metric::Cosine, IndexConfig::Flat).await;
     context
         .sql("SET vector_search.ordered = true")
@@ -181,7 +181,7 @@ async fn ordered_session_mode_allows_sort_elision() {
 }
 
 #[tokio::test]
-async fn filter_keeps_datafusion_exact_fallback() {
+async fn day_01_filter_keeps_datafusion_exact_fallback() {
     let context = context(Metric::Cosine, IndexConfig::Flat).await;
     let sql = "SELECT id FROM points WHERE payload = 'north' \
                ORDER BY cosine_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 1";
@@ -192,7 +192,7 @@ async fn filter_keeps_datafusion_exact_fallback() {
 }
 
 #[tokio::test]
-async fn unsafe_sort_shapes_are_not_lowered() {
+async fn day_01_unsafe_sort_shapes_are_not_lowered() {
     let context = context(Metric::Cosine, IndexConfig::Flat).await;
     for sql in [
         "SELECT id FROM points ORDER BY array_distance(embedding, [1.0, 0.0, 0.0]) LIMIT 2",
@@ -207,7 +207,7 @@ async fn unsafe_sort_shapes_are_not_lowered() {
 }
 
 #[tokio::test]
-async fn hnsw_is_visible_in_explain() {
+async fn day_04_hnsw_is_visible_in_explain() {
     let context = context(
         Metric::Cosine,
         IndexConfig::Hnsw(HnswConfig {
@@ -230,7 +230,7 @@ async fn hnsw_is_visible_in_explain() {
 }
 
 #[tokio::test]
-async fn ivf_pq_is_visible_in_explain() {
+async fn day_05_ivf_pq_is_visible_in_explain() {
     let context = context(
         Metric::Euclidean,
         IndexConfig::IvfPq(IvfPqConfig {
@@ -255,7 +255,7 @@ async fn ivf_pq_is_visible_in_explain() {
 }
 
 #[tokio::test]
-async fn dot_product_requires_descending_order() {
+async fn day_01_dot_product_requires_descending_order() {
     let context = context(Metric::Dot, IndexConfig::Flat).await;
     let sql = "SELECT id FROM points \
                ORDER BY inner_product(embedding, [1.0, 0.0, 0.0]) DESC LIMIT 2";
@@ -271,7 +271,7 @@ async fn dot_product_requires_descending_order() {
 }
 
 #[tokio::test]
-async fn rich_schema_matches_only_the_configured_vector_column() {
+async fn day_01_rich_schema_matches_only_the_configured_vector_column() {
     let context = context_with_batches(
         "documents",
         rich_schema_batches(),
@@ -343,7 +343,7 @@ async fn rich_schema_matches_only_the_configured_vector_column() {
 }
 
 #[tokio::test]
-async fn rich_schema_rejects_a_missing_selected_column() {
+async fn day_01_rich_schema_rejects_a_missing_selected_column() {
     let error = attachment_result(rich_schema_batches(), "missing_embedding")
         .await
         .unwrap_err();
@@ -355,7 +355,7 @@ async fn rich_schema_rejects_a_missing_selected_column() {
 }
 
 #[tokio::test]
-async fn rich_schema_rejects_a_scalar_selected_column() {
+async fn day_01_rich_schema_rejects_a_scalar_selected_column() {
     let error = attachment_result(rich_schema_batches(), "price")
         .await
         .unwrap_err();
@@ -367,7 +367,7 @@ async fn rich_schema_rejects_a_scalar_selected_column() {
 }
 
 #[tokio::test]
-async fn rich_schema_rejects_a_zero_width_selected_column() {
+async fn day_01_rich_schema_rejects_a_zero_width_selected_column() {
     let item = Arc::new(Field::new("item", DataType::Float32, false));
     let schema = Arc::new(Schema::new(vec![Field::new(
         "text_embedding",
@@ -390,7 +390,7 @@ async fn rich_schema_rejects_a_zero_width_selected_column() {
 }
 
 #[tokio::test]
-async fn rich_schema_rejects_a_null_selected_value() {
+async fn day_01_rich_schema_rejects_a_null_selected_value() {
     let item = Arc::new(Field::new("item", DataType::Float32, false));
     let schema = Arc::new(Schema::new(vec![Field::new(
         "text_embedding",

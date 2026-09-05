@@ -10,4 +10,5 @@ otherwise.
 - Do not change public APIs or tests to make an implementation pass.
 - Preserve deterministic tie-breaking and the validation behavior described by
   each chapter.
-- Run the focused tests listed at the end of each checkpoint before continuing.
+- Run the checkpoint's focused tests, then `cargo x test-day N` and
+  `cargo x test-through N`, before continuing to the next day.

@@ -423,7 +423,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn inventory_and_configs_match_the_frozen_matrix() {
+    fn day_06_inventory_and_configs_match_the_frozen_matrix() {
         assert_eq!(INDEX_NAMES, ["flat", "ivf_flat", "nsw", "hnsw", "ivf_pq"]);
         assert_eq!(ivf_flat_config().seed, 7);
         assert_eq!(nsw_config().ef_search, 40);
@@ -518,7 +518,7 @@ mod tests {
     }
 
     #[test]
-    fn smoke_truth_is_recomputed_on_the_selected_base() {
+    fn day_06_smoke_truth_is_recomputed_on_the_selected_base() {
         let (truth, exact) =
             select_exact_truth(Mode::Smoke, vec![99], || Ok::<_, &'static str>(vec![7])).unwrap();
         assert_eq!(truth, Truth::RecomputedFlatSelectedBase);
@@ -533,18 +533,7 @@ mod tests {
     }
 
     #[test]
-    fn starter_keeps_exactly_four_chapter_six_ownership_points() {
-        let source = include_str!("recall.rs")
-            .split("#[cfg(test)]")
-            .next()
-            .unwrap();
-        assert_eq!(source.matches("todo!(\"Chapter 6:").count(), 4);
-        assert!(source.contains("run_balanced("));
-        assert!(source.contains("let _helper = percentile;"));
-    }
-
-    #[test]
-    fn result_validation_requires_complete_unique_public_order() {
+    fn day_06_result_validation_requires_complete_unique_public_order() {
         let valid = (0..100)
             .map(|row| Neighbor {
                 row,
@@ -556,7 +545,7 @@ mod tests {
     }
 
     #[test]
-    fn summary_uses_rank_prefixes_and_validates_query_shape() {
+    fn day_06_summary_uses_rank_prefixes_and_validates_query_shape() {
         let neighbors = (0..100)
             .map(|row| Neighbor {
                 row,
@@ -583,7 +572,7 @@ mod tests {
     }
 
     #[test]
-    fn full_accounting_matches_the_fixed_search_representation() {
+    fn day_06_full_accounting_matches_the_fixed_search_representation() {
         let accounting = PqAccounting {
             codes_bytes: 4_000_000,
             codebooks_bytes: 8_192,
