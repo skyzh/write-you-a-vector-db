@@ -18,10 +18,10 @@ contracts, query planning, and execution boundary that make SQL vector search wo
 
 ## Course Status
 
-The [Rust course](https://skyzh.github.io/write-you-a-vector-db/rust-01-overview) has six required chapters: an
+The [Rust course](https://skyzh.github.io/write-you-a-vector-db/rust-01-overview) has six required days: an
 Arrow-backed in-memory table and safe DataFusion optimizer rule, IVFFlat, NSW, HNSW, residual IVF-PQ, and a final shared
-recall and latency benchmark. The implementation chapters include starter code, focused tests, and separate completed
-reference crates. Chapters 1–5 include self-contained SQLLogicTests; Chapter 5 also includes a focused planner/EXPLAIN
+recall and latency benchmark. The implementation days include starter code, focused tests, and separate completed
+reference crates. Days 1–5 include self-contained SQLLogicTests; Day 5 also includes a focused planner/EXPLAIN
 test.
 
 The final benchmark compares Flat, IVFFlat, NSW, HNSW, and IVF-PQ on the external SIFT1M corpus. All five indexes share
@@ -43,7 +43,7 @@ vector-db-benchmark-support/
                 shared benchmark fixtures and reporting support
 ```
 
-Before implementing Chapter 1, launch the supplied product shell from the repository root:
+Before implementing Day 1, launch the supplied product shell from the repository root:
 
 ```shell
 cargo run -p vector-datafusion --example sql
@@ -69,7 +69,7 @@ cargo run --release -p vector-core --example recall -- /absolute/path/to/sift1M
 
 The workspace uses the stable Rust channel from `rust-toolchain.toml` and pins course dependencies in `Cargo.lock`.
 
-Each chapter ends with two day-based learner commands. The first runs only the
+Each day ends with two learner commands. The first runs only the
 new tests for that day; the second reruns every learner day through it:
 
 ```shell
@@ -79,7 +79,7 @@ cargo x test-through 1
 
 Replace `1` with the current day number, from 1 through 6. The Day 6 SIFT1M
 tests remain ignored unless you explicitly provide the external corpus and use
-their chapter commands.
+the Day 6 commands.
 
 The original [C++/BusTub edition](https://skyzh.github.io/write-you-a-vector-db/cpp-01-overview) is deprecated and
 unmaintained. It remains online for existing readers but is no longer recommended for new learners.

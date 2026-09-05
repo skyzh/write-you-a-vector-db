@@ -83,7 +83,7 @@ impl VectorRow {
     }
 }
 
-/// A vector index attached outside one ordinary registered `MemTable`.
+/// A vector index attached to one ordinary registered `MemTable`.
 #[derive(Debug, Clone)]
 pub struct VectorIndexAttachment {
     snapshot: Arc<VectorIndexSnapshot>,
@@ -177,7 +177,7 @@ impl IndexedSnapshot {
 
 /// Build the course's three-column example as an ordinary DataFusion `MemTable`.
 pub fn vector_mem_table(_rows: Vec<VectorRow>) -> DataFusionResult<Arc<MemTable>> {
-    todo!("Chapter 1: validate the simple rows and build the introductory Arrow MemTable")
+    todo!("Day 1: validate the simple rows and build the introductory Arrow MemTable")
 }
 
 impl VectorIndexAttachment {
@@ -196,7 +196,7 @@ impl VectorIndexAttachment {
         _index: IndexConfig,
     ) -> DataFusionResult<Self> {
         todo!(
-            "Chapter 1: bind the registered MemTable, selected vector column, snapshot rows, and core index"
+            "Day 1: bind the registered MemTable, selected vector column, snapshot rows, and core index"
         )
     }
 
@@ -257,9 +257,7 @@ impl VectorIndexOptimizer {
         _plan: Arc<dyn ExecutionPlan>,
         _config: &datafusion::common::config::ConfigOptions,
     ) -> DataFusionResult<Transformed<Arc<dyn ExecutionPlan>>> {
-        todo!(
-            "Chapter 1: replace only a matching MemTable top-k sort with the attached vector index"
-        )
+        todo!("Day 1: replace only a matching MemTable top-k sort with the attached vector index")
     }
 }
 
@@ -416,7 +414,7 @@ impl VectorIndexScanExec {
     }
 
     fn selected_rows(&self) -> DataFusionResult<Vec<RowId>> {
-        todo!("Chapter 1: search the selected index and validate every returned snapshot row id")
+        todo!("Day 1: search the selected index and validate every returned snapshot row id")
     }
 
     fn output_batch(&self, rows: &[RowId]) -> DataFusionResult<RecordBatch> {
@@ -489,7 +487,7 @@ impl ExecutionPlan for VectorIndexScanExec {
     }
 
     fn with_fetch(&self, _fetch: Option<usize>) -> Option<Arc<dyn ExecutionPlan>> {
-        todo!("Chapter 1: preserve DataFusion's final sort unless ordered index output is enabled")
+        todo!("Day 1: preserve DataFusion's final sort unless ordered index output is enabled")
     }
 
     fn fetch(&self) -> Option<usize> {
@@ -519,7 +517,7 @@ fn match_vector_order(
     _vector_column: &str,
 ) -> Option<Vec<f32>> {
     todo!(
-        "Chapter 1: match function, direction, configured vector column, literal, metric, and dimension"
+        "Day 1: match function, direction, configured vector column, literal, metric, and dimension"
     )
 }
 

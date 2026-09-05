@@ -9,7 +9,7 @@ pub(crate) fn search_layer(
     _ef: usize,
     _allowed_rows: usize,
 ) -> Vec<Neighbor> {
-    todo!("Chapter 3: traverse the graph with separate candidate and result frontiers")
+    todo!("Day 3: traverse the graph with separate candidate and result frontiers")
 }
 
 pub(crate) fn greedy_search(
@@ -20,7 +20,7 @@ pub(crate) fn greedy_search(
     _entry: usize,
     _allowed_rows: usize,
 ) -> usize {
-    todo!("Chapter 4: greedily descend one HNSW layer")
+    todo!("Day 4: greedily descend one HNSW layer")
 }
 
 pub(crate) fn prune_neighbors(
@@ -30,5 +30,5 @@ pub(crate) fn prune_neighbors(
     _neighbors: &mut Vec<usize>,
     _max_connections: usize,
 ) {
-    todo!("Chapter 3: retain the closest deterministic neighbor set")
+    todo!("Day 3: retain the closest deterministic neighbor set")
 }

@@ -2,7 +2,7 @@
 
 {{#include rust-in-progress.md}}
 
-> **Chapter 1**
+> **Day 1**
 >
 > Start from the two `*-starter` crates. Finish with ordinary Arrow tables, one
 > explicitly attached vector index, and a conservative DataFusion optimizer
@@ -10,7 +10,7 @@
 
 In the [product tour](./rust-00-sql-shell.md), you began with an empty session, created and populated `points`, then ran the
 supplied shell before and after attaching an index to `embedding`. The SQL and nearest rows stayed fixed while the physical
-leaf changed from `DataSourceExec` to `VectorIndexScanExec`. This chapter opens that path: you will build the Arrow table,
+leaf changed from `DataSourceExec` to `VectorIndexScanExec`. Day 1 opens that path: you will build the Arrow table,
 bind one selected vector field to an index, and make the optimizer choose the new scan only when the query is safe.
 
 Your first query uses the course's small three-column table:
@@ -40,12 +40,12 @@ SortExec: TopK(fetch=3), ...
   VectorIndexScanExec: index=flat, metric=Cosine, query_dim=3, fetch=Some(3), ordered=false
 ```
 
-Chapter 2 will put `index=ivf_flat` behind the same boundary.
+Day 2 will put `index=ivf_flat` behind the same boundary.
 
 ## From the Product Tour to Your First Checkpoint
 
 The product tour showed the complete path before asking you to build it. Keep
-these boundaries separate as you work through the chapter:
+these boundaries separate as you work through the day:
 
 | What you observed | What is supplied | What you implement |
 | --- | --- | --- |
@@ -60,8 +60,8 @@ vector-db-starter/core/src/dataset.rs
 vector-db-starter/datafusion/src/lib.rs
 ```
 
-The starter exposes the same public API as the reference but leaves the Chapter
-1 implementation points as TODOs. Metric math, the exact `FlatIndex`, shared
+The starter exposes the same public API as the reference but leaves the Day 1
+implementation points as TODOs. Metric math, the exact `FlatIndex`, shared
 snapshot/lookup scaffolding, examples, and tests are ready. IVFFlat, NSW, HNSW,
 and IVF-PQ remain later learner work. Do not modify public APIs or tests while
 completing the exercises.
@@ -139,9 +139,9 @@ let context = with_vector_indexes(&context, vec![attachment]);
 ```
 
 The supplied SQL session resolves each accepted `CREATE INDEX` target into this same attachment constructor. The bridge is
-already implemented; your Chapter 1 work is the attachment and execution path it calls.
+already implemented; your Day 1 work is the attachment and execution path it calls.
 
-The rich Chapter 1 test table deliberately puts ordinary scalar fields around
+The rich Day 1 test table deliberately puts ordinary scalar fields around
 two vector fields:
 
 ```text
@@ -277,7 +277,7 @@ The SQLLogicTest starts from an empty session: it creates and inserts the simple
 table, then attaches indexes to the selected columns. `text_embedding` reaches `VectorIndexScanExec`, while
 `image_embedding` stays on `DataSourceExec` and returns its different ranking.
 
-## Chapter 1 Review
+## Day 1 Review
 
 Run the Day 1 focused and cumulative gates:
 
@@ -286,18 +286,18 @@ cargo x test-day 1
 cargo x test-through 1
 ```
 
-After the core tests, `sql.rs`, and the Chapter 1 SQLLogicTest pass, explain:
+After the core tests, `sql.rs`, and the Day 1 SQLLogicTest pass, explain:
 
 - how the simple `VectorRow` helper becomes an ordinary `MemTable`;
 - why an attachment owns exactly one configured vector field;
 - how an index dataset ordinal resolves to a projected source row;
 - why the same-shaped image-vector query cannot use the text-vector index;
 - where DataFusion performs exact fallback and final ordering; and
-- why the supplied session rejects changes to an indexed table instead of letting its attachment become stale; and
+- why the supplied session rejects changes to an indexed table instead of letting its attachment become stale;
 - how later approximate indexes reuse this boundary without weakening it.
 
 IVFFlat implementation, filtered pushdown, joins, general DDL/catalog semantics,
-persistence, and disk row lookup remain outside this chapter. The product tour's
+persistence, and disk row lookup remain outside Day 1. The product tour's
 supplied bridge resolves an eligible in-memory table and selected vector column into the attachment path you implemented
 here. It can hold multiple distinct attachments, but it rejects mutation of an indexed table and does not provide
 persistence, automatic rebuilding, online maintenance, or a general catalog lifecycle.

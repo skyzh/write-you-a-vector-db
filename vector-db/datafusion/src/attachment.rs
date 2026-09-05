@@ -17,7 +17,7 @@ use vector_core::{Dataset, IndexConfig, Metric, VectorIndex};
 
 use crate::core_error;
 
-/// A vector index attached outside one ordinary registered `MemTable`.
+/// A vector index attached to one ordinary registered `MemTable`.
 #[derive(Debug, Clone)]
 pub struct VectorIndexAttachment {
     pub(crate) snapshot: Arc<VectorIndexSnapshot>,

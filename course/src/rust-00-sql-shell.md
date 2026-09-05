@@ -7,7 +7,7 @@ ordinary in-memory table, run one nearest-neighbor query, attach an index to its
 change while the SQL result stays the same.
 
 This tour uses the completed `vector-datafusion` example. You do not need to read or modify its source. Your own work begins
-in Chapter 1.
+on Day 1.
 
 ## Launch the Supplied Shell
 
@@ -95,7 +95,7 @@ or a general catalog lifecycle.
 can become visible atomically?
 
 That narrow boundary keeps the first experience concrete without turning the course into a parser or catalog project.
-Next, [Chapter 1](./rust-02-datafusion.md) opens the path you just used: you will build the Arrow table, attach one selected
+Next, [Day 1](./rust-02-datafusion.md) opens the path you just used: you will build the Arrow table, attach one selected
 vector field, and make the optimizer choose `VectorIndexScanExec` only when doing so is safe.
 
 {{#include copyright.md}}

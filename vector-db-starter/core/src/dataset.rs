@@ -10,7 +10,7 @@ pub struct Dataset {
 
 impl Dataset {
     pub fn try_new(_vectors: Vec<Vec<f32>>) -> Result<Self> {
-        todo!("Chapter 1: validate a non-empty, rectangular, finite dataset")
+        todo!("Day 1: validate a non-empty, rectangular, finite dataset")
     }
 
     pub fn len(&self) -> usize {
@@ -34,10 +34,10 @@ impl Dataset {
     }
 
     pub(crate) fn validate_for_metric(&self, _metric: Metric) -> Result<()> {
-        todo!("Chapter 1: reject zero-norm dataset rows for cosine distance")
+        todo!("Day 1: reject zero-norm dataset rows for cosine distance")
     }
 
     pub(crate) fn validate_query(&self, _query: &[f32], _metric: Metric) -> Result<()> {
-        todo!("Chapter 1: validate query dimension, finiteness, and cosine norm")
+        todo!("Day 1: validate query dimension, finiteness, and cosine norm")
     }
 }

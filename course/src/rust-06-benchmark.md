@@ -2,14 +2,14 @@
 
 {{#include rust-in-progress.md}}
 
-> **Chapter 6**
+> **Day 6**
 >
 > Complete [Compress IVFFlat with Product Quantization](./rust-07-ivfpq.md) first. Finish with one release-mode benchmark
 > that compares Flat, IVFFlat, NSW, HNSW, and IVF-PQ on the external SIFT1M corpus under the same Euclidean queries and
 > `k = 100` contract.
 
 A search-time number is not useful by itself. An approximate index can look fast by returning the wrong neighbors, while
-recall from another workload cannot explain the latency you measured. This chapter therefore prints timing and result
+recall from another workload cannot explain the latency you measured. Day 6 therefore prints timing and result
 quality from the same run.
 
 The benchmark has two explicit modes. The default full run uses all one million SIFT base vectors, all 10,000 queries,
@@ -19,7 +19,7 @@ parity result.
 
 ## Start from the Completed Indexes
 
-Your Chapter 5 starter already contains the five index implementations. Before opening the benchmark, keep their product
+Your Day 5 starter already contains the five index implementations. Before opening the benchmark, keep their product
 paths green from the repository root:
 
 ```sh
@@ -38,8 +38,8 @@ vector-db-starter/core/examples/recall.rs
 
 The supplied `vector-benchmark-support` crate owns command-line parsing, SIFT file validation, the full and smoke mode
 sizes, cyclic warm-up and timing, rank-recall calculation, and nearest-rank percentile selection. The example already
-owns the five configurations, report layout, result validation, and IVF-PQ accounting. You complete exactly four Chapter
-6 ownership points:
+owns the five configurations, report layout, result validation, and IVF-PQ accounting. You complete exactly four Day 6
+ownership points:
 
 1. construct NSW;
 2. construct HNSW;
@@ -53,7 +53,7 @@ cargo test -p vector-benchmark-support
 ```
 
 They use tiny little-endian fixtures and deliberately corrupted inputs, so they need no external download. The raw
-starter's example test is expected to stop at a Chapter 6 `todo!()` until you finish both checkpoints below:
+starter's example test is expected to stop at a Day 6 `todo!()` until you finish both checkpoints below:
 
 ```sh
 cargo test -p vector-core-starter --example recall
@@ -260,9 +260,9 @@ it excludes retained vectors used for reranking, centroids, row IDs, list and gr
 the other four live indexes.
 
 Record observed timings and rank recall only from a run you actually performed, together with its mode, machine, and
-fixed configuration. Do not infer a universal fastest index, quality ranking, or latency threshold from this chapter.
+fixed configuration. Do not infer a universal fastest index, quality ranking, or latency threshold from this run.
 
-## Chapter 6 Review
+## Day 6 Review
 
 Run the Day 6 focused gate, then the complete cumulative course:
 

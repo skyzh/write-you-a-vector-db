@@ -1,6 +1,6 @@
 # Vector Core Starter
 
-In the six Rust chapters, you will use this crate to:
+Across the six Rust days, you will use this crate to:
 
 1. validate the in-memory dataset used by the DataFusion table;
 2. implement recall measurement and IVFFlat;

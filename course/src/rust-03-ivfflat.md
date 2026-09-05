@@ -2,20 +2,20 @@
 
 {{#include rust-in-progress.md}}
 
-> **Chapter 2**
+> **Day 2**
 >
 > Complete [Make the SQL Path Reach Your Index Safely](./rust-02-datafusion.md) first. Finish with a seeded IVFFlat
 > index behind the same SQL top-k path, recall defined against exact search, and an explicit `probes` tradeoff.
 
-Chapter 1 left you with an exact `FlatIndex` and a conservative DataFusion path that can use it. The SQL matcher, selected
-vector column, checked row lookup, and final `SortExec` are already working. This chapter changes only how the index
+Day 1 left you with an exact `FlatIndex` and a conservative DataFusion path that can use it. The SQL matcher, selected
+vector column, checked row lookup, and final `SortExec` are already working. Day 2 changes only how the index
 chooses candidates: IVFFlat groups dataset rows into inverted lists, then searches the lists nearest to the query.
 It is a coarse quantization index: comparing against a small set of centroids chooses which full-precision vectors to
 score.
 
 ## Start from the SQL Path You Already Own
 
-The Chapter 2 SQL case keeps Chapter 1's table, matcher, lookup, and Euclidean query:
+The Day 2 SQL case keeps Day 1's table, matcher, lookup, and Euclidean query:
 
 ```sql
 SELECT id, payload
@@ -24,20 +24,20 @@ ORDER BY array_distance(embedding, [1.0, 1.0, 1.0])
 LIMIT 5;
 ```
 
-From the repository root, confirm the completed Chapter 1 case first:
+From the repository root, confirm the completed Day 1 case first:
 
 ```sh
 cargo test -p vector-datafusion-starter --test sqllogictest day_01_table_and_optimizer_sql
 ```
 
-Now run the Chapter 2 case before implementing IVFFlat:
+Now run the Day 2 case before implementing IVFFlat:
 
 ```sh
 cargo test -p vector-datafusion-starter --test sqllogictest day_02_ivfflat_sql
 ```
 
 This second command is your product-level expected failure. It uses the same DataFusion integration with
-`IndexConfig::IvfFlat`, then reaches the unfinished IVFFlat constructor. At the end of the chapter, the same command must
+`IndexConfig::IvfFlat`, then reaches the unfinished IVFFlat constructor. At the end of the day, the same command must
 reach this plan and return the five expected rows:
 
 ```text
@@ -54,7 +54,7 @@ vector-db-starter/core/src/ivf.rs       IvfFlatIndex::search_with_probes
 ```
 
 The starter already supplies `Dataset`, `Metric`, `TopK`, `DeterministicRng`, the IVFFlat configuration and public index
-shell, and the complete Chapter 1 DataFusion path. Keep those public APIs and the Chapter 1 tests unchanged.
+shell, and the complete Day 1 DataFusion path. Keep those public APIs and the Day 1 tests unchanged.
 
 ## Checkpoint 1: Define Recall against Flat Search
 
@@ -157,8 +157,8 @@ An empty cluster has no mean. Re-seed it from the row farthest from its nearest 
 silently remove a partition.
 
 Cosine adds a different boundary: nonzero assigned vectors can average to the zero vector. Normalize every nonzero cosine
-centroid after the mean. If its norm is zero, replace it with an assigned dataset row, which has already passed Chapter
-1's nonzero-norm validation.
+centroid after the mean. If its norm is zero, replace it with an assigned dataset row, which has already passed Day 1's
+nonzero-norm validation.
 
 **Prediction:** The mean of `[1, 0]` and `[-1, 0]` is `[0, 0]`. What would cosine distance do with that centroid if you
 kept it? Which already validated row can safely replace it?
@@ -221,14 +221,14 @@ Return to the product-level case you ran at the start:
 cargo test -p vector-datafusion-starter --test sqllogictest day_02_ivfflat_sql
 ```
 
-The SQL text and the matcher you implemented in Chapter 1 are unchanged. DataFusion passes `LIMIT 5` through Chapter 1's
+The SQL text and the matcher you implemented on Day 1 are unchanged. DataFusion passes `LIMIT 5` through Day 1's
 `with_fetch`. `VectorIndexScanExec` calls `IvfFlatIndex::search`, which uses the configured `probes`; the generic bounded
 sort remains responsible for final SQL ordering. Unsupported query shapes still use the exact `DataSourceExec` path.
 
 The test uses all three partitions, so its five returned rows must match exact search. This is an integration check, not
 a claim that a smaller probe count always returns the same rows.
 
-## Checkpoint 6: Run the Chapter 2 Product Loop
+## Checkpoint 6: Run the Day 2 Product Loop
 
 Run the supplied example after the focused core and SQL tests pass:
 
@@ -246,9 +246,9 @@ VectorIndexScanExec: index=ivf_flat, metric=Cosine, query_dim=3, fetch=Some(3), 
 
 Both runs keep DataFusion's final `SortExec` and return the same three rows. The product contract did not change; the
 candidate-selection implementation did. Smaller probe counts expose the recall/work tradeoff you reasoned about above,
-while Chapter 6 owns the release-mode latency comparison across all five indexes.
+while Day 6 owns the release-mode latency comparison across all five indexes.
 
-## Chapter 2 Review
+## Day 2 Review
 
 Run the Day 2 focused gate, then the cumulative course through Day 2:
 
@@ -257,7 +257,7 @@ cargo x test-day 2
 cargo x test-through 2
 ```
 
-After the five Chapter 2 core tests, Chapter 2 SQLLogicTest, and product example pass, choose one concrete build and query
+After the five Day 2 core tests, Day 2 SQLLogicTest, and product example pass, choose one concrete build and query
 and explain:
 
 - why the configuration is rejected before training;
@@ -265,10 +265,10 @@ and explain:
 - how a dataset row flows from assignment to a probed list to `TopK`;
 - why empty and zero-mean cosine clusters need different recovery logic;
 - why probing every list is an exactness test; and
-- how Chapter 1's optimizer rule reaches a new index without changing its SQL safety contract; and
+- how Day 1's optimizer rule reaches a new index without changing its SQL safety contract;
 - which same-implementation properties a seed fixes without fixing the reference implementation's centroid identities.
 
 Keep this checkpoint focused on in-memory IVFFlat. Persistent postings, online centroid retraining, product quantization,
-cross-index timing, and reproducible latency targets remain outside this chapter.
+cross-index timing, and reproducible latency targets remain outside Day 2.
 
 {{#include copyright.md}}
