@@ -241,7 +241,7 @@ fn build_nsw(
     _metric: Metric,
     _config: NswConfig,
 ) -> vector_core_starter::Result<NswIndex> {
-    todo!("Chapter 6: build NSW with the benchmark configuration")
+    todo!("Day 6: build NSW with the benchmark configuration")
 }
 
 fn build_hnsw(
@@ -249,7 +249,7 @@ fn build_hnsw(
     _metric: Metric,
     _config: HnswConfig,
 ) -> vector_core_starter::Result<HnswIndex> {
-    todo!("Chapter 6: build HNSW with the benchmark configuration")
+    todo!("Day 6: build HNSW with the benchmark configuration")
 }
 
 fn build_ivf_pq(
@@ -257,7 +257,7 @@ fn build_ivf_pq(
     _metric: Metric,
     _config: IvfPqConfig,
 ) -> vector_core_starter::Result<IvfPqIndex> {
-    todo!("Chapter 6: build IVF-PQ with the benchmark configuration")
+    todo!("Day 6: build IVF-PQ with the benchmark configuration")
 }
 
 fn summarize(
@@ -306,7 +306,7 @@ fn summarize(
 
 fn report_percentiles(_sorted: &[Duration]) -> (Duration, Duration) {
     let _helper = percentile;
-    todo!("Chapter 6: use the supplied nearest-rank percentile helper")
+    todo!("Day 6: use the supplied nearest-rank percentile helper")
 }
 
 fn validate_neighbors(

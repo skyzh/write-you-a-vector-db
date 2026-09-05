@@ -1047,7 +1047,7 @@ fn starter_exposes_the_attachment_api_without_solution_bodies() {
     assert!(source.contains("pub async fn try_new"));
     assert!(source.contains("pub fn with_vector_indexes"));
     assert!(source.contains("_vector_column: impl Into<String>"));
-    assert_eq!(source.matches("Chapter 1:").count(), 6);
+    assert_eq!(source.matches("Day 1:").count(), 6);
     for task in [
         "build the introductory Arrow MemTable",
         "selected vector column",

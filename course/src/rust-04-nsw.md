@@ -2,14 +2,14 @@
 
 {{#include rust-in-progress.md}}
 
-> **Chapter 3**
+> **Day 3**
 >
 > Complete [Narrow the Search with IVFFlat](./rust-03-ivfflat.md) first. You will replace centroid/list selection with graph
 > reachability while keeping the SQL matcher, row lookup, and final top-k sort supplied.
 
 ## Start from the Product You Already Have
 
-Chapter 2 ended with one five-row table and one SQL query running through IVFFlat. Run it again from the repository
+Day 2 ended with one five-row table and one SQL query running through IVFFlat. Run it again from the repository
 root:
 
 ```sh
@@ -24,7 +24,7 @@ The seeded IVFFlat plan contains `index=ivf_flat`, and its `LIMIT 3` result is:
 (3, three)
 ```
 
-This chapter keeps that query and fixture fixed. What changes is how the core index proposes candidate row offsets:
+Day 3 keeps that query and fixture fixed. What changes is how the core index proposes candidate row offsets:
 IVFFlat probes centroid lists, while navigable small world (NSW) search follows edges in a proximity graph. DataFusion's
 bounded `SortExec` still owns final SQL ordering.
 
@@ -42,8 +42,8 @@ You own four TODOs:
 3. `NswIndex::try_new`; and
 4. `NswIndex::search_with_ef`.
 
-The same starter also declares `greedy_search`, HNSW, and IVF-PQ surfaces for later chapters. Leave those future TODOs
-alone. The supplied private tests let you finish one NSW boundary at a time without making graph helpers public.
+The same starter also declares `greedy_search`, HNSW, and IVF-PQ surfaces for later days. Leave those future TODOs
+alone. The supplied crate-internal tests let you finish one NSW boundary at a time without making graph helpers public.
 
 ## Checkpoint 1: Search One Supplied Layer
 
@@ -124,7 +124,7 @@ cargo test -p vector-core-starter \
   graph_tests::day_03_search_layer_respects_bounds_and_expands_equal_frontier -- --exact
 ```
 
-Before the implementation it reaches the Chapter 3 traversal TODO. Afterward it checks allowed rows, disconnected
+Before the implementation it reaches the Day 3 traversal TODO. Afterward it checks allowed rows, disconnected
 components, duplicate and invalid entry points, nearest-first uniqueness, and the strict-worse stopping boundary.
 
 **Prediction:** If every entry point is in one of two disconnected components, why can increasing `ef` not return a row
@@ -146,7 +146,7 @@ owner, break distance ties by row offset, and truncate to `max_connections`.
 
 ![Choose the connections that survive pruning](./vector-db/05-nsw-insert-3.svg)
 
-Run the private helper test:
+Run the crate-internal helper test:
 
 ```sh
 cargo test -p vector-core-starter \
@@ -231,7 +231,7 @@ Both retain the supplied `SortExec` and show the same three rows:
 (3, three)
 ```
 
-The example demonstrates the Chapter 2 → Chapter 3 handoff through the existing attachment, matcher, source-row lookup,
+The example demonstrates the Day 2 → Day 3 handoff through the existing attachment, matcher, source-row lookup,
 and final sort. Equal rows here do not establish general recall, work, or performance.
 
 Keep the separate five-result SQL fixture green:
@@ -243,7 +243,7 @@ cargo test -p vector-datafusion-starter --test sqllogictest day_03_nsw_sql -- --
 That SQLLogicTest uses a different eight-row fixture and `LIMIT 5`. It verifies `index=nsw`, the supplied final sort,
 and its own five expected rows. Unsupported SQL shapes continue to use the supplied exact path.
 
-## Chapter 3 Review
+## Day 3 Review
 
 Run the Day 3 focused gate, then the cumulative course through Day 3:
 
@@ -260,7 +260,7 @@ Choose one insertion and one query and explain:
 - why `ef_search.max(k)` is necessary; and
 - why a disconnected component remains unreachable without an entry point or edge into it.
 
-Keep this chapter to one immutable graph layer. Hierarchy, deletion, concurrent mutation, persistence, filtered pushdown,
+Keep Day 3 to one immutable graph layer. Hierarchy, deletion, concurrent mutation, persistence, filtered pushdown,
 general DDL/catalog behavior, benchmarking, and neighbor-diversification heuristics belong outside this checkpoint.
 
 {{#include copyright.md}}

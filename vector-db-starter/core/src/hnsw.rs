@@ -34,7 +34,7 @@ pub struct HnswIndex {
 
 impl HnswIndex {
     pub fn try_new(_dataset: Dataset, _metric: Metric, _config: HnswConfig) -> Result<Self> {
-        todo!("Chapter 4: assign seeded levels and build every included graph layer")
+        todo!("Day 4: assign seeded levels and build every included graph layer")
     }
 
     pub fn levels(&self) -> &[usize] {
@@ -51,7 +51,7 @@ impl HnswIndex {
         _k: usize,
         _ef_search: usize,
     ) -> Result<Vec<Neighbor>> {
-        todo!("Chapter 4: descend greedily and search layer zero with ef_search.max(k)")
+        todo!("Day 4: descend greedily and search layer zero with ef_search.max(k)")
     }
 
     pub fn layer(&self, level: usize) -> Option<&[Vec<usize>]> {

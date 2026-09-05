@@ -2,7 +2,7 @@
 
 {{#include rust-in-progress.md}}
 
-> **Chapter 5**
+> **Day 5**
 >
 > Complete [Add Hierarchy with HNSW](./rust-05-hnsw.md) first. Build a residual IVF-PQ index that scores compact codes,
 > reranks a shortlist with full vectors, and exposes the representation accounting used by the final benchmark.
@@ -10,7 +10,7 @@
 IVFFlat avoids comparing a query with every row, but it still reads every component of every vector in the probed lists.
 Product quantization replaces that candidate-scoring representation with a short sequence of learned codeword IDs.
 
-This chapter follows the product-quantization design introduced by
+Day 5 follows the product-quantization design introduced by
 [Jégou, Douze, and Schmid](https://doi.org/10.1109/TPAMI.2010.57). It combines a coarse IVF partition with product
 quantization of residuals, the structure commonly called IVFADC or IVF-PQ. The
 [Faiss index guide](https://github.com/facebookresearch/faiss/wiki/Faiss-indexes#summary-of-methods) uses the same
@@ -91,8 +91,8 @@ vector-db-starter/core/src/pq.rs
 The starter already exposes `IvfPqConfig`, `IvfPqIndex`, its `VectorIndex` implementation, byte-accounting methods, and
 the DataFusion `IndexConfig::IvfPq` path. Keep those public APIs, existing indexes, and tests unchanged.
 
-All commands in this chapter exercise the cumulative starter workspace. Complete Chapters 1–4 first; an untouched
-starter stops at an earlier `todo!()` before it reaches Chapter 5.
+All commands on this page exercise the cumulative starter workspace. Complete Days 1–4 first; an untouched
+starter stops at an earlier `todo!()` before it reaches Day 5.
 
 `IvfPqConfig` separates the main budgets:
 
@@ -121,7 +121,7 @@ Implement `IvfPqIndex::try_new`. Validate before training:
 
 Build the coarse partition with the same partitions, probes, iterations, and seed. Assign every row against the final
 centroids, then compute `row - centroid`. Rebuilding membership after the final centroid update preserves the complete
-one-list-per-row invariant from Chapter 2.
+one-list-per-row invariant from Day 2.
 
 Run the focused layout boundary:
 
@@ -178,7 +178,7 @@ cargo test -p vector-core-starter --test indexes day_05_ivf_pq_
 ```
 
 These cases also cover large finite values, representability, and public ordering. Finally, confirm the unchanged
-Chapter 1 adapter can select the completed Euclidean index:
+Day 1 adapter can select the completed Euclidean index:
 
 ```sh
 cargo test -p vector-datafusion-starter --test sql day_05_ivf_pq_is_visible_in_explain
@@ -195,12 +195,12 @@ For any built index:
 - `full_precision_bytes()` counts the retained dataset's vector components.
 
 Do not describe the ratio between full-precision vector bytes and code-plus-codebook bytes as total-memory compression.
-The final chapter prints the exact accounting beside the shared five-index benchmark, where its scope can be read with
+The final day prints the exact accounting beside the shared five-index benchmark, where its scope can be read with
 the workload and search configuration.
 
 ## Return to the SQL Product
 
-Run the self-contained Chapter 5 SQLLogicTest:
+Run the self-contained Day 5 SQLLogicTest:
 
 ```sh
 cargo test -p vector-datafusion-starter --test sqllogictest day_05_ivf_pq_sql -- --exact
@@ -231,7 +231,7 @@ and returns:
 This fixture verifies one deterministic handoff from an exact scan to the supplied IVF-PQ SQL adapter. It does not
 establish external-corpus recall, latency, memory use, or general exactness.
 
-## Chapter 5 Review
+## Day 5 Review
 
 Run the Day 5 focused gate, then the cumulative course through Day 5:
 
@@ -249,7 +249,7 @@ After the IVF-PQ core tests and DataFusion plan check pass, explain:
 - which bytes the search-representation accounting includes and excludes; and
 - why a compact representation alone does not establish a latency or recall ranking.
 
-Keep this chapter focused on an executable IVF-PQ mental model. Bit-packed codes, cosine or inner-product support,
+Keep Day 5 focused on an executable IVF-PQ mental model. Bit-packed codes, cosine or inner-product support,
 optimized product quantization, SIMD table scans, persistent layouts, training samples separate from indexed rows, and
 removing full vectors from memory remain outside its scope.
 

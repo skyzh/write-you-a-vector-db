@@ -28,7 +28,7 @@ pub struct NswIndex {
 
 impl NswIndex {
     pub fn try_new(_dataset: Dataset, _metric: Metric, _config: NswConfig) -> Result<Self> {
-        todo!("Chapter 3: insert rows into a bounded reciprocal proximity graph")
+        todo!("Day 3: insert rows into a bounded reciprocal proximity graph")
     }
 
     pub fn adjacency(&self) -> &[Vec<usize>] {
@@ -41,7 +41,7 @@ impl NswIndex {
         _k: usize,
         _ef_search: usize,
     ) -> Result<Vec<Neighbor>> {
-        todo!("Chapter 3: search the NSW graph with ef_search.max(k)")
+        todo!("Day 3: search the NSW graph with ef_search.max(k)")
     }
 }
 

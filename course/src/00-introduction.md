@@ -8,9 +8,9 @@ answer SQL top-k queries through DataFusion and make the tradeoff between recall
 
 <div class="warning">
 
-**Course status:** All six chapters are ready to implement: an in-memory Arrow table and DataFusion optimizer rule,
+**Course status:** All six days are ready to implement: an in-memory Arrow table and DataFusion optimizer rule,
 followed by IVFFlat, NSW, HNSW, residual IVF-PQ, and a five-index SIFT1M rank-recall and latency benchmark. The repository
-includes starter code, focused tests, and separate completed references. Chapter 6 uses corpus files that you acquire
+includes starter code, focused tests, and separate completed references. Day 6 uses corpus files that you acquire
 locally; hosted tests do not download or run the external dataset.
 
 </div>
@@ -31,7 +31,7 @@ behind one SQL top-k query.
 
 ## What You Will Build
 
-The six Rust chapters build:
+The six Rust days build:
 
 1. An Arrow-backed vector table and a conservative DataFusion optimizer rule that selects a vector-index scan.
 2. An IVFFlat index and recall harness that compare approximate results with exact search.
@@ -70,21 +70,21 @@ measure, and explain.
 You should be comfortable with Rust ownership, traits, error handling, iterators, and Cargo. You should also know basic
 database concepts such as records, indexes, SQL ordering, and query plans.
 
-Prior knowledge of nearest-neighbor algorithms, Apache Arrow, or DataFusion is not required. Chapter 1 introduces the small
+Prior knowledge of nearest-neighbor algorithms, Apache Arrow, or DataFusion is not required. Day 1 introduces the small
 subset of DataFusion's extension interface used by the course.
 
 ## How to Use This Book
 
 Start with the [Rust course](./rust-01-overview.md). It defines the architecture, system contract, starter workspace,
-progression, and scope. Each available chapter pairs the book with starter code, focused tests, and a separate reference
+progression, and scope. Each day pairs the book with starter code, focused tests, and a separate reference
 solution.
 
-Each implementation chapter begins with a concrete goal, the relevant invariants, and a small prediction exercise. It ends
+Each implementation day begins with a concrete goal, the relevant invariants, and a small prediction exercise. It ends
 with focused tests and a short reflection on what you observed.
 
-Chapter 1 makes the table and optimizer rule runnable. Chapter 2 compares IVFFlat with exact search, Chapter 3 follows
-graph edges with NSW, and Chapter 4 adds sparse HNSW layers. Chapter 5 adds residual IVF-PQ behind the same collection and
-SQL boundary. Chapter 6 compares all five indexes under one fixed SIFT1M measurement contract, so the reported rank
+Day 1 makes the table and optimizer rule runnable. Day 2 compares IVFFlat with exact search, Day 3 follows
+graph edges with NSW, and Day 4 adds sparse HNSW layers. Day 5 adds residual IVF-PQ behind the same collection and
+SQL boundary. Day 6 compares all five indexes under one fixed SIFT1M measurement contract, so the reported rank
 recall and latency fields describe the same data, queries, Euclidean metric, and `k = 100`.
 
 ## Community

@@ -2,14 +2,14 @@
 
 {{#include rust-in-progress.md}}
 
-> **Chapter 4**
+> **Day 4**
 >
 > Complete [Navigate a Proximity Graph with NSW](./rust-04-nsw.md) first. You will turn that one-layer graph into a
 > seeded hierarchy, route through its sparse upper layers, and run the same SQL top-k through `index=hnsw`.
 
 ## Start from the NSW Product
 
-Chapter 3 ended with one five-row table and one cosine-distance query running through IVFFlat and NSW. From the
+Day 3 ended with one five-row table and one cosine-distance query running through IVFFlat and NSW. From the
 repository root, run that supplied comparison again:
 
 ```sh
@@ -24,14 +24,14 @@ The second plan contains `index=nsw`, and both indexes return:
 (3, three)
 ```
 
-This chapter keeps the SQL matcher, source-row lookup, and final `SortExec` fixed. You will change the core candidate
+Day 4 keeps the SQL matcher, source-row lookup, and final `SortExec` fixed. You will change the core candidate
 path: instead of starting every query in one graph that contains every row, HNSW first makes coarse moves through sparse
-upper layers and then reuses Chapter 3's bounded search in the all-row layer-zero graph.
+upper layers and then reuses Day 3's bounded search in the all-row layer-zero graph.
 
 **Prediction:** In a before-and-after SQL comparison whose table and query are unchanged, which plan field should change?
 Why must the returned rows still satisfy the same SQL ordering contract even though the route proposing them changes?
 
-The cumulative starter leaves exactly three Chapter 4 units unfinished:
+The cumulative starter leaves exactly three Day 4 units unfinished:
 
 ```text
 vector-db-starter/core/src/graph.rs        greedy_search
@@ -39,7 +39,7 @@ vector-db-starter/core/src/hnsw.rs         HnswIndex::try_new
 vector-db-starter/core/src/hnsw.rs         HnswIndex::search_with_ef
 ```
 
-Chapter 3 already supplied `search_layer`, `prune_neighbors`, deterministic metric ordering, and the DataFusion boundary.
+Day 3 already supplied `search_layer`, `prune_neighbors`, deterministic metric ordering, and the DataFusion boundary.
 `try_new` is one complete build operation: level assignment and graph construction share the same insertion loop, so you
 will implement and check them together.
 
@@ -105,7 +105,7 @@ inspectable:
 
 The first row needs no search. Store it in every included layer and make it the entry point. For each later row, start
 from the current global entry point. Greedily descend through layers above the new row's sampled level. At every layer the
-new row joins, reuse Chapter 3's `search_layer` with `ef_construction`, connect the nearest
+new row joins, reuse Day 3's `search_layer` with `ef_construction`, connect the nearest
 `max_connections` candidates, and prune reciprocal edges back to the cap.
 
 ![Search each included layer before connecting the new vector](./vector-db/06-hnsw-insert-2.svg)
@@ -152,7 +152,7 @@ Implement `HnswIndex::search_with_ef`. Validate the query for dimension, finite 
 reject a zero explicit search width.
 
 Begin at the stored global entry point. Call `greedy_search` once per upper layer, from the top layer down through layer
-one, carrying the returned row into the next layer. At layer zero, call Chapter 3's `search_layer` with width
+one, carrying the returned row into the next layer. At layer zero, call Day 3's `search_layer` with width
 `ef_search.max(k)`, then truncate the nearest-first result to `k`.
 
 ```text
@@ -185,7 +185,13 @@ datasets or search budgets.
 
 ## Return to the SQL Product
 
-Run the self-contained Chapter 4 SQLLogicTest:
+First confirm that the unchanged Day 1 adapter can select the completed HNSW index:
+
+```sh
+cargo test -p vector-datafusion-starter --test sql day_04_hnsw_is_visible_in_explain
+```
+
+Then run the self-contained Day 4 SQLLogicTest:
 
 ```sh
 cargo test -p vector-datafusion-starter --test sqllogictest day_04_hnsw_sql -- --exact
@@ -215,7 +221,7 @@ Unsupported SQL shapes continue to use the exact scan.
 The fixture uses Euclidean distance and `LIMIT 5`; it verifies `index=hnsw`, the supplied final sort, and the expected
 rows without depending on mutable interactive-shell state.
 
-## Check the Course Through Chapter 4
+## Check the Course Through Day 4
 
 Run the Day 4 focused gate, then the cumulative course through Day 4:
 
@@ -227,7 +233,7 @@ cargo x test-through 4
 The runner selects only the tests assigned through HNSW, so unfinished Day 5
 IVF-PQ work cannot turn this Day 4 gate red.
 
-## Chapter 4 Review
+## Day 4 Review
 
 Choose one insertion and one query and explain:
 
@@ -238,7 +244,7 @@ Choose one insertion and one query and explain:
 - when the global entry point changes; and
 - why equal rows in the supplied SQL comparison say nothing about general recall or speed.
 
-The index in this chapter is immutable and in memory. Deletion, concurrent mutation, persistence, production
+The Day 4 index is immutable and in memory. Deletion, concurrent mutation, persistence, production
 neighbor-diversification heuristics, and adaptive search budgets would change the learner contract rather than complete
 this checkpoint.
 
