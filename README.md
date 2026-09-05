@@ -2,87 +2,34 @@
 
 # Vector Database from Scratch
 
-Vector Database from Scratch is a short, Rust-first systems course. Build a small in-memory vector database in Rust,
-compare approximate results with exact search, and connect the resulting indexes to SQL through DataFusion.
+Vector Database from Scratch is a hands-on course for systems and database engineers. Build a small in-memory vector
+database in Rust, compare approximate results with exact search, and use the resulting indexes from SQL through
+DataFusion.
 
 **[Read the course](https://skyzh.github.io/vector-db-from-scratch/)**
 
-The course focuses on the boundary where algorithms become database features:
+## What You Will Build
 
-```text
-in-memory table → DataFusion optimizer rule → IVFFlat → NSW → HNSW → IVF-PQ → benchmark
-```
+By the end of the course, your vector database will include:
 
-Instead of hiding vector search behind an HTTP API or an ANN library, the course exposes the algorithms, evaluation
-contracts, query planning, and execution boundary that make SQL vector search work.
+* an Arrow-backed in-memory table and a safe DataFusion optimizer rule;
+* IVFFlat, NSW, HNSW, and residual IVF-PQ indexes;
+* SQL commands for creating indexes and comparing query plans; and
+* a shared benchmark for recall, build time, and search latency on SIFT1M.
 
-## Course Status
+The course focuses on the boundary where vector-search algorithms become database features. It covers the algorithms,
+evaluation contracts, query planning, and execution path instead of hiding them behind an HTTP API or ANN library.
 
-The [Rust course](https://skyzh.github.io/vector-db-from-scratch/rust-01-overview) has six required days: an
-Arrow-backed in-memory table and safe DataFusion optimizer rule, IVFFlat, NSW, HNSW, residual IVF-PQ, and a final shared
-recall and latency benchmark. The implementation days include starter code, focused tests, and separate completed
-reference crates. Days 1–5 include self-contained SQLLogicTests; Day 5 also includes a focused planner/EXPLAIN
-test.
+## Course Structure
 
-The final benchmark compares Flat, IVFFlat, NSW, HNSW, and IVF-PQ on the external SIFT1M corpus. All five indexes share
-the same Euclidean queries and `k = 100`. The report couples build and search time with first-neighbor rank recall at
-1, 10, and 100, p50 and p99 search latency, and explicit IVF-PQ search-representation accounting.
+The [guided Rust course](https://skyzh.github.io/vector-db-from-scratch/rust-01-overview) has six days. Each day adds one
+database or indexing capability, with starter code, focused tests, and a completed reference. The book contains the
+setup, checkpoint commands, SQL walkthroughs, and benchmark instructions.
 
-## Rust Workspace
+You need basic Rust, but you do not need prior knowledge of vector search or DataFusion.
 
-The repository-root Cargo workspace separates the learner starter from the completed reference:
-
-```text
-vector-db-starter/
-  core/          package: vector-db-from-scratch-core-starter
-  datafusion/    package: vector-db-from-scratch-datafusion-starter
-vector-db/
-  core/          package: vector-db-from-scratch-core
-  datafusion/    package: vector-db-from-scratch-datafusion
-vector-db-benchmark-support/
-                shared benchmark fixtures and reporting support
-```
-
-Before implementing Day 1, launch the supplied product shell from the repository root:
-
-```shell
-cargo run -p vector-db-from-scratch-datafusion --example sql
-```
-
-The supplied DataFusion CLI starts with an empty course session and accepts semicolon-terminated SQL. The product tour
-creates and populates an in-memory table, compares a query with `EXPLAIN`, attaches an index named in SQL, and runs the
-same query again. You do not need to inspect or modify the completed reference example.
-
-Check the untouched starter without executing TODOs:
-
-```shell
-cargo check -p vector-db-from-scratch-core-starter
-cargo check -p vector-db-from-scratch-datafusion-starter
-```
-
-Validate the completed reference with:
-
-```shell
-cargo test -p vector-db-from-scratch-core -p vector-db-from-scratch-datafusion
-cargo run --release -p vector-db-from-scratch-core --example recall -- /absolute/path/to/sift1M
-```
-
-The workspace uses the stable Rust channel from `rust-toolchain.toml` and pins course dependencies in `Cargo.lock`.
-
-Each day ends with two learner commands. The first runs only the
-new tests for that day; the second reruns every learner day through it:
-
-```shell
-cargo x test-day 1
-cargo x test-through 1
-```
-
-Replace `1` with the current day number, from 1 through 6. The Day 6 SIFT1M
-tests remain ignored unless you explicitly provide the external corpus and use
-the Day 6 commands.
-
-The original [C++/BusTub edition](https://skyzh.github.io/vector-db-from-scratch/cpp-01-overview) is deprecated and
-unmaintained. It remains online for existing readers but is no longer recommended for new learners.
+The original [C++/BusTub edition](https://skyzh.github.io/vector-db-from-scratch/cpp-01-overview) remains online for
+existing readers, but it is deprecated and unmaintained.
 
 ## Community
 
