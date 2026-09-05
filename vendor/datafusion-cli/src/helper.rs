@@ -27,7 +27,8 @@ use crate::highlighter::{Color, NoSyntaxHighlighter, SyntaxHighlighter};
 
 use datafusion::common::config::Dialect;
 use datafusion::sql::parser::{DFParser, Statement};
-use datafusion::sql::sqlparser::dialect::dialect_from_str;
+use datafusion::sql::sqlparser::dialect::{Dialect as SqlDialect, dialect_from_str};
+use datafusion::sql::sqlparser::tokenizer::{Token, Tokenizer};
 
 use rustyline::completion::{Completer, FilenameCompleter, Pair};
 use rustyline::error::ReadlineError;
@@ -88,7 +89,7 @@ impl CliHelper {
                     ))));
                 }
             };
-            let lines = split_from_semicolon(sql);
+            let lines = split_from_semicolon(sql, dialect.as_ref());
             for line in lines {
                 match DFParser::parse_sql_with_dialect(&line, dialect.as_ref()) {
                     Ok(statements) if statements.is_empty() => {
@@ -183,8 +184,8 @@ impl Validator for CliHelper {
 impl Helper for CliHelper {}
 
 /// Splits a string which consists of multiple queries.
-pub(crate) fn split_from_semicolon(sql: &str) -> Vec<String> {
-    let (mut commands, remainder) = split_complete_from_semicolon(sql);
+pub(crate) fn split_from_semicolon(sql: &str, dialect: &dyn SqlDialect) -> Vec<String> {
+    let (mut commands, remainder) = split_complete_from_semicolon(sql, dialect);
     if !remainder.trim().is_empty() {
         commands.push(format!("{};", remainder.trim()));
     }
@@ -192,46 +193,48 @@ pub(crate) fn split_from_semicolon(sql: &str) -> Vec<String> {
 }
 
 /// Splits complete semicolon-terminated queries and returns any trailing fragment.
-pub(crate) fn split_complete_from_semicolon(sql: &str) -> (Vec<String>, String) {
+pub(crate) fn split_complete_from_semicolon(
+    sql: &str,
+    dialect: &dyn SqlDialect,
+) -> (Vec<String>, String) {
     let mut commands = Vec::new();
-    let mut current_command = String::new();
-    let mut in_single_quote = false;
-    let mut in_double_quote = false;
-    let mut in_block_comment = false;
-    let mut chars = sql.chars().peekable();
+    let mut tokens = Vec::new();
+    let mut tokenizer = Tokenizer::new(dialect, sql);
+    // Incomplete quoted strings and comments are expected while collecting a statement. The
+    // tokenizer leaves every complete token in `tokens`, so top-level semicolons before that
+    // trailing fragment are still safe boundaries.
+    let _ = tokenizer.tokenize_with_location_into_buf(&mut tokens);
+    let mut statement_start = 0;
 
-    while let Some(c) = chars.next() {
-        if in_block_comment {
-            current_command.push(c);
-            if c == '*' && chars.peek() == Some(&'/') {
-                current_command.push(chars.next().expect("peeked block-comment terminator"));
-                in_block_comment = false;
+    for token in tokens {
+        if token.token == Token::SemiColon {
+            let statement_end = byte_offset(sql, token.span.end.line, token.span.end.column);
+            let statement = sql[statement_start..statement_end].trim();
+            if !statement.is_empty() {
+                commands.push(statement.to_owned());
             }
-            continue;
-        }
-
-        if !in_single_quote && !in_double_quote && c == '/' && chars.peek() == Some(&'*') {
-            current_command.push(c);
-            current_command.push(chars.next().expect("peeked block-comment opener"));
-            in_block_comment = true;
-            continue;
-        }
-
-        if c == '\'' && !in_double_quote {
-            in_single_quote = !in_single_quote;
-        } else if c == '"' && !in_single_quote {
-            in_double_quote = !in_double_quote;
-        }
-
-        if c == ';' && !in_single_quote && !in_double_quote {
-            if !current_command.trim().is_empty() {
-                commands.push(format!("{};", current_command.trim()));
-                current_command.clear();
-            }
-        } else {
-            current_command.push(c);
+            statement_start = statement_end;
         }
     }
 
-    (commands, current_command)
+    (commands, sql[statement_start..].to_owned())
+}
+
+fn byte_offset(sql: &str, target_line: u64, target_column: u64) -> usize {
+    let mut line = 1;
+    let mut column = 1;
+
+    for (offset, character) in sql.char_indices() {
+        if line == target_line && column == target_column {
+            return offset;
+        }
+        if character == '\n' {
+            line += 1;
+            column = 1;
+        } else {
+            column += 1;
+        }
+    }
+
+    sql.len()
 }

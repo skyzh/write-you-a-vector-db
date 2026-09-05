@@ -66,19 +66,21 @@ pub async fn exec_from_lines(
     print_options: &PrintOptions,
 ) -> Result<()> {
     let mut query = "".to_owned();
+    let task_ctx = ctx.task_ctx();
+    let dialect_name = &task_ctx.session_config().options().sql_parser.dialect;
+    let dialect = dialect_from_str(dialect_name)
+        .ok_or_else(|| plan_datafusion_err!("Unsupported SQL dialect: {dialect_name}"))?;
 
     for line in reader.lines() {
         match line {
             Ok(line) if line.starts_with("#!") => {
                 continue;
             }
-            Ok(line) if line.starts_with("--") => {
-                continue;
-            }
             Ok(line) => {
                 query.push_str(line.trim_end());
                 query.push('\n');
-                let (statements, remainder) = split_complete_from_semicolon(&query);
+                let (statements, remainder) =
+                    split_complete_from_semicolon(&query, dialect.as_ref());
                 query = remainder;
                 for statement in statements {
                     match exec_and_print(ctx, print_options, statement).await {
@@ -168,7 +170,11 @@ pub async fn exec_from_repl(
                 break;
             }
             Ok(line) => {
-                let lines = split_from_semicolon(&line);
+                let task_ctx = ctx.task_ctx();
+                let dialect_name = &task_ctx.session_config().options().sql_parser.dialect;
+                let lines = dialect_from_str(dialect_name)
+                    .map(|dialect| split_from_semicolon(&line, dialect.as_ref()))
+                    .unwrap_or_else(|| vec![line]);
                 for line in lines {
                     rl.add_history_entry(line.trim_end())?;
                     tokio::select! {
